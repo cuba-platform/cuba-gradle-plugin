@@ -1,0 +1,52 @@
+apply plugin: 'groovy'
+apply plugin: 'maven'
+
+isSnapshot = true
+group = 'com.haulmont.gradle'
+version = '1.0' + (isSnapshot ? '-SNAPSHOT' : '')
+
+repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
+repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
+repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+
+repositories {
+    mavenLocal()
+    mavenRepo(urls: "$repositoryUrl/groups/work")
+}
+
+org.apache.ivy.util.url.CredentialsStore.INSTANCE.addCredentials(
+    'Sonatype Nexus Repository Manager',
+    'repository.haulmont.com',
+    repositoryUser,
+    repositoryPassword
+)
+
+configurations {
+    deployerJars
+}
+
+dependencies {
+    compile gradleApi()
+    groovy localGroovy()
+    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
+}
+
+task sourceJar(type: Jar) {
+    from sourceSets.main.groovy
+    from sourceSets.main.resources
+    classifier = 'sources'
+} 
+
+artifacts {
+    archives sourceJar
+}
+
+uploadArchives.configure {
+    repositories.mavenDeployer {
+        name = 'httpDeployer'
+        configuration = configurations.deployerJars
+        repository(url: "$repositoryUrl/repositories/" + (isSnapshot ? 'snapshots' : 'releases')) {
+            authentication(userName: repositoryUser, password: repositoryPassword)
+        }
+    }
+}
