@@ -112,11 +112,14 @@ class CubaPlugin implements Plugin<Project> {
                     resources { srcDir 'src' }
                 }
                 test {
-                    java { srcDir 'test' }
+                    java { 
+                        srcDir 'test' 
+                        compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
+                    }
                     resources { srcDir 'test' }
                 }
             }
-
+            
             project.uploadArchives.configure {
                 repositories.mavenDeployer {
                     name = 'httpDeployer'
