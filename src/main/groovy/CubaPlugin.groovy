@@ -154,6 +154,7 @@ class CubaDeployment extends DefaultTask {
 
     def jarNames
     def appName
+    def Closure doAfter
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
@@ -186,9 +187,89 @@ class CubaDeployment extends DefaultTask {
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } != null)
             }
         }
+        
+        if (doAfter)
+            doAfter.call()
+        
+        File webXml = new File("$project.tomcatDir/webapps/$appName/WEB-INF/web.xml")
+        webXml.setLastModified(new Date().getTime())
     }
 
     def appJars(Object... names) {
         jarNames = names
     }
+}
+
+class CubaDbCreation extends DefaultTask {
+    
+    def dbms
+    def delimiter
+    def host = 'localhost'
+    def dbName
+    def dbUser
+    def dbPassword
+    def driverClasspath 
+    def createDbSql
+    
+    @TaskAction
+    def createDb() {
+        def driver
+        def dbUrl
+        def masterUrl
+        if (dbms == 'postgres') {
+            driver = 'org.postgresql.Driver'
+            dbUrl = "jdbc:postgresql://$host/$dbName"
+            masterUrl = "jdbc:postgresql://$host/postgres"
+            if (!delimiter) 
+                delimiter = '^'
+            if (!createDbSql) 
+                createDbSql = "drop database if exists $dbName; create database $dbName with template=template0 encoding='UTF8';"
+        } else 
+            throw new UnsupportedOperationException("DBMS $dbms not supported")
+        
+        project.ant.sql(
+            classpath: driverClasspath,
+            driver: driver,
+            url: masterUrl,
+            userid: dbUser, password: dbPassword,
+            autocommit: true,
+            createDbSql
+        )
+        
+        getInitScripts().each { File script ->
+            project.ant.sql(
+                    classpath: driverClasspath, 
+                    src: script.absolutePath, 
+                    delimiter: delimiter,
+                    driver: driver,
+                    url: dbUrl,
+                    userid: dbUser, password: dbPassword,
+                    autocommit: true
+            )
+        }
+    }
+    
+    private List<File> getInitScripts() {
+        List<File> files = []
+        File dbDir = new File(project.buildDir, 'db')
+        if (dbDir.exists()) {
+            String[] moduleDirs = dbDir.list()
+            Arrays.sort(moduleDirs)
+            for (String moduleDirName : moduleDirs) {
+                File moduleDir = new File(dbDir, moduleDirName)
+                File initDir = new File(moduleDir, "init")
+                File scriptDir = new File(initDir, dbms)
+                if (scriptDir.exists()) {
+                    File[] scriptFiles = scriptDir.listFiles(new FilenameFilter() {
+                        public boolean accept(File dir, String name) {
+                            return name.endsWith("create-db.sql")
+                        }
+                    })
+                    files.addAll(Arrays.asList(scriptFiles))
+                }
+            }
+        }
+        return files
+    }
+
 }
