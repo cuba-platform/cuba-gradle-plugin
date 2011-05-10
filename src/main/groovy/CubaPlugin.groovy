@@ -130,6 +130,25 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
 
+            project.assemble << {
+                if (project.configurations.getAsMap().dbscripts) {
+                    File dir = new File("${project.buildDir}/db")
+                    project.configurations.dbscripts.files.each { dep ->
+                        project.copy {
+                            from project.zipTree(dep.absolutePath)
+                            into dir
+                        }
+                    }
+                    def lastName = Arrays.asList(dir.list()).sort().last()
+                    def num = lastName.substring(0,2).toInteger()
+                    
+                    project.copy {
+                        from new File(project.rootProject.projectDir, 'db')
+                        into "${project.buildDir}/db/${num + 10}-app"
+                    }
+                }
+            }
+            
             if (project.convention.plugins.idea) {
                 project.ideaModule.scopes += [PROVIDED: [plus: [project.configurations.provided], minus: []]]
             }
@@ -137,16 +156,31 @@ class CubaPlugin implements Plugin<Project> {
     }
 }
 
-class CubaEnhancing extends JavaExec {
-
+class CubaEnhancing extends DefaultTask {
+    
+    def persistenceXml
+    def metadataXml
+    
     CubaEnhancing() {
-        main = 'org.apache.openjpa.enhance.PCEnhancer'
-        classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
         setDescription('Enhances classes')
     }
 
-    void setPersistenceXml(String persistenceXml) {
-        args('-properties', persistenceXml)
+    @TaskAction
+    def enhance() {
+        if (persistenceXml) {
+            project.javaexec {
+                main = 'org.apache.openjpa.enhance.PCEnhancer'
+                classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                args('-properties', persistenceXml)
+            }
+        }
+        if (metadataXml) {
+            project.javaexec {
+                main = 'com.haulmont.cuba.core.sys.CubaTransientEnhancer'
+                classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                args(metadataXml)
+            }
+        }
     }
 }
 
@@ -164,15 +198,15 @@ class CubaDeployment extends DefaultTask {
     def deploy() {
         project.copy {
             from 'web'
-            into "$project.tomcatDir/webapps/$appName"
+            into "${project.tomcatDir}/webapps/$appName"
         }
         project.copy {
             from project.configurations.jdbc
-            into "$project.tomcatDir/lib"
+            into "${project.tomcatDir}/lib"
         }
         project.copy {
             from project.configurations.runtime
-            into "$project.tomcatDir/shared/lib"
+            into "${project.tomcatDir}/shared/lib"
             include { details ->
                 def name = details.file.name
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } == null)
@@ -181,17 +215,38 @@ class CubaDeployment extends DefaultTask {
         project.copy {
             from project.configurations.runtime
             from project.libsDir
-            into "$project.tomcatDir/webapps/$appName/WEB-INF/lib"
+            into "${project.tomcatDir}/webapps/$appName/WEB-INF/lib"
             include { details ->
                 def name = details.file.name
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } != null)
             }
         }
         
+        if (project.configurations.getAsMap().dbscripts) {
+            project.copy {
+                from "${project.buildDir}/db"
+                into "${project.tomcatDir}/webapps/$appName/WEB-INF/db"
+            }
+        }
+        
+        if (project.configurations.getAsMap().webcontent) {
+            project.configurations.webcontent.files.each { dep ->
+                project.copy {
+                    from project.zipTree(dep.absolutePath)
+                    into "${project.tomcatDir}/webapps/$appName"
+                    exclude '**/web.xml', '**/app.properties'
+                }
+            }
+            project.copy {
+                from "${project.buildDir}/web"
+                into "${project.tomcatDir}/webapps/$appName"
+            }
+        }
+        
         if (doAfter)
             doAfter.call()
         
-        File webXml = new File("$project.tomcatDir/webapps/$appName/WEB-INF/web.xml")
+        File webXml = new File("${project.tomcatDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
