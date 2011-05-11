@@ -8,6 +8,7 @@ import org.gradle.api.*
 import org.gradle.api.plugins.*
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.bundling.Zip
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -129,23 +130,45 @@ class CubaPlugin implements Plugin<Project> {
                     }
                 }
             }
-
-            project.assemble << {
-                if (project.configurations.getAsMap().dbscripts) {
-                    File dir = new File("${project.buildDir}/db")
-                    project.configurations.dbscripts.files.each { dep ->
-                        project.copy {
-                            from project.zipTree(dep.absolutePath)
-                            into dir
+            
+            if (project.name.endsWith('-core')) {
+                project.task('assembleDbScripts') << {
+                    if (project.configurations.getAsMap().dbscripts) {
+                        project.logger.info '>>> project has dbscripts'
+                        File dir = new File("${project.buildDir}/db")
+                        if (dir.exists()) {
+                            project.logger.info ">>> delete $dir.absolutePath"
+                            project.delete(dir)
+                        }
+                        project.configurations.dbscripts.files.each { dep ->
+                            project.logger.info ">>> copy db from: $dep.absolutePath"
+                            project.copy {
+                                from project.zipTree(dep.absolutePath)
+                                into dir
+                            }
+                        }
+                        File srcDbDir = new File(project.rootProject.projectDir, 'db')
+                        project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath" 
+                        if (srcDbDir.exists()) {
+                            def lastName = Arrays.asList(dir.list()).sort().last()
+                            def num = lastName.substring(0,2).toInteger()
+                            project.copy {
+                                project.logger.info ">>> copy db from: $srcDbDir.absolutePath" 
+                                from srcDbDir
+                                into "${project.buildDir}/db/${num + 10}-${project.rootProject.name}"
+                            }
                         }
                     }
-                    def lastName = Arrays.asList(dir.list()).sort().last()
-                    def num = lastName.substring(0,2).toInteger()
-                    
-                    project.copy {
-                        from new File(project.rootProject.projectDir, 'db')
-                        into "${project.buildDir}/db/${num + 10}-app"
-                    }
+                }
+                
+                project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
+                    from "${project.buildDir}/db"
+                    exclude '**/*.bat'
+                    classifier = 'db'
+                }
+
+                project.artifacts {
+                    archives project.dbScriptsArchive
                 }
             }
             
@@ -168,17 +191,23 @@ class CubaEnhancing extends DefaultTask {
     @TaskAction
     def enhance() {
         if (persistenceXml) {
-            project.javaexec {
-                main = 'org.apache.openjpa.enhance.PCEnhancer'
-                classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
-                args('-properties', persistenceXml)
+            File f = new File(persistenceXml)
+            if (f.exists()) {
+                project.javaexec {
+                    main = 'org.apache.openjpa.enhance.PCEnhancer'
+                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                    args('-properties', persistenceXml)
+                }
             }
         }
         if (metadataXml) {
-            project.javaexec {
-                main = 'com.haulmont.cuba.core.sys.CubaTransientEnhancer'
-                classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
-                args(metadataXml)
+            File f = new File(persistenceXml)
+            if (f.exists()) {
+                project.javaexec {
+                    main = 'com.haulmont.cuba.core.sys.CubaTransientEnhancer'
+                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                    args(metadataXml)
+                }
             }
         }
     }
@@ -218,7 +247,7 @@ class CubaDeployment extends DefaultTask {
             into "${project.tomcatDir}/webapps/$appName/WEB-INF/lib"
             include { details ->
                 def name = details.file.name
-                return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } != null)
+                return !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } != null)
             }
         }
         
@@ -234,7 +263,7 @@ class CubaDeployment extends DefaultTask {
                 project.copy {
                     from project.zipTree(dep.absolutePath)
                     into "${project.tomcatDir}/webapps/$appName"
-                    exclude '**/web.xml', '**/app.properties'
+                    exclude '**/web.xml'
                 }
             }
             project.copy {
@@ -271,6 +300,10 @@ class CubaDbCreation extends DefaultTask {
         def driver
         def dbUrl
         def masterUrl
+        
+        if (!driverClasspath)
+            driverClasspath = project.configurations.jdbc.fileCollection{ true }.asPath
+            
         if (dbms == 'postgres') {
             driver = 'org.postgresql.Driver'
             dbUrl = "jdbc:postgresql://$host/$dbName"
@@ -282,6 +315,7 @@ class CubaDbCreation extends DefaultTask {
         } else 
             throw new UnsupportedOperationException("DBMS $dbms not supported")
         
+        project.logger.info(">>> executing SQL: $createDbSql")
         project.ant.sql(
             classpath: driverClasspath,
             driver: driver,
@@ -292,6 +326,7 @@ class CubaDbCreation extends DefaultTask {
         )
         
         getInitScripts().each { File script ->
+            project.logger.info(">>> Executing SQL script: ${script.absolutePath}")
             project.ant.sql(
                     classpath: driverClasspath, 
                     src: script.absolutePath, 
