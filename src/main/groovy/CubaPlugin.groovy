@@ -9,6 +9,7 @@ import org.gradle.api.plugins.*
 import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.file.FileTree
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -39,143 +40,182 @@ class CubaPlugin implements Plugin<Project> {
             mavenRepo(urls: "$project.repositoryUrl/groups/work")
         }
 
-        if (project == project.rootProject) {
+        if (project == project.rootProject)
+            applyToRootProject(project)
+        else
+            applyToModuleProject(project)
+    }
+    
+    private void applyToRootProject(Project project) {
+        project.configurations {
+            tomcat
+        }
 
-            project.configurations {
-                tomcat
-            }
+        project.dependencies {
+            tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '6.0.29', ext: 'zip')
+            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.0-SNAPSHOT', ext: 'zip')
+        }
 
-            project.dependencies {
-                tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '6.0.29', ext: 'zip')
-                tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.0-SNAPSHOT', ext: 'zip')
-            }
-
-            project.task([description: 'Sets up Tomcat instance'], 'setupTomcat') << {
-                project.configurations.tomcat.files.each { dep ->
-                    project.copy {
-                        from project.zipTree(dep.absolutePath)
-                        into project.tomcatDir
-                    }
+        project.task([description: 'Sets up Tomcat instance'], 'setupTomcat') << {
+            project.configurations.tomcat.files.each { dep ->
+                project.copy {
+                    from project.zipTree(dep.absolutePath)
+                    into project.tomcatDir
                 }
-            }
-
-            project.task([description: 'Starts local Tomcat'], 'start') << {
-                ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
-                    env(key: 'NOPAUSE', value: true)
-                    arg(line: '/c start callAndExit.bat debug.bat')
-                }
-            }
-
-            project.task([description: 'Stops local Tomcat'], 'stop') << {
-                ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
-                    env(key: 'NOPAUSE', value: true)
-                    arg(line: '/c start callAndExit.bat shutdown.bat')
-                }
-            }
-
-            if (project.convention.plugins.idea) {
-                project.ideaProject.withXml { provider ->
-                    def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                    node.@languageLevel = 'JDK_1_6'
-                    node.@'project-jdk-name' = '1.6'
-
-                    node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                    node.@default = 'Haulmont'
-                    node = node.appendNode('copyright')
-                    node.appendNode('option', [name: 'notice', value: 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'])
-                    node.appendNode('option', [name: 'keyword', value: 'Copyright'])
-                    node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                    node.appendNode('option', [name: 'myName', value: 'Haulmont'])
-                    node.appendNode('option', [name: 'myLocal', value: 'true'])
-
-                    provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
-                }
-            }
-        } else {
-            project.sourceCompatibility = '1.6'
-
-            project.configurations {
-                provided
-                jdbc
-                deployerJars
-            }
-
-            project.dependencies {
-                deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
-            }
-
-            project.sourceSets {
-                main {
-                    java {
-                        srcDir 'src'
-                        compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
-                    }
-                    resources { srcDir 'src' }
-                }
-                test {
-                    java { 
-                        srcDir 'test' 
-                        compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
-                    }
-                    resources { srcDir 'test' }
-                }
-            }
-            
-            project.uploadArchives.configure {
-                repositories.mavenDeployer {
-                    name = 'httpDeployer'
-                    configuration = project.configurations.deployerJars
-                    repository(url: "$project.repositoryUrl/repositories/" + (project.isSnapshot ? 'snapshots' : 'releases')) {
-                        authentication(userName: project.repositoryUser, password: project.repositoryPassword)
-                    }
-                }
-            }
-            
-            if (project.name.endsWith('-core')) {
-                project.task('assembleDbScripts') << {
-                    if (project.configurations.getAsMap().dbscripts) {
-                        project.logger.info '>>> project has dbscripts'
-                        File dir = new File("${project.buildDir}/db")
-                        if (dir.exists()) {
-                            project.logger.info ">>> delete $dir.absolutePath"
-                            project.delete(dir)
-                        }
-                        project.configurations.dbscripts.files.each { dep ->
-                            project.logger.info ">>> copy db from: $dep.absolutePath"
-                            project.copy {
-                                from project.zipTree(dep.absolutePath)
-                                into dir
-                            }
-                        }
-                        File srcDbDir = new File(project.rootProject.projectDir, 'db')
-                        project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath" 
-                        if (srcDbDir.exists()) {
-                            def lastName = Arrays.asList(dir.list()).sort().last()
-                            def num = lastName.substring(0,2).toInteger()
-                            project.copy {
-                                project.logger.info ">>> copy db from: $srcDbDir.absolutePath" 
-                                from srcDbDir
-                                into "${project.buildDir}/db/${num + 10}-${project.rootProject.name}"
-                            }
-                        }
-                    }
-                }
-                
-                project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
-                    from "${project.buildDir}/db"
-                    exclude '**/*.bat'
-                    classifier = 'db'
-                }
-
-                project.artifacts {
-                    archives project.dbScriptsArchive
-                }
-            }
-            
-            if (project.convention.plugins.idea) {
-                project.ideaModule.scopes += [PROVIDED: [plus: [project.configurations.provided], minus: []]]
             }
         }
+
+        project.task([description: 'Starts local Tomcat'], 'start') << {
+            ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
+                env(key: 'NOPAUSE', value: true)
+                arg(line: '/c start callAndExit.bat debug.bat')
+            }
+        }
+
+        project.task([description: 'Stops local Tomcat'], 'stop') << {
+            ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
+                env(key: 'NOPAUSE', value: true)
+                arg(line: '/c start callAndExit.bat shutdown.bat')
+            }
+        }
+
+        if (project.convention.plugins.idea) {
+            project.ideaProject.withXml { provider ->
+                def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
+                node.@languageLevel = 'JDK_1_6'
+                node.@'project-jdk-name' = '1.6'
+
+                node = provider.node.component.find { it.@name == 'CopyrightManager' }
+                node.@default = 'Haulmont'
+                node = node.appendNode('copyright')
+                node.appendNode('option', [name: 'notice', value: 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'])
+                node.appendNode('option', [name: 'keyword', value: 'Copyright'])
+                node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
+                node.appendNode('option', [name: 'myName', value: 'Haulmont'])
+                node.appendNode('option', [name: 'myLocal', value: 'true'])
+
+                provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
+                
+                node = provider.node.component.find { it.@name == 'CompilerConfiguration' }
+                node = node.appendNode('excludeFromCompile')
+                findEntityDirectories(project).each { dir ->
+                    node.appendNode('directory', [url: "file://$dir", includeSubdirectories: 'true'])
+                }
+            }
+        }
+    }
+    
+    private void applyToModuleProject(Project project) {
+        project.sourceCompatibility = '1.6'
+
+        project.configurations {
+            provided
+            jdbc
+            deployerJars
+        }
+
+        project.dependencies {
+            deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
+        }
+
+        project.sourceSets {
+            main {
+                java {
+                    srcDir 'src'
+                    compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
+                }
+                resources { srcDir 'src' }
+            }
+            test {
+                java { 
+                    srcDir 'test' 
+                    compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
+                }
+                resources { srcDir 'test' }
+            }
+        }
+        
+        project.uploadArchives.configure {
+            repositories.mavenDeployer {
+                name = 'httpDeployer'
+                configuration = project.configurations.deployerJars
+                repository(url: "$project.repositoryUrl/repositories/" + (project.isSnapshot ? 'snapshots' : 'releases')) {
+                    authentication(userName: project.repositoryUser, password: project.repositoryPassword)
+                }
+            }
+        }
+        
+        if (project.name.endsWith('-core')) {
+            project.task('assembleDbScripts') << {
+                if (project.configurations.getAsMap().dbscripts) {
+                    project.logger.info '>>> project has dbscripts'
+                    File dir = new File("${project.buildDir}/db")
+                    if (dir.exists()) {
+                        project.logger.info ">>> delete $dir.absolutePath"
+                        project.delete(dir)
+                    }
+                    project.configurations.dbscripts.files.each { dep ->
+                        project.logger.info ">>> copy db from: $dep.absolutePath"
+                        project.copy {
+                            from project.zipTree(dep.absolutePath)
+                            into dir
+                        }
+                    }
+                    File srcDbDir = new File(project.rootProject.projectDir, 'db')
+                    project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath" 
+                    if (srcDbDir.exists()) {
+                        def lastName = Arrays.asList(dir.list()).sort().last()
+                        def num = lastName.substring(0,2).toInteger()
+                        project.copy {
+                            project.logger.info ">>> copy db from: $srcDbDir.absolutePath" 
+                            from srcDbDir
+                            into "${project.buildDir}/db/${num + 10}-${project.rootProject.name}"
+                        }
+                    }
+                }
+            }
+            
+            project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
+                from "${project.buildDir}/db"
+                exclude '**/*.bat'
+                classifier = 'db'
+            }
+
+            project.artifacts {
+                archives project.dbScriptsArchive
+            }
+        }
+        
+        if (project.convention.plugins.idea) {
+            project.ideaModule.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
+            // Uncomment this and remove withXml hook after upgrade to milestone-4
+            // project.ideaModule.inheritOutputDirs = false
+            // project.ideaModule.outputDir = new File(project.buildDir, 'classes/main')
+            // project.ideaModule.testOutputDir = new File(project.buildDir, 'classes/test')
+            project.ideaModule.withXml { provider ->
+                def node = provider.node.component.find { it.@name == 'NewModuleRootManager' }
+                node.@'inherit-compiler-output' = 'false'
+                node.appendNode('output', [url: "file://${project.buildDir}/classes/main"])
+                node.appendNode('output-test', [url: "file://${project.buildDir}/classes/test"])
+            }    
+        }
+    }
+    
+    private Collection findEntityDirectories(Project rootProject) {
+        Set result = new HashSet()
+        rootProject.subprojects.each { proj ->
+            if (proj.hasProperty('sourceSets')) {
+                FileTree tree = proj.sourceSets.main.java.matching {
+                    include('**/entity/**')
+                }
+                tree.visit { details ->
+                    if (!details.file.isDirectory()) {
+                        result.add(details.file.parent)
+                    }
+                }
+            }
+        }
+        return result
     }
 }
 
