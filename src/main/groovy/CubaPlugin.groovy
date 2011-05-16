@@ -265,14 +265,12 @@ class CubaDeployment extends DefaultTask {
 
     @TaskAction
     def deploy() {
-        project.copy {
-            from 'web'
-            into "${project.tomcatDir}/webapps/$appName"
-        }
+        project.logger.info(">>> copying from configurations.jdbc to ${project.tomcatDir}/lib")
         project.copy {
             from project.configurations.jdbc
             into "${project.tomcatDir}/lib"
         }
+        project.logger.info(">>> copying shared libs from configurations.runtime")
         project.copy {
             from project.configurations.runtime
             into "${project.tomcatDir}/shared/lib"
@@ -281,6 +279,7 @@ class CubaDeployment extends DefaultTask {
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } == null)
             }
         }
+        project.logger.info(">>> copying app libs from configurations.runtime")
         project.copy {
             from project.configurations.runtime
             from project.libsDir
@@ -292,6 +291,7 @@ class CubaDeployment extends DefaultTask {
         }
         
         if (project.configurations.getAsMap().dbscripts) {
+            project.logger.info(">>> copying dbscripts from ${project.buildDir}/db to ${project.tomcatDir}/webapps/$appName/WEB-INF/db")
             project.copy {
                 from "${project.buildDir}/db"
                 into "${project.tomcatDir}/webapps/$appName/WEB-INF/db"
@@ -300,21 +300,32 @@ class CubaDeployment extends DefaultTask {
         
         if (project.configurations.getAsMap().webcontent) {
             project.configurations.webcontent.files.each { dep ->
+                project.logger.info(">>> copying webcontent from $dep.absolutePath to ${project.tomcatDir}/webapps/$appName")
                 project.copy {
                     from project.zipTree(dep.absolutePath)
                     into "${project.tomcatDir}/webapps/$appName"
                     exclude '**/web.xml'
                 }
             }
+            project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${project.tomcatDir}/webapps/$appName")
             project.copy {
                 from "${project.buildDir}/web"
                 into "${project.tomcatDir}/webapps/$appName"
             }
         }
         
-        if (doAfter)
+        project.logger.info(">>> copying from web to ${project.tomcatDir}/webapps/$appName")
+        project.copy {
+            from 'web'
+            into "${project.tomcatDir}/webapps/$appName"
+        }
+
+        if (doAfter) {
+            project.logger.info(">>> calling doAfter")
             doAfter.call()
-        
+        }
+            
+        project.logger.info(">>> touch ${project.tomcatDir}/webapps/$appName/WEB-INF/web.xml")
         File webXml = new File("${project.tomcatDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
