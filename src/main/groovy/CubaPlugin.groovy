@@ -286,7 +286,8 @@ class CubaDeployment extends DefaultTask {
             into "${project.tomcatDir}/webapps/$appName/WEB-INF/lib"
             include { details ->
                 def name = details.file.name
-                return !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } != null)
+                return !(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) && 
+                    (jarNames.find { name.startsWith(it) } != null)
             }
         }
         
