@@ -407,6 +407,7 @@ class CubaDbCreation extends DefaultTask {
                             return name.endsWith("create-db.sql")
                         }
                     })
+		    Arrays.sort(scriptFiles)
                     files.addAll(Arrays.asList(scriptFiles))
                 }
             }
