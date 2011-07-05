@@ -161,9 +161,9 @@ class CubaPlugin implements Plugin<Project> {
                             into dir
                         }
                     }
-                    File srcDbDir = new File(project.rootProject.projectDir, 'db')
+                    File srcDbDir = new File(project.projectDir, 'db')
                     project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath" 
-                    if (srcDbDir.exists()) {
+                    if (srcDbDir.exists() && dir.exists()) {
                         def lastName = Arrays.asList(dir.list()).sort().last()
                         def num = lastName.substring(0,2).toInteger()
                         project.copy {
@@ -178,6 +178,7 @@ class CubaPlugin implements Plugin<Project> {
             project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
                 from "${project.buildDir}/db"
                 exclude '**/*.bat'
+                exclude '**/*.sh'
                 classifier = 'db'
             }
 
