@@ -63,19 +63,28 @@ class CubaPlugin implements Plugin<Project> {
                     into project.tomcatDir
                 }
             }
+            ant.chmod(osfamily: 'unix', perm: 'a+x') {
+                fileset(dir: "${project.tomcatDir}/bin", includes: '*.sh')
+            }
         }
 
         project.task([description: 'Starts local Tomcat'], 'start') << {
-            ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
+            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
                 env(key: 'NOPAUSE', value: true)
                 arg(line: '/c start callAndExit.bat debug.bat')
+            }
+            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
+                arg(line: 'debug.sh')
             }
         }
 
         project.task([description: 'Stops local Tomcat'], 'stop') << {
-            ant.exec(dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
+            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
                 env(key: 'NOPAUSE', value: true)
                 arg(line: '/c start callAndExit.bat shutdown.bat')
+            }
+            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
+                arg(line: 'shutdown.sh')
             }
         }
 
