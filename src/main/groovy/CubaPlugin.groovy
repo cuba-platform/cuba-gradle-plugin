@@ -87,6 +87,29 @@ class CubaPlugin implements Plugin<Project> {
                 arg(line: 'shutdown.sh')
             }
         }
+        
+        project.task([description: 'Close tomcat after tests'], 'closeTomcat') << {
+            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
+                env(key: 'NOPAUSE', value: true)
+                arg(line: '/c start callAndExit.bat shutdown.bat')
+            }
+            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
+                arg(line: 'shutdown.sh')
+            }
+        }
+        
+        project.task([description: 'Delete Tomcat instance'], 'dropTomcat') << {     
+            File dir = new File(project.tomcatDir)
+            if (dir.exists()) {
+                project.tasks['stop'].execute()
+                ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
+                    not {
+                        socket(server: 'localhost', port: '8787')
+                    }
+                }
+                project.delete(dir)
+            }
+        }
 
         if (project.convention.plugins.idea) {
             project.ideaProject.withXml { provider ->
