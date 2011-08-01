@@ -266,10 +266,24 @@ class CubaEnhancing extends DefaultTask {
         if (persistenceXml) {
             File f = new File(persistenceXml)
             if (f.exists()) {
+                def persistence = new XmlParser().parse(f)
+                def pu = persistence.'persistence-unit'[0]
+                def properties = pu.properties[0]
+                if (!properties) 
+                    properties = pu.appendNode('properties')
+                def prop = properties.find { it.@name == 'openjpa.DetachState' }
+                if (!prop)
+                    prop = properties.appendNode('property', [name: 'openjpa.DetachState', value: 'loaded(DetachedStateField=true, DetachedStateManager=true)'])
+                
+                File tmpDir = new File(project.buildDir, 'tmp')
+                tmpDir.mkdirs()
+                File tmpFile = new File(tmpDir, 'persistence.xml')
+                new XmlNodePrinter(new PrintWriter(new FileWriter(tmpFile))).print(persistence)
+                
                 project.javaexec {
                     main = 'org.apache.openjpa.enhance.PCEnhancer'
                     classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
-                    args('-properties', persistenceXml)
+                    args('-properties', tmpFile)
                 }
             }
         }
