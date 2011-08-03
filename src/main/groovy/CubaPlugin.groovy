@@ -10,6 +10,7 @@ import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.file.FileTree
+import org.gradle.api.file.FileCollection
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -383,6 +384,96 @@ class CubaDeployment extends DefaultTask {
     }
 }
 
+class CubaWebStartCreation extends DefaultTask {
+    
+    def jnlpTemplateName = "${project.projectDir}/webstart/template.jnlp"
+    def indexFileName
+    def baseHost = 'http://localhost:8080/'
+    def basePath = "${project.applicationName}-webstart"
+    def signJarsAlias = 'signJars'
+    def signJarsPassword = 'HaulmontSignJars'
+    def signJarsKeystore = "${project.projectDir}/webstart/sign-jars-keystore.jks"
+    
+    CubaWebStartCreation() {
+        setDescription('Creates web start distribution')
+    }
+    
+    @TaskAction
+    def create() {
+        File distDir = new File(project.buildDir, "distributions/${basePath}")
+        File libDir = new File(distDir, 'lib')
+        libDir.mkdirs()
+        
+        project.logger.info(">>> copying app libs from configurations.runtime to ${libDir}")
+        
+        project.copy {
+            from project.configurations.runtime
+            from project.libsDir
+            into libDir
+            include { details ->
+                def name = details.file.name
+                return !(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar'))
+            }
+        }
+        
+        project.logger.info(">>> signing jars in ${libDir}")
+        
+        libDir.listFiles().each {
+            ant.signjar(jar: "${it}", alias: signJarsAlias, keystore: signJarsKeystore, storepass: signJarsPassword)
+        }
+        
+        project.logger.info(">>> creating JNLP file from ${jnlpTemplateName}")
+        
+        File jnlpTemplate = new File(jnlpTemplateName)
+        def jnlpNode = new XmlParser().parse(jnlpTemplate)
+        
+        if (!baseHost.endsWith('/'))
+            baseHost += '/'
+            
+        jnlpNode.@codebase = baseHost + basePath
+        def jnlpName = jnlpNode.@href
+        
+        def resourcesNode = jnlpNode.resources[0]
+        
+        libDir.listFiles().each {
+            resourcesNode.appendNode('jar', [href: "lib/${it.getName()}", download: 'eager'])
+        }
+        
+        File jnlpFile = new File(distDir, jnlpName)
+        new XmlNodePrinter(new PrintWriter(new FileWriter(jnlpFile))).print(jnlpNode)
+        
+        if (indexFileName) {
+            project.logger.info(">>> copying indes file from ${indexFileName} to ${distDir}")
+            project.copy {
+                from indexFileName
+                into distDir.getAbsolutePath()
+            }
+        }
+    }
+}    
+
+class CubaWebStartDeployment extends DefaultTask {
+
+    def basePath = "${project.applicationName}-webstart"
+
+    CubaWebStartDeployment() {
+        setDescription('Deploys web start distribution into the local Tomcat')
+    }
+
+    @TaskAction
+    def deploy() {
+        File distDir = new File(project.buildDir, "distributions/${basePath}")
+        
+        project.logger.info(">>> copying web start distribution from ${distDir} to ${project.tomcatDir}/webapps/$basePath")
+        
+        project.copy {
+            from distDir
+            into "${project.tomcatDir}/webapps/$basePath"
+        }
+    }    
+}
+    
+                        
 class CubaDbCreation extends DefaultTask {
     
     def dbms
