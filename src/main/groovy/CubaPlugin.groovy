@@ -69,47 +69,17 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        project.task([description: 'Starts local Tomcat'], 'start') << {
-            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
-                env(key: 'NOPAUSE', value: true)
-                arg(line: '/c start callAndExit.bat debug.bat')
-            }
-            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
-                arg(line: 'debug.sh')
-            }
+        project.task([type: CubaStartTomcat], 'start') {
+            tomcatRootDir = project.tomcatDir
         }
 
-        project.task([description: 'Stops local Tomcat'], 'stop') << {
-            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
-                env(key: 'NOPAUSE', value: true)
-                arg(line: '/c start callAndExit.bat shutdown.bat')
-            }
-            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
-                arg(line: 'shutdown.sh')
-            }
+        project.task([type: CubaStopTomcat], 'stop') {
+            tomcatRootDir = project.tomcatDir
         }
         
-        project.task([description: 'Close tomcat after tests'], 'closeTomcat') << {
-            ant.exec(osfamily: 'windows', dir: "${project.tomcatDir}/bin", executable: 'cmd.exe', spawn: true) {
-                env(key: 'NOPAUSE', value: true)
-                arg(line: '/c start callAndExit.bat shutdown.bat')
-            }
-            ant.exec(osfamily: 'unix', dir: "${project.tomcatDir}/bin", executable: '/bin/sh') {
-                arg(line: 'shutdown.sh')
-            }
-        }
-        
-        project.task([description: 'Delete Tomcat instance'], 'dropTomcat') << {     
-            File dir = new File(project.tomcatDir)
-            if (dir.exists()) {
-                project.tasks['stop'].execute()
-                ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
-                    not {
-                        socket(server: 'localhost', port: '8787')
-                    }
-                }
-                project.delete(dir)
-            }
+        project.task([type: CubaDropTomcat], 'dropTomcat') {     
+            tomcatRootDir = project.tomcatDir
+            listeningPort = '8787'
         }
 
         if (project.convention.plugins.idea) {
@@ -473,7 +443,6 @@ class CubaWebStartDeployment extends DefaultTask {
     }    
 }
     
-                        
 class CubaDbCreation extends DefaultTask {
     
     def dbms
@@ -554,3 +523,79 @@ class CubaDbCreation extends DefaultTask {
     }
 
 }
+
+class CubaStartTomcat extends DefaultTask {
+    
+    def tomcatRootDir = project.tomcatDir
+    
+    CubaStartTomcat() {
+        setDescription('Starts local Tomcat')
+    }
+    
+    @TaskAction
+    def deploy() {
+        def binDir = "${tomcatRootDir}/bin"
+        ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
+            env(key: 'NOPAUSE', value: true)
+            arg(line: '/c start callAndExit.bat debug.bat')
+        }
+        ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
+            arg(line: 'debug.sh')
+        }
+    }    
+}
+
+class CubaStopTomcat extends DefaultTask {
+    
+    def tomcatRootDir = project.tomcatDir
+    
+    CubaStopTomcat() {
+        setDescription('Stops local Tomcat')
+    }
+    
+    @TaskAction
+    def deploy() {
+        def binDir = "${tomcatRootDir}/bin"
+        ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
+            env(key: 'NOPAUSE', value: true)
+            arg(line: '/c start callAndExit.bat shutdown.bat')
+        }
+        ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
+            arg(line: 'shutdown.sh')
+        }
+    }    
+}
+
+class CubaDropTomcat extends DefaultTask {
+    
+    def tomcatRootDir = project.tomcatDir
+    def listeningPort = '8787'
+    
+    CubaDropTomcat() {
+        setDescription('Deletes local Tomcat')
+    }
+    
+    @TaskAction
+    def deploy() {
+        File dir = new File(tomcatRootDir)
+        if (dir.exists()) {
+            // stop
+            def binDir = "${tomcatRootDir}/bin"
+            ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
+                env(key: 'NOPAUSE', value: true)
+                arg(line: '/c start callAndExit.bat shutdown.bat')
+            }
+            ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
+                arg(line: 'shutdown.sh')
+            }
+            // wait and delete
+            ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
+                not {
+                    socket(server: 'localhost', port: listeningPort)
+                }
+            }
+            project.delete(dir)
+        }
+    }    
+}
+
