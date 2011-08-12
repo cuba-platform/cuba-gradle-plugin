@@ -57,16 +57,8 @@ class CubaPlugin implements Plugin<Project> {
             tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.0-SNAPSHOT', ext: 'zip')
         }
 
-        project.task([description: 'Sets up Tomcat instance'], 'setupTomcat') << {
-            project.configurations.tomcat.files.each { dep ->
-                project.copy {
-                    from project.zipTree(dep.absolutePath)
-                    into project.tomcatDir
-                }
-            }
-            ant.chmod(osfamily: 'unix', perm: 'a+x') {
-                fileset(dir: "${project.tomcatDir}/bin", includes: '*.sh')
-            }
+        project.task([type: CubaSetupTomcat], 'setupTomcat') {
+            tomcatRootDir = project.tomcatDir
         }
 
         project.task([type: CubaStartTomcat], 'start') {
@@ -276,6 +268,7 @@ class CubaDeployment extends DefaultTask {
     def jarNames
     def appName
     def Closure doAfter
+    def tomcatRootDir = project.tomcatDir
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
@@ -283,15 +276,15 @@ class CubaDeployment extends DefaultTask {
 
     @TaskAction
     def deploy() {
-        project.logger.info(">>> copying from configurations.jdbc to ${project.tomcatDir}/lib")
+        project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc
-            into "${project.tomcatDir}/lib"
+            into "${tomcatRootDir}/lib"
         }
         project.logger.info(">>> copying shared libs from configurations.runtime")
         project.copy {
             from project.configurations.runtime
-            into "${project.tomcatDir}/shared/lib"
+            into "${tomcatRootDir}/shared/lib"
             include { details ->
                 def name = details.file.name
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } == null)
@@ -301,7 +294,7 @@ class CubaDeployment extends DefaultTask {
         project.copy {
             from project.configurations.runtime
             from project.libsDir
-            into "${project.tomcatDir}/webapps/$appName/WEB-INF/lib"
+            into "${tomcatRootDir}/webapps/$appName/WEB-INF/lib"
             include { details ->
                 def name = details.file.name
                 return !(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) && 
@@ -310,33 +303,33 @@ class CubaDeployment extends DefaultTask {
         }
         
         if (project.configurations.getAsMap().dbscripts) {
-            project.logger.info(">>> copying dbscripts from ${project.buildDir}/db to ${project.tomcatDir}/webapps/$appName/WEB-INF/db")
+            project.logger.info(">>> copying dbscripts from ${project.buildDir}/db to ${tomcatRootDir}/webapps/$appName/WEB-INF/db")
             project.copy {
                 from "${project.buildDir}/db"
-                into "${project.tomcatDir}/webapps/$appName/WEB-INF/db"
+                into "${tomcatRootDir}/webapps/$appName/WEB-INF/db"
             }
         }
         
         if (project.configurations.getAsMap().webcontent) {
             project.configurations.webcontent.files.each { dep ->
-                project.logger.info(">>> copying webcontent from $dep.absolutePath to ${project.tomcatDir}/webapps/$appName")
+                project.logger.info(">>> copying webcontent from $dep.absolutePath to ${tomcatRootDir}/webapps/$appName")
                 project.copy {
                     from project.zipTree(dep.absolutePath)
-                    into "${project.tomcatDir}/webapps/$appName"
+                    into "${tomcatRootDir}/webapps/$appName"
                     exclude '**/web.xml'
                 }
             }
-            project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${project.tomcatDir}/webapps/$appName")
+            project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${tomcatRootDir}/webapps/$appName")
             project.copy {
                 from "${project.buildDir}/web"
-                into "${project.tomcatDir}/webapps/$appName"
+                into "${tomcatRootDir}/webapps/$appName"
             }
         }
         
-        project.logger.info(">>> copying from web to ${project.tomcatDir}/webapps/$appName")
+        project.logger.info(">>> copying from web to ${tomcatRootDir}/webapps/$appName")
         project.copy {
             from 'web'
-            into "${project.tomcatDir}/webapps/$appName"
+            into "${tomcatRootDir}/webapps/$appName"
         }
 
         if (doAfter) {
@@ -344,8 +337,8 @@ class CubaDeployment extends DefaultTask {
             doAfter.call()
         }
             
-        project.logger.info(">>> touch ${project.tomcatDir}/webapps/$appName/WEB-INF/web.xml")
-        File webXml = new File("${project.tomcatDir}/webapps/$appName/WEB-INF/web.xml")
+        project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
+        File webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
@@ -524,6 +517,28 @@ class CubaDbCreation extends DefaultTask {
 
 }
 
+class CubaSetupTomcat extends DefaultTask {
+    
+    def tomcatRootDir = project.tomcatDir
+    
+    CubaSetupTomcat() {
+        setDescription('Sets up local Tomcat')
+    }
+    
+    @TaskAction
+    def setup() {
+        project.configurations.tomcat.files.each { dep ->
+            project.copy {
+                from project.zipTree(dep.absolutePath)
+                into tomcatRootDir
+            }
+        }
+        ant.chmod(osfamily: 'unix', perm: 'a+x') {
+            fileset(dir: "${tomcatRootDir}/bin", includes: '*.sh')
+        }
+    }    
+}
+
 class CubaStartTomcat extends DefaultTask {
     
     def tomcatRootDir = project.tomcatDir
@@ -535,6 +550,7 @@ class CubaStartTomcat extends DefaultTask {
     @TaskAction
     def deploy() {
         def binDir = "${tomcatRootDir}/bin"
+        project.logger.info ">>> starting $tomcatRootDir"
         ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
             env(key: 'NOPAUSE', value: true)
             arg(line: '/c start callAndExit.bat debug.bat')
@@ -556,6 +572,7 @@ class CubaStopTomcat extends DefaultTask {
     @TaskAction
     def deploy() {
         def binDir = "${tomcatRootDir}/bin"
+        project.logger.info ">>> stopping $tomcatRootDir"
         ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
             env(key: 'NOPAUSE', value: true)
             arg(line: '/c start callAndExit.bat shutdown.bat')
@@ -579,6 +596,7 @@ class CubaDropTomcat extends DefaultTask {
     def deploy() {
         File dir = new File(tomcatRootDir)
         if (dir.exists()) {
+            project.logger.info ">>> deleting $dir"
             // stop
             def binDir = "${tomcatRootDir}/bin"
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
@@ -592,6 +610,12 @@ class CubaDropTomcat extends DefaultTask {
             ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
                 not {
                     socket(server: 'localhost', port: listeningPort)
+                }
+            }
+            if (listeningPort) {
+                // kill to be sure
+                ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
+                    arg(line: "kill_by_port.sh $listeningPort")
                 }
             }
             project.delete(dir)
