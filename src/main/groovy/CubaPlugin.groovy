@@ -441,6 +441,7 @@ class CubaDbCreation extends DefaultTask {
     def dbms
     def delimiter
     def host = 'localhost'
+    def dbFolder = 'db'
     def dbName
     def dbUser
     def dbPassword
@@ -493,7 +494,7 @@ class CubaDbCreation extends DefaultTask {
     
     private List<File> getInitScripts() {
         List<File> files = []
-        File dbDir = new File(project.buildDir, 'db')
+        File dbDir = new File(project.buildDir, dbFolder)
         if (dbDir.exists()) {
             String[] moduleDirs = dbDir.list()
             Arrays.sort(moduleDirs)
