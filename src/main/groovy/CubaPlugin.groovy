@@ -269,6 +269,7 @@ class CubaDeployment extends DefaultTask {
     def appName
     def Closure doAfter
     def tomcatRootDir = project.tomcatDir
+    def webcontentExclude = []
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
@@ -311,12 +312,14 @@ class CubaDeployment extends DefaultTask {
         }
         
         if (project.configurations.getAsMap().webcontent) {
+            def excludePatterns = ['**/web.xml'] + webcontentExclude
             project.configurations.webcontent.files.each { dep ->
                 project.logger.info(">>> copying webcontent from $dep.absolutePath to ${tomcatRootDir}/webapps/$appName")
                 project.copy {
                     from project.zipTree(dep.absolutePath)
                     into "${tomcatRootDir}/webapps/$appName"
-                    exclude '**/web.xml'
+                    excludes = excludePatterns
+                    includeEmptyDirs = false
                 }
             }
             project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${tomcatRootDir}/webapps/$appName")
