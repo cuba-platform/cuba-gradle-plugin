@@ -38,7 +38,12 @@ class CubaPlugin implements Plugin<Project> {
 
         project.repositories {
             mavenLocal()
-            mavenRepo(urls: "$project.repositoryUrl/groups/work")
+            def rep = mavenRepo(url: "$project.repositoryUrl/groups/work")
+            if (project.hasProperty("snapshotTimeout")) {
+                project.logger.info(">>> snapshotTimeout = $project.snapshotTimeout ms")
+                rep.setSnapshotTimeout(project.snapshotTimeout)
+            } else
+                rep.setSnapshotTimeout(0)
         }
 
         if (project == project.rootProject)
@@ -74,27 +79,30 @@ class CubaPlugin implements Plugin<Project> {
             listeningPort = '8787'
         }
 
-        if (project.convention.plugins.idea) {
-            project.ideaProject.withXml { provider ->
-                def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                node.@languageLevel = 'JDK_1_6'
-                node.@'project-jdk-name' = '1.6'
+        if (project.idea) {
+            project.logger.info ">>> configuring IDEA project"
+            project.idea.project.ipr {
+                withXml { provider ->
+                    def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
+                    node.@languageLevel = 'JDK_1_6'
+                    node.@'project-jdk-name' = '1.6'
 
-                node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                node.@default = 'Haulmont'
-                node = node.appendNode('copyright')
-                node.appendNode('option', [name: 'notice', value: 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'])
-                node.appendNode('option', [name: 'keyword', value: 'Copyright'])
-                node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                node.appendNode('option', [name: 'myName', value: 'Haulmont'])
-                node.appendNode('option', [name: 'myLocal', value: 'true'])
+                    node = provider.node.component.find { it.@name == 'CopyrightManager' }
+                    node.@default = 'Haulmont'
+                    node = node.appendNode('copyright')
+                    node.appendNode('option', [name: 'notice', value: 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'])
+                    node.appendNode('option', [name: 'keyword', value: 'Copyright'])
+                    node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
+                    node.appendNode('option', [name: 'myName', value: 'Haulmont'])
+                    node.appendNode('option', [name: 'myLocal', value: 'true'])
 
-                provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
-                
-                node = provider.node.component.find { it.@name == 'CompilerConfiguration' }
-                node = node.appendNode('excludeFromCompile')
-                findEntityDirectories(project).each { dir ->
-                    node.appendNode('directory', [url: "file://$dir", includeSubdirectories: 'true'])
+                    provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
+
+                    node = provider.node.component.find { it.@name == 'CompilerConfiguration' }
+                    node = node.appendNode('excludeFromCompile')
+                    findEntityDirectories(project).each { dir ->
+                        node.appendNode('directory', [url: "file://$dir", includeSubdirectories: 'true'])
+                    }
                 }
             }
         }
@@ -182,18 +190,12 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
         
-        if (project.convention.plugins.idea) {
-            project.ideaModule.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
-            // Uncomment this and remove withXml hook after upgrade to milestone-4
-            // project.ideaModule.inheritOutputDirs = false
-            // project.ideaModule.outputDir = new File(project.buildDir, 'classes/main')
-            // project.ideaModule.testOutputDir = new File(project.buildDir, 'classes/test')
-            project.ideaModule.withXml { provider ->
-                def node = provider.node.component.find { it.@name == 'NewModuleRootManager' }
-                node.@'inherit-compiler-output' = 'false'
-                node.appendNode('output', [url: "file://${project.buildDir}/classes/main"])
-                node.appendNode('output-test', [url: "file://${project.buildDir}/classes/test"])
-            }    
+        if (project.idea) {
+            project.logger.info ">>> configuring IDEA module $project.name"
+            project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
+            project.idea.module.inheritOutputDirs = false
+            project.idea.module.outputDir = new File(project.buildDir, 'classes/main')
+            project.idea.module.testOutputDir = new File(project.buildDir, 'classes/test')
         }
     }
     
@@ -245,7 +247,7 @@ class CubaEnhancing extends DefaultTask {
                 
                 project.javaexec {
                     main = 'org.apache.openjpa.enhance.PCEnhancer'
-                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
                     args('-properties', tmpFile)
                 }
             }
@@ -255,7 +257,7 @@ class CubaEnhancing extends DefaultTask {
             if (f.exists()) {
                 project.javaexec {
                     main = 'com.haulmont.cuba.core.sys.CubaTransientEnhancer'
-                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.classesDir)
+                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
                     args(metadataXml)
                 }
             }

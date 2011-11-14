@@ -1,9 +1,10 @@
 apply plugin: 'groovy'
 apply plugin: 'maven'
+apply plugin: 'idea'
 
 isSnapshot = true
 group = 'com.haulmont.gradle'
-version = '1.0' + (isSnapshot ? '-SNAPSHOT' : '')
+version = '1.1' + (isSnapshot ? '-SNAPSHOT' : '')
 
 repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
 repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -11,7 +12,7 @@ repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
 repositories {
     mavenLocal()
-    mavenRepo(urls: "$repositoryUrl/groups/work")
+    mavenRepo(url: "$repositoryUrl/groups/work")
 }
 
 org.apache.ivy.util.url.CredentialsStore.INSTANCE.addCredentials(
