@@ -37,6 +37,7 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
         log = LogFactory.getLog(OpenJPAConfiguration.LOG_ENHANCE);
     }
 
+    @Override
     public void run(BCClass bc, ClassMetaData meta) {
         _pc = bc;
         _managedType = bc;
@@ -116,6 +117,7 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
         }
     }
 
+    @Override
     public boolean skipEnhance(BCMethod m) {
         return false;
     }
