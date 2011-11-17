@@ -29,21 +29,15 @@ class CubaPlugin implements Plugin<Project> {
         if (!project.hasProperty('repositoryPassword'))
             project.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
-        org.apache.ivy.util.url.CredentialsStore.INSTANCE.addCredentials(
-            'Sonatype Nexus Repository Manager',
-            'repository.haulmont.com',
-            project.repositoryUser,
-            project.repositoryPassword
-        )
-
         project.repositories {
             mavenLocal()
-            def rep = mavenRepo(url: "$project.repositoryUrl/groups/work")
-            if (project.hasProperty("snapshotTimeout")) {
-                project.logger.info(">>> snapshotTimeout = $project.snapshotTimeout ms")
-                rep.setSnapshotTimeout(project.snapshotTimeout)
-            } else
-                rep.setSnapshotTimeout(0)
+            maven {
+                credentials {
+                    username project.repositoryUser
+                    password project.repositoryPassword
+                }
+                url "$project.repositoryUrl/groups/work"
+            }
         }
 
         if (project == project.rootProject)
@@ -238,13 +232,13 @@ class CubaEnhancing extends DefaultTask {
                     properties = pu.appendNode('properties')
                 def prop = properties.find { it.@name == 'openjpa.DetachState' }
                 if (!prop)
-                    prop = properties.appendNode('property', [name: 'openjpa.DetachState', value: 'loaded(DetachedStateField=true, DetachedStateManager=true)'])
+                    properties.appendNode('property', [name: 'openjpa.DetachState', value: 'loaded(DetachedStateField=true, DetachedStateManager=true)'])
                 
                 File tmpDir = new File(project.buildDir, 'tmp')
                 tmpDir.mkdirs()
                 File tmpFile = new File(tmpDir, 'persistence.xml')
                 new XmlNodePrinter(new PrintWriter(new FileWriter(tmpFile))).print(persistence)
-                
+
                 project.javaexec {
                     main = 'org.apache.openjpa.enhance.PCEnhancer'
                     classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
@@ -256,7 +250,7 @@ class CubaEnhancing extends DefaultTask {
             File f = new File(persistenceXml)
             if (f.exists()) {
                 project.javaexec {
-                    main = 'com.haulmont.cuba.core.sys.CubaTransientEnhancer'
+                    main = 'CubaTransientEnhancer'
                     classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
                     args(metadataXml)
                 }
@@ -628,4 +622,3 @@ class CubaDropTomcat extends DefaultTask {
         }
     }    
 }
-

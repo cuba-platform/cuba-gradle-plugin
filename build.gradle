@@ -1,10 +1,11 @@
+apply plugin: 'java'
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'idea'
 
 isSnapshot = true
 group = 'com.haulmont.gradle'
-version = '1.1' + (isSnapshot ? '-SNAPSHOT' : '')
+version = '1.2' + (isSnapshot ? '-SNAPSHOT' : '')
 
 repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
 repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -13,22 +14,24 @@ repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 repositories {
     mavenLocal()
     mavenRepo(url: "$repositoryUrl/groups/work")
+    maven {
+        credentials {
+            username repositoryUser
+            password repositoryPassword
+        }
+        url "$repositoryUrl/groups/work"
+    }
 }
-
-org.apache.ivy.util.url.CredentialsStore.INSTANCE.addCredentials(
-    'Sonatype Nexus Repository Manager',
-    'repository.haulmont.com',
-    repositoryUser,
-    repositoryPassword
-)
 
 configurations {
     deployerJars
 }
 
 dependencies {
-    compile gradleApi()
-    groovy localGroovy()
+    compile(group: 'org.apache.openjpa', name: 'openjpa', version: '2.1.1')
+    compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
+    compile(gradleApi())
+    groovy(localGroovy())
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
 }
 
