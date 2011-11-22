@@ -774,7 +774,8 @@ class CubaWebToolkit extends ProjectAllWebToolkit {
             def inheritedSources = []
             for (def artifactName: inheritedArtifacts) {
                 def artifact = providedArtefacts.find { it.name == artifactName }
-                inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
+                if (artifact)
+                    inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
                 def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
                 if (artifactSource)
                     inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
