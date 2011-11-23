@@ -885,10 +885,10 @@ class CubaWebThemeCreation extends DefaultTask {
                     combinedCss.append("\n")
                 }
                 br.close()
+                // delete obsolete css and empty directories
+                cssFile.delete()
             }
-            // delete obsolete css and empty directories
-            cssFile.delete()
-            if ((dir.listFiles() == null) || (dir.listFiles().length == 0))
+            if (dir.isDirectory() && ((dir.listFiles() == null) || (dir.listFiles().length == 0)))
                 dir.delete()
         }
 
