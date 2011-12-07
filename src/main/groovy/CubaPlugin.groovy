@@ -132,12 +132,14 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        project.uploadArchives.configure {
-            repositories.mavenDeployer {
-                name = 'httpDeployer'
-                configuration = project.configurations.deployerJars
-                repository(url: "$project.repositoryUrl/repositories/" + (project.isSnapshot ? 'snapshots' : 'releases')) {
-                    authentication(userName: project.repositoryUser, password: project.repositoryPassword)
+        if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
+            project.uploadArchives.configure {
+                repositories.mavenDeployer {
+                    name = 'httpDeployer'
+                    configuration = project.configurations.deployerJars
+                    repository(url: "$project.repositoryUrl/repositories/" + (project.isSnapshot ? 'snapshots' : 'releases')) {
+                        authentication(userName: project.repositoryUser, password: project.repositoryPassword)
+                    }
                 }
             }
         }
