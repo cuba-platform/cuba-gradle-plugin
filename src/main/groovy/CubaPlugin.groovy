@@ -447,6 +447,7 @@ class CubaDbCreation extends DefaultTask {
     def dbUser
     def dbPassword
     def driverClasspath
+    def dropDbSql
     def createDbSql
 
     @TaskAction
@@ -464,10 +465,36 @@ class CubaDbCreation extends DefaultTask {
             masterUrl = "jdbc:postgresql://$host/postgres"
             if (!delimiter)
                 delimiter = '^'
+            if (!dropDbSql)
+                dropDbSql = "drop database if exists $dbName;"
             if (!createDbSql)
-                createDbSql = "drop database if exists $dbName; create database $dbName with template=template0 encoding='UTF8';"
+                createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
+        } else if (dbms == 'mssql') {
+            driver = 'net.sourceforge.jtds.jdbc.Driver'
+            dbUrl = "jdbc:jtds:sqlserver://$host/$dbName"
+            masterUrl = "jdbc:jtds:sqlserver://$host/master"
+            if (!delimiter)
+                delimiter = '^'
+            if (!dropDbSql)
+                dropDbSql = "drop database $dbName;"
+            if (!createDbSql)
+                createDbSql = "create database $dbName;"
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
+
+        project.logger.info(">>> executing SQL: $dropDbSql")
+        try {
+            project.ant.sql(
+                    classpath: driverClasspath,
+                    driver: driver,
+                    url: masterUrl,
+                    userid: dbUser, password: dbPassword,
+                    autocommit: true,
+                    dropDbSql
+            )
+        } catch (Exception e) {
+            project.logger.warn(e.getMessage())
+        }
 
         project.logger.info(">>> executing SQL: $createDbSql")
         project.ant.sql(
