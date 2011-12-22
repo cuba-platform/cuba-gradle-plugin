@@ -490,6 +490,7 @@ class CubaDbCreation extends DefaultTask {
                     url: masterUrl,
                     userid: dbUser, password: dbPassword,
                     autocommit: true,
+                    encoding: "UTF-8",
                     dropDbSql
             )
         } catch (Exception e) {
@@ -503,6 +504,7 @@ class CubaDbCreation extends DefaultTask {
                 url: masterUrl,
                 userid: dbUser, password: dbPassword,
                 autocommit: true,
+                encoding: "UTF-8",
                 createDbSql
         )
 
@@ -515,7 +517,8 @@ class CubaDbCreation extends DefaultTask {
                     driver: driver,
                     url: dbUrl,
                     userid: dbUser, password: dbPassword,
-                    autocommit: true
+                    autocommit: true,
+                    encoding: "UTF-8"
             )
         }
     }
