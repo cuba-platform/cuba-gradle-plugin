@@ -145,34 +145,7 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project.name.endsWith('-core')) {
-            project.task('assembleDbScripts') << {
-                if (project.configurations.getAsMap().dbscripts) {
-                    project.logger.info '>>> project has dbscripts'
-                    File dir = new File("${project.buildDir}/db")
-                    if (dir.exists()) {
-                        project.logger.info ">>> delete $dir.absolutePath"
-                        project.delete(dir)
-                    }
-                    project.configurations.dbscripts.files.each { dep ->
-                        project.logger.info ">>> copy db from: $dep.absolutePath"
-                        project.copy {
-                            from project.zipTree(dep.absolutePath)
-                            into dir
-                        }
-                    }
-                    File srcDbDir = new File(project.projectDir, 'db')
-                    project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath"
-                    if (srcDbDir.exists() && dir.exists()) {
-                        def lastName = Arrays.asList(dir.list()).sort().last()
-                        def num = lastName.substring(0, 2).toInteger()
-                        project.copy {
-                            project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
-                            from srcDbDir
-                            into "${project.buildDir}/db/${num + 10}-${project.rootProject.name}"
-                        }
-                    }
-                }
-            }
+            project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
 
             project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
                 from "${project.buildDir}/db"
@@ -210,6 +183,49 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
         return result
+    }
+}
+
+class CubaDbScriptsAssembling extends DefaultTask {
+
+    def moduleAlias
+
+    CubaDbScriptsAssembling() {
+        setDescription('Gathers database scripts from module and its dependencies')
+    }
+
+    @TaskAction
+    def assemble() {
+        if (project.configurations.getAsMap().dbscripts) {
+            project.logger.info '>>> project has dbscripts'
+            File dir = new File("${project.buildDir}/db")
+            if (dir.exists()) {
+                project.logger.info ">>> delete $dir.absolutePath"
+                project.delete(dir)
+            }
+            project.configurations.dbscripts.files.each { dep ->
+                project.logger.info ">>> copy db from: $dep.absolutePath"
+                project.copy {
+                    from project.zipTree(dep.absolutePath)
+                    into dir
+                }
+            }
+            File srcDbDir = new File(project.projectDir, 'db')
+            project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath"
+            if (srcDbDir.exists() && dir.exists()) {
+                def moduleDirName = moduleAlias
+                if (!moduleDirName) {
+                    def lastName = Arrays.asList(dir.list()).sort().last()
+                    def num = lastName.substring(0, 2).toInteger()
+                    moduleDirName = "${num + 10}-${project.rootProject.name}"
+                }
+                project.copy {
+                    project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
+                    from srcDbDir
+                    into "${project.buildDir}/db/${moduleDirName}"
+                }
+            }
+        }
     }
 }
 
