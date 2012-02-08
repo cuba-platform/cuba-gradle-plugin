@@ -284,6 +284,7 @@ class CubaDeployment extends DefaultTask {
     def Closure doAfter
     def tomcatRootDir = project.tomcatDir
     def webcontentExclude = []
+    def dbScriptsExcludes = []
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
@@ -322,6 +323,7 @@ class CubaDeployment extends DefaultTask {
             project.copy {
                 from "${project.buildDir}/db"
                 into "${tomcatRootDir}/webapps/$appName/WEB-INF/db"
+                excludes = dbScriptsExcludes
             }
         }
 
