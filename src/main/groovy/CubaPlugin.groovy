@@ -4,6 +4,7 @@
  * Use is subject to license terms.
  */
 
+import com.yahoo.platform.yui.compressor.CssCompressor
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -892,6 +893,7 @@ class CubaWebThemeCreation extends DefaultTask {
     }
 
     def buildCssTheme(themeDir, destFile) {
+
         if (!themeDir.isDirectory()) {
             throw new IllegalArgumentException("ThemeDir should be a directory");
         }
@@ -954,7 +956,10 @@ class CubaWebThemeCreation extends DefaultTask {
 
         def themeFileName = themePath + destFile
         BufferedWriter out = new BufferedWriter(new FileWriter(themeFileName));
-        out.write(combinedCss.toString());
+
+        CssCompressor compressor = new CssCompressor(new StringReader(combinedCss.toString()))
+        compressor.compress(out, 0)
+
         out.close();
 
         project.logger.info(">>> compiled CSS to " + themePath + destFile
