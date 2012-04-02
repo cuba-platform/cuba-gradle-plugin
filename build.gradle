@@ -3,9 +3,8 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'idea'
 
-isSnapshot = true
 group = 'com.haulmont.gradle'
-version = '1.2' + (isSnapshot ? '-SNAPSHOT' : '')
+version = '1.2.0'
 
 repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
 repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -50,7 +49,7 @@ uploadArchives.configure {
     repositories.mavenDeployer {
         name = 'httpDeployer'
         configuration = configurations.deployerJars
-        repository(url: "$repositoryUrl/repositories/" + (isSnapshot ? 'snapshots' : 'releases')) {
+        repository(url: "$repositoryUrl/repositories/releases") {
             authentication(userName: repositoryUser, password: repositoryPassword)
         }
     }
