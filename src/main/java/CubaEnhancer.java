@@ -77,7 +77,7 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
 
             code = method.getCode(false);
 
-            final String fieldName = StringUtils.uncapitalize(name.replace("set", ""));
+            final String fieldName = StringUtils.uncapitalize(name.replaceFirst("set", ""));
 
             code.aload().setThis();
             code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0], new Class[]{});
