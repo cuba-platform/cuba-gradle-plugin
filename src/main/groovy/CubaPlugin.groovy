@@ -53,8 +53,8 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         project.dependencies {
-            tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '6.0.29', ext: 'zip')
-            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.0-SNAPSHOT', ext: 'zip')
+            tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '7.0.27', ext: 'zip')
+            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.1', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat') {
