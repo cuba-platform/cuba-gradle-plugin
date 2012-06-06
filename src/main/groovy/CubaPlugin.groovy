@@ -15,6 +15,8 @@ import org.gradle.api.tasks.bundling.Zip
 
 class CubaPlugin implements Plugin<Project> {
 
+    def HAULMONT_COPYRIGHT = 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'
+
     @Override
     void apply(Project project) {
         project.group = project.artifactGroup
@@ -85,7 +87,11 @@ class CubaPlugin implements Plugin<Project> {
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
                     node.@default = 'Haulmont'
                     node = node.appendNode('copyright')
-                    node.appendNode('option', [name: 'notice', value: 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'])
+                    if (!project.copyright)
+                        node.appendNode('option', [name: 'notice', value: HAULMONT_COPYRIGHT])
+                    else
+                        node.appendNode('option', [name: 'notice', value: project.copyright])
+
                     node.appendNode('option', [name: 'keyword', value: 'Copyright'])
                     node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
                     node.appendNode('option', [name: 'myName', value: 'Haulmont'])
@@ -964,5 +970,69 @@ class CubaWebThemeCreation extends DefaultTask {
 
         project.logger.info(">>> compiled CSS to " + themePath + destFile
                 + " (" + combinedCss.toString().length() + " bytes)");
+    }
+}
+
+/**
+ * Enhance styles in target webContentDir
+ */
+class CubaEnhanceStyles extends DefaultTask {
+
+    private static final String URL_REGEX = "(?:@import\\s*(?:url\\(\\s*)?|url\\(\\s*).(?:\\.|[^)\"'?])*";
+
+    def webContentDir
+
+    CubaEnhanceStyles() {
+        setDescription('Enhance styles in theme')
+    }
+
+    @TaskAction
+    def enhanceStyles() {
+        project.logger.info('>>> enchance styles')
+
+        File contentDir
+        if (webContentDir instanceof File)
+            contentDir = webContentDir
+        else
+            contentDir = new File(webContentDir)
+
+        File themesRoot = new File(contentDir, '/VAADIN/themes/')
+        if (themesRoot.exists()) {
+            themesRoot.eachFile { themeDir ->
+                if (themeDir.isDirectory()) {
+                    project.logger.info(">>> enhance includes for theme ${themeDir.name}")
+                    enhanceTheme(themeDir)
+                }
+            }
+        }
+    }
+
+    def enhanceTheme(File themeDir) {
+        String releaseTimestamp = Long.toString(new Date().getTime());
+
+        final File[] files = themeDir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File pathname) {
+                return pathname.isFile() && pathname.getName().endsWith(".css");
+            }
+        });
+
+        for (final File file: files) {
+            StringBuffer enhanceFile = new StringBuffer();
+
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(file)));
+            String strLine;
+            while ((strLine = br.readLine()) != null) {
+                strLine = strLine.replaceAll(URL_REGEX, '$0?' + releaseTimestamp);
+                enhanceFile.append(strLine);
+                enhanceFile.append("\n");
+            }
+            br.close();
+            BufferedWriter out = new BufferedWriter(new FileWriter(file.getPath()));
+            out.write(enhanceFile.toString());
+            out.close();
+            project.logger.info(">>> enhance CSS: " + file.getName());
+        }
     }
 }
