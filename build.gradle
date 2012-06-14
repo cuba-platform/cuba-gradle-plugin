@@ -11,6 +11,7 @@ ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
 ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
 repositories {
+    mavenLocal()
     maven {
         credentials {
             username repositoryUser
@@ -18,7 +19,6 @@ repositories {
         }
         url "http://repository.haulmont.com:8587/nexus/content/groups/work"
     }
-    mavenLocal()
 }
 
 configurations {
