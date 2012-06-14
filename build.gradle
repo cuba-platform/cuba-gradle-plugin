@@ -4,22 +4,21 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 group = 'com.haulmont.gradle'
-version = '1.3.1'
+version = '1.4.0'
 
-repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
-repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
-repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
+ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
+ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
 repositories {
-    mavenLocal()
-    mavenRepo(url: "$repositoryUrl/groups/work")
     maven {
         credentials {
             username repositoryUser
             password repositoryPassword
         }
-        url "$repositoryUrl/groups/work"
+        url "http://repository.haulmont.com:8587/nexus/content/groups/work"
     }
+    mavenLocal()
 }
 
 configurations {

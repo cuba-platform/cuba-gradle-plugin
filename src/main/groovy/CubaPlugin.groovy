@@ -15,7 +15,9 @@ import org.gradle.api.tasks.bundling.Zip
 
 class CubaPlugin implements Plugin<Project> {
 
-    def HAULMONT_COPYRIGHT = 'Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.\nHaulmont Technology proprietary and confidential.\nUse is subject to license terms.'
+    def HAULMONT_COPYRIGHT = '''Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.
+Haulmont Technology proprietary and confidential.
+Use is subject to license terms.'''
 
     @Override
     void apply(Project project) {
@@ -23,14 +25,14 @@ class CubaPlugin implements Plugin<Project> {
         project.version = project.artifactVersion + (project.isSnapshot ? '-SNAPSHOT' : '')
 
         if (!project.hasProperty('tomcatDir'))
-            project.tomcatDir = project.rootDir.absolutePath + '/../tomcat'
+            project.ext.tomcatDir = project.rootDir.absolutePath + '/../tomcat'
 
         if (!project.hasProperty('repositoryUrl'))
-            project.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
+            project.ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
         if (!project.hasProperty('repositoryUser'))
-            project.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
+            project.ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
         if (!project.hasProperty('repositoryPassword'))
-            project.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+            project.ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
         project.repositories {
             mavenLocal()
@@ -56,7 +58,7 @@ class CubaPlugin implements Plugin<Project> {
 
         project.dependencies {
             tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '7.0.27', ext: 'zip')
-            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.1', ext: 'zip')
+            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.2', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat') {
@@ -81,13 +83,13 @@ class CubaPlugin implements Plugin<Project> {
             project.idea.project.ipr {
                 withXml { provider ->
                     def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                    node.@languageLevel = 'JDK_1_6'
-                    node.@'project-jdk-name' = '1.6'
+                    node.@languageLevel = 'JDK_1_7'
+                    node.@'project-jdk-name' = '1.7'
 
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
                     node.@default = 'Haulmont'
                     node = node.appendNode('copyright')
-                    if (!project.copyright)
+                    if (!project.hasProperty('copyright'))
                         node.appendNode('option', [name: 'notice', value: HAULMONT_COPYRIGHT])
                     else
                         node.appendNode('option', [name: 'notice', value: project.copyright])
@@ -110,7 +112,8 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void applyToModuleProject(Project project) {
-        project.sourceCompatibility = '1.6'
+        project.sourceCompatibility = '1.7'
+        project.targetCompatibility = '1.7'
 
         project.configurations {
             provided
