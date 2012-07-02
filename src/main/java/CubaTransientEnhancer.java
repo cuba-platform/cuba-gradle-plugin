@@ -21,6 +21,7 @@
 
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.openjpa.enhance.AsmAdaptor;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 
@@ -56,6 +57,7 @@ public class CubaTransientEnhancer {
             for (BCClass cl : classes) {
                 enhancer.enhanceSetters(cl);
                 cl.write();
+                AsmAdaptor.write(cl); // see https://issues.apache.org/jira/browse/OPENJPA-2085
             }
         } catch (IOException e) {
             e.printStackTrace();
