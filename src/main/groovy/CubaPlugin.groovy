@@ -132,6 +132,7 @@ Use is subject to license terms.'''
                     compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
                 }
                 resources { srcDir 'src' }
+                output.resourcesDir = output.classesDir
             }
             test {
                 java {
@@ -139,6 +140,7 @@ Use is subject to license terms.'''
                     compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
                 }
                 resources { srcDir 'test' }
+                output.resourcesDir = output.classesDir
             }
         }
 
