@@ -21,6 +21,8 @@
 
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.openjpa.enhance.AsmAdaptor;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -36,9 +38,11 @@ import java.util.List;
 
 public class CubaTransientEnhancer {
 
+    private static Log log = LogFactory.getLog(CubaTransientEnhancer.class);
+
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.err.println("Error:No argument");
+            System.err.println("Error: metadata.xml is not specified");
             return;
         }
         String metaConfigName = args[0];
@@ -55,13 +59,26 @@ public class CubaTransientEnhancer {
             Collection<BCClass> classes = getBCClasses(document);
             CubaTransientEnhancer enhancer = new CubaTransientEnhancer();
             for (BCClass cl : classes) {
+                log.info("enhancing: " + cl.getName());
                 enhancer.enhanceSetters(cl);
-                cl.write();
-                AsmAdaptor.write(cl); // see https://issues.apache.org/jira/browse/OPENJPA-2085
+                if (args.length > 1) {
+                    File file = getOutputFile(cl, args[1]);
+                    cl.write(file);
+                    AsmAdaptor.write(cl, file); // see https://issues.apache.org/jira/browse/OPENJPA-2085
+                } else {
+                    cl.write();
+                    AsmAdaptor.write(cl); // see https://issues.apache.org/jira/browse/OPENJPA-2085
+                }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error", e);
         }
+    }
+
+    private static File getOutputFile(BCClass cl, String dir) {
+        File file = new File(dir, cl.getName().replace('.', '/') + ".class");
+        file.getParentFile().mkdirs();
+        return file;
     }
 
     private void enhanceSetters(BCClass editingClass) {
@@ -76,7 +93,6 @@ public class CubaTransientEnhancer {
             if (table.getLocalVariable(StringUtils.lowerCase(name.replace("set","")+"_local"))!=null){
                 return;
             }
-
 
             String fieldName = StringUtils.uncapitalize(name.replace("set",""));
             code.aload().setThis();
@@ -116,7 +132,7 @@ public class CubaTransientEnhancer {
                 try {
                       classes.add(project.loadClass(Class.forName(classElement.getText())));
                 } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
+                    log.error("Error", e);
                 }
             }
         }

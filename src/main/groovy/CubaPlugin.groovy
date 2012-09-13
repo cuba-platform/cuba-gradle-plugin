@@ -5,10 +5,12 @@
  */
 
 import com.yahoo.platform.yui.compressor.CssCompressor
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.file.FileTree
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
@@ -100,12 +102,6 @@ Use is subject to license terms.'''
                     node.appendNode('option', [name: 'myLocal', value: 'true'])
 
                     provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
-
-                    node = provider.node.component.find { it.@name == 'CompilerConfiguration' }
-                    node = node.appendNode('excludeFromCompile')
-                    findEntityDirectories(project).each { dir ->
-                        node.appendNode('directory', [url: "file://$dir", includeSubdirectories: 'true'])
-                    }
                 }
             }
         }
@@ -132,7 +128,7 @@ Use is subject to license terms.'''
                     compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
                 }
                 resources { srcDir 'src' }
-                output.resourcesDir = output.classesDir
+                output.dir("$project.buildDir/enhanced-classes/main")
             }
             test {
                 java {
@@ -140,8 +136,13 @@ Use is subject to license terms.'''
                     compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
                 }
                 resources { srcDir 'test' }
-                output.resourcesDir = output.classesDir
+                output.dir("$project.buildDir/enhanced-classes/test")
             }
+        }
+
+        // Ensure there will be no duplicates in jars
+        project.jar {
+            exclude { details -> !details.isDirectory() && isEnhanced(details.file, project.buildDir) }
         }
 
         if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
@@ -174,27 +175,35 @@ Use is subject to license terms.'''
         if (project.idea) {
             project.logger.info ">>> configuring IDEA module $project.name"
             project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
-            project.idea.module.inheritOutputDirs = false
-            project.idea.module.outputDir = new File(project.buildDir, 'classes/main')
-            project.idea.module.testOutputDir = new File(project.buildDir, 'classes/test')
-        }
-    }
+            project.idea.module.inheritOutputDirs = true
 
-    private Collection findEntityDirectories(Project rootProject) {
-        Set result = new HashSet()
-        rootProject.subprojects.each { proj ->
-            if (proj.hasProperty('sourceSets')) {
-                FileTree tree = proj.sourceSets.main.java.matching {
-                    include('**/entity/**')
+            // Enhanced classes library entry must go before source folder
+            project.idea.module.iml.withXml { provider ->
+                Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
+                Node enhNode = rootNode.children().find {
+                    it.name() == 'orderEntry' && it.@type == 'module-library' &&
+                        it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
                 }
-                tree.visit { details ->
-                    if (!details.file.isDirectory()) {
-                        result.add(details.file.parent)
-                    }
+                if (enhNode) {
+                    int srcIdx = rootNode.children().findIndexOf { it.name() == 'orderEntry' && it.@type == 'sourceFolder' }
+                    rootNode.children().remove(enhNode)
+                    rootNode.children().add(srcIdx, enhNode)
                 }
             }
         }
-        return result
+    }
+
+    def isEnhanced(File file, File buildDir) {
+        Path path = file.toPath()
+        Path classesPath = Paths.get(buildDir.toString(), 'classes/main')
+        if (!path.startsWith(classesPath))
+            return false
+
+        Path enhClassesPath = Paths.get(buildDir.toString(), 'enhanced-classes/main')
+
+        Path relPath = classesPath.relativize(path)
+        Path enhPath = enhClassesPath.resolve(relPath)
+        return Files.exists(enhPath)
     }
 }
 
@@ -272,7 +281,7 @@ class CubaEnhancing extends DefaultTask {
                 project.javaexec {
                     main = 'org.apache.openjpa.enhance.PCEnhancer'
                     classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
-                    args('-properties', tmpFile)
+                    args('-properties', tmpFile, '-d', "$project.buildDir/enhanced-classes/main")
                 }
             }
         }
@@ -282,7 +291,7 @@ class CubaEnhancing extends DefaultTask {
                 project.javaexec {
                     main = 'CubaTransientEnhancer'
                     classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
-                    args(metadataXml)
+                    args(metadataXml, "$project.buildDir/enhanced-classes/main")
                 }
             }
         }
