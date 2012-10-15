@@ -18,6 +18,7 @@ public abstract class CubaDbTask extends DefaultTask {
     protected def dbUrl
     protected def driver
     protected File dbDir
+    protected Sql sqlInstance
 
     protected void init() {
         if (dbms == 'postgres') {
@@ -77,11 +78,20 @@ public abstract class CubaDbTask extends DefaultTask {
 
 
     protected void markScript(String name, boolean init) {
-        Sql sql = createSql()
+        Sql sql = getSql()
         sql.executeUpdate('insert into SYS_DB_CHANGELOG (SCRIPT_NAME, IS_INIT) values (?, ?)', [name, (init ? 1 : 0)])
     }
 
-    protected Sql createSql() {
-        return Sql.newInstance(dbUrl, dbUser, dbPassword, driver)
+    protected Sql getSql() {
+        if (!sqlInstance)
+            sqlInstance = Sql.newInstance(dbUrl, dbUser, dbPassword, driver)
+        return sqlInstance
+    }
+
+    protected void closeSql() {
+        if (sqlInstance) {
+            sqlInstance.close()
+            sqlInstance = null
+        }
     }
 }

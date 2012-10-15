@@ -61,7 +61,7 @@ class CubaDbCreation extends CubaDbTask {
                 createDbSql
         )
 
-        createSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
+        getSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
                 "SCRIPT_NAME varchar(300) not null primary key, " +
                 "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
                 "IS_INIT integer default 0)")
@@ -86,6 +86,8 @@ class CubaDbCreation extends CubaDbTask {
             String name = getScriptName(file)
             markScript(name, true)
         }
+
+        closeSql()
     }
 
     private List<File> getInitScripts() {

@@ -24,6 +24,8 @@ class CubaDbUpdate extends CubaDbTask {
                 markScript(name, false)
             }
         }
+
+        closeSql()
     }
 
     protected void executeScript(File file) {
@@ -35,7 +37,7 @@ class CubaDbUpdate extends CubaDbTask {
         String script = FileUtils.readFileToString(file)
         StrTokenizer tokenizer = new StrTokenizer(
                 script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
-        Sql sql = createSql()
+        Sql sql = getSql()
         while (tokenizer.hasNext()) {
             String sqlCommand = tokenizer.nextToken()
             if (sqlCommand.trim().toLowerCase().startsWith("select")) {
@@ -76,7 +78,7 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected List<String> getExecutedScripts() {
-        return createSql().rows('select SCRIPT_NAME from SYS_DB_CHANGELOG').collect { row -> row.script_name }
+        return getSql().rows('select SCRIPT_NAME from SYS_DB_CHANGELOG').collect { row -> row.script_name }
     }
 
     protected List<File> getScriptsByExtension(List files, final URI scriptDirUri, final String extension) {
