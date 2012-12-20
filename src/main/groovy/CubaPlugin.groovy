@@ -23,27 +23,47 @@ Use is subject to license terms.'''
 
     @Override
     void apply(Project project) {
+        project.logger.info(">>> applying to project $project.name")
+
         project.group = project.artifactGroup
         project.version = project.artifactVersion + (project.isSnapshot ? '-SNAPSHOT' : '')
 
         if (!project.hasProperty('tomcatDir'))
             project.ext.tomcatDir = project.rootDir.absolutePath + '/../tomcat'
 
-        if (!project.hasProperty('repositoryUrl'))
-            project.ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
-        if (!project.hasProperty('repositoryUser'))
-            project.ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
-        if (!project.hasProperty('repositoryPassword'))
-            project.ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
 
         project.repositories {
-            mavenLocal()
-            maven {
-                credentials {
-                    username project.repositoryUser
-                    password project.repositoryPassword
+            project.rootProject.buildscript.repositories.each {
+                project.logger.info(">>> using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
+                project.repositories.add(it)
+            }
+        }
+
+        if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
+            project.configurations {
+                deployerJars
+            }
+            project.dependencies {
+                deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
+            }
+
+            def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl :
+                "http://repository.haulmont.com:8587/nexus/content/repositories/${project.isSnapshot ? 'snapshots' : 'releases'}"
+            def uploadUser = project.hasProperty('uploadUser') ? project.uploadUser :
+                System.getenv('HAULMONT_REPOSITORY_USER')
+            def uploadPassword = project.hasProperty('uploadPassword') ? project.uploadPassword :
+                System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+
+            project.logger.info(">>> upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
+
+            project.uploadArchives.configure {
+                repositories.mavenDeployer {
+                    name = 'httpDeployer'
+                    configuration = project.configurations.deployerJars
+                    repository(url: uploadUrl) {
+                        authentication(userName: uploadUser, password: uploadPassword)
+                    }
                 }
-                url "$project.repositoryUrl/groups/work"
             }
         }
 
@@ -116,11 +136,6 @@ Use is subject to license terms.'''
         project.configurations {
             provided
             jdbc
-            deployerJars
-        }
-
-        project.dependencies {
-            deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
         }
 
         project.sourceSets {
@@ -145,18 +160,6 @@ Use is subject to license terms.'''
         // Ensure there will be no duplicates in jars
         project.jar {
             exclude { details -> !details.isDirectory() && isEnhanced(details.file, project.buildDir) }
-        }
-
-        if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
-            project.uploadArchives.configure {
-                repositories.mavenDeployer {
-                    name = 'httpDeployer'
-                    configuration = project.configurations.deployerJars
-                    repository(url: "$project.repositoryUrl/repositories/" + (project.isSnapshot ? 'snapshots' : 'releases')) {
-                        authentication(userName: project.repositoryUser, password: project.repositoryPassword)
-                    }
-                }
-            }
         }
 
         if (project.name.endsWith('-core')) {
