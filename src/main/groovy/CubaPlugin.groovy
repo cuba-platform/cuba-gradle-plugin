@@ -5,6 +5,9 @@
  */
 
 import com.yahoo.platform.yui.compressor.CssCompressor
+import org.apache.commons.io.FilenameUtils
+import org.apache.commons.io.FileUtils
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -14,6 +17,7 @@ import org.gradle.api.Project
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
+import groovyx.gpars.GParsPool
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -80,7 +84,7 @@ Use is subject to license terms.'''
 
         project.dependencies {
             tomcat(group: 'com.haulmont.thirdparty', name: 'apache-tomcat', version: '7.0.27', ext: 'zip')
-            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.3', ext: 'zip')
+            tomcat(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.4', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat') {
@@ -475,6 +479,9 @@ class CubaWebStartCreation extends DefaultTask {
     def signJarsAlias = 'signJars'
     def signJarsPassword = 'HaulmontSignJars'
     def signJarsKeystore = "${project.projectDir}/webstart/sign-jars-keystore.jks"
+    def applicationSignJars = []
+    def jarSignerThreadCount = 4
+    def useSignerCache = false
 
     CubaWebStartCreation() {
         setDescription('Creates web start distribution')
@@ -485,6 +492,10 @@ class CubaWebStartCreation extends DefaultTask {
         File distDir = new File(project.buildDir, "distributions/${basePath}")
         File libDir = new File(distDir, 'lib')
         libDir.mkdirs()
+
+        File signerCacheDir = new File(project.buildDir, "jar-signer-cache")
+        if (!signerCacheDir.exists())
+            signerCacheDir.mkdir()
 
         project.logger.info(">>> copying app libs from configurations.runtime to ${libDir}")
 
@@ -500,9 +511,48 @@ class CubaWebStartCreation extends DefaultTask {
 
         project.logger.info(">>> signing jars in ${libDir}")
 
-        libDir.listFiles().each {
-            ant.signjar(jar: "${it}", alias: signJarsAlias, keystore: signJarsKeystore, storepass: signJarsPassword)
+		Date startStamp = new Date()
+
+        if (useSignerCache && applicationSignJars.empty) {
+            if (project.parent) {
+                project.parent.subprojects.each { subProject ->
+                    subProject.configurations.archives.allArtifacts.each {
+                        if (''.equals(it.classifier))
+                            applicationSignJars.add(it.name + '-' + subProject.version)
+                    }
+                }
+            }
+
+            project.logger.info(">>> do not cache jars: ${applicationSignJars}")
         }
+		
+		GParsPool.withPool(jarSignerThreadCount) {
+			libDir.listFiles().eachParallel { File jarFile ->
+                def cachedJar = new File(signerCacheDir, jarFile.name)
+                def libraryName = FilenameUtils.getBaseName(jarFile.name)
+
+                if (useSignerCache && cachedJar.exists() && !libraryName.endsWith('-SNAPSHOT')
+                        && !applicationSignJars.contains(libraryName)) {
+                    project.logger.info(">>> Use cached jar: ${jarFile}")
+                    FileUtils.copyFile(cachedJar, jarFile)
+                } else {
+                    project.logger.info(">>> Sign: ${jarFile}")
+                    ant.signjar(jar: "${jarFile}", alias: signJarsAlias, keystore: signJarsKeystore,
+                            storepass: signJarsPassword, preservelastmodified: "true")
+
+                    if (useSignerCache && !libraryName.endsWith('-SNAPSHOT')
+                            && !applicationSignJars.contains(libraryName)) {
+                        project.logger.info(">>> Cache jar: ${jarFile}")
+                        FileUtils.copyFile(jarFile, cachedJar)
+                    }
+                }
+			}
+		}
+		
+		Date endStamp = new Date()
+		long processTime = endStamp.getTime() - startStamp.getTime()		
+		
+		project.logger.info(">>> signing time: ${processTime}")
 
         project.logger.info(">>> creating JNLP file from ${jnlpTemplateName}")
 

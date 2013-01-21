@@ -29,6 +29,7 @@ dependencies {
     compile(group: 'org.apache.openjpa', name: 'openjpa', version: '2.2.0')
     compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
     compile(group: 'commons-io', name: 'commons-io', version: '1.4')
+    compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(gradleApi())
     groovy(localGroovy())
