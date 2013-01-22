@@ -481,7 +481,7 @@ class CubaWebStartCreation extends DefaultTask {
     def signJarsKeystore = "${project.projectDir}/webstart/sign-jars-keystore.jks"
     def applicationSignJars = []
     def jarSignerThreadCount = 4
-    def useSignerCache = false
+    def useSignerCache = true
 
     CubaWebStartCreation() {
         setDescription('Creates web start distribution')
