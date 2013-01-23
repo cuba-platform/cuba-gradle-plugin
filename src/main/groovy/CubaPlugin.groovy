@@ -720,7 +720,7 @@ class ProjectAllWebToolkit extends DefaultTask {
 
     private def defaultCompilerArgs = [
            '-style' : 'OBF',
-           '-localWorkers' : '2',
+           '-localWorkers' : Runtime.getRuntime().availableProcessors(),
            '-logLevel' : 'INFO'
     ]
 
@@ -800,10 +800,15 @@ class ProjectAllWebToolkit extends DefaultTask {
     }
 
     protected List collectClassPathEntries() {
-        def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
+        if (project.configurations.gwtBuilding) {
+            def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
 
-        File validationSrcDir = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }.file
-        List compilerClassPath = [validationSrcDir]
+            def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
+            if (validationApiArtifact) {
+                File validationSrcDir = validationApiArtifact.file
+                compilerClassPath.add(validationSrcDir)
+            }
+        }
 
         def moduleClassesDirs = []
         def moduleSrcDirs = []
@@ -849,11 +854,17 @@ class CubaWebToolkit extends ProjectAllWebToolkit {
 
     @Override
     protected List collectClassPathEntries() {
-        def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
+        def gwtBuildingArtifacts = []
+        def compilerClassPath = []
+        if (project.configurations.gwtBuilding) {
+            gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
+            def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
+            if (validationApiArtifact) {
+                File validationSrcDir = validationApiArtifact.file
+                compilerClassPath.add(validationSrcDir)
+            }
+        }
         def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
-
-        File validationSrcDir = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }.file
-        List compilerClassPath = [validationSrcDir]
 
         def mainClasspath = project.sourceSets.main.compileClasspath.findAll { !excludedArtifact(it.name) }
 
@@ -871,13 +882,16 @@ class CubaWebToolkit extends ProjectAllWebToolkit {
 
             // unpack inhertited toolkit (widget sets)
             for (InheritedArtifact toolkit: inheritedWidgetSets) {
-                File toolkitJar = providedArtefacts.find { it.name == toolkit.name }.file
-                File toolkitClassesDir = new File("${project.buildDir}/tmp/${toolkit.name}-classes")
-                project.copy {
-                    from project.zipTree(toolkitJar)
-                    into toolkitClassesDir
+                def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
+                if (toolkitArtifact) {
+                    File toolkitJar = toolkitArtifact.file
+                    File toolkitClassesDir = new File("${project.buildDir}/tmp/${toolkit.name}-classes")
+                    project.copy {
+                        from project.zipTree(toolkitJar)
+                        into toolkitClassesDir
+                    }
+                    mainClasspath.add(0, toolkitClassesDir)
                 }
-                mainClasspath.add(0, toolkitClassesDir)
             }
 
             for (InheritedArtifact sourceArtifact: inheritedSources)
