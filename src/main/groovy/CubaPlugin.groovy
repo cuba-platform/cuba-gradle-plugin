@@ -800,6 +800,7 @@ class ProjectAllWebToolkit extends DefaultTask {
     }
 
     protected List collectClassPathEntries() {
+        def compilerClassPath = []
         if (project.configurations.gwtBuilding) {
             def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
 
