@@ -125,7 +125,7 @@ Use is subject to license terms.'''
                     node.appendNode('option', [name: 'myName', value: 'Haulmont'])
                     node.appendNode('option', [name: 'myLocal', value: 'true'])
 
-                    provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
+//                    provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
 
                     provider.node.component.find { it.@name == 'Encoding' }.@defaultCharsetForPropertiesFiles = 'UTF-8'
                 }
