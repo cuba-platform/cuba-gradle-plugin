@@ -7,6 +7,7 @@
 import com.yahoo.platform.yui.compressor.CssCompressor
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
+import org.gradle.api.internal.project.DefaultAntBuilder
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -483,6 +484,8 @@ class CubaWebStartCreation extends DefaultTask {
     def jarSignerThreadCount = 4
     def useSignerCache = true
 
+    def threadLocalAnt = new ThreadLocal<AntBuilder>()
+
     CubaWebStartCreation() {
         setDescription('Creates web start distribution')
     }
@@ -528,23 +531,12 @@ class CubaWebStartCreation extends DefaultTask {
 		
 		GParsPool.withPool(jarSignerThreadCount) {
 			libDir.listFiles().eachParallel { File jarFile ->
-                def cachedJar = new File(signerCacheDir, jarFile.name)
-                def libraryName = FilenameUtils.getBaseName(jarFile.name)
-
-                if (useSignerCache && cachedJar.exists() && !libraryName.endsWith('-SNAPSHOT')
-                        && !applicationSignJars.contains(libraryName)) {
-                    project.logger.info(">>> Use cached jar: ${jarFile}")
-                    FileUtils.copyFile(cachedJar, jarFile)
-                } else {
-                    project.logger.info(">>> Sign: ${jarFile}")
-                    ant.signjar(jar: "${jarFile}", alias: signJarsAlias, keystore: signJarsKeystore,
-                            storepass: signJarsPassword, preservelastmodified: "true")
-
-                    if (useSignerCache && !libraryName.endsWith('-SNAPSHOT')
-                            && !applicationSignJars.contains(libraryName)) {
-                        project.logger.info(">>> Cache jar: ${jarFile}")
-                        FileUtils.copyFile(jarFile, cachedJar)
-                    }
+                try {
+                    project.logger.info(">>> started sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
+                    doSignFile(jarFile, signerCacheDir)
+                    project.logger.info(">>> finished sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
+                } catch (Exception e) {
+                    project.logger.error("failed to sign jar file $jarFile.name", e)
                 }
 			}
 		}
@@ -579,6 +571,37 @@ class CubaWebStartCreation extends DefaultTask {
             project.copy {
                 from indexFileName
                 into distDir.getAbsolutePath()
+            }
+        }
+    }
+
+    void doSignFile(File jarFile, File signerCacheDir) {
+        def cachedJar = new File(signerCacheDir, jarFile.name)
+        def libraryName = FilenameUtils.getBaseName(jarFile.name)
+
+        if (useSignerCache && cachedJar.exists() &&
+                !libraryName.endsWith('-SNAPSHOT')
+                && !applicationSignJars.contains(libraryName)) {
+            project.logger.info(">>> use cached jar: ${jarFile}")
+            FileUtils.copyFile(cachedJar, jarFile)
+        } else {
+            project.logger.info(">>> sign: ${jarFile}")
+
+            def sharedAnt
+            if (threadLocalAnt.get())
+                sharedAnt = threadLocalAnt.get()
+            else {
+                sharedAnt = new DefaultAntBuilder(project)
+                threadLocalAnt.set(sharedAnt)
+            }
+
+            sharedAnt.signjar(jar: "${jarFile}", alias: signJarsAlias, keystore: signJarsKeystore,
+                              storepass: signJarsPassword, preservelastmodified: "true")
+
+            if (useSignerCache && !libraryName.endsWith('-SNAPSHOT')
+                    && !applicationSignJars.contains(libraryName)) {
+                project.logger.info(">>> cache jar: ${jarFile}")
+                FileUtils.copyFile(jarFile, cachedJar)
             }
         }
     }
