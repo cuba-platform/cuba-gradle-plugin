@@ -736,10 +736,10 @@ class CubaDropTomcat extends DefaultTask {
 
 class ProjectAllWebToolkit extends DefaultTask {
 
-    def widgetSetsDir
-    def widgetSetModules
-    def widgetSetClass
-    def compilerArgs
+    String widgetSetsDir
+    List widgetSetModules
+    String widgetSetClass
+    Map compilerArgs
 
     private def defaultCompilerArgs = [
            '-style' : 'OBF',
@@ -763,8 +763,7 @@ class ProjectAllWebToolkit extends DefaultTask {
         if (!widgetSetClass)
             throw new IllegalStateException('Please specify \'String widgetSetClass\' for build GWT')
 
-        if (!widgetSetModules || widgetSetModules.isEmpty())
-            throw new IllegalStateException('Please specify not empty \'Collection widgetSetModules\' for build GWT')
+        checkWidgetSetModules()
 
         File widgetSetsDirectory = new File(this.widgetSetsDir)
         if (!widgetSetsDirectory.exists()) {
@@ -783,6 +782,11 @@ class ProjectAllWebToolkit extends DefaultTask {
         } else {
             println "Widgetsets dir exists, skip build GWT"
         }
+    }
+
+    protected void checkWidgetSetModules() {
+        if (!widgetSetModules || widgetSetModules.isEmpty())
+            throw new IllegalStateException('Please specify not empty \'Collection widgetSetModules\' for build GWT')
     }
 
     def jvmArgs(String... jvmArgs) {
@@ -824,7 +828,7 @@ class ProjectAllWebToolkit extends DefaultTask {
 
     protected List collectClassPathEntries() {
         def compilerClassPath = []
-        if (project.configurations.gwtBuilding) {
+        if (project.configurations.findByName('gwtBuilding')) {
             def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
 
             def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
@@ -836,9 +840,11 @@ class ProjectAllWebToolkit extends DefaultTask {
 
         def moduleClassesDirs = []
         def moduleSrcDirs = []
-        for (def module: widgetSetModules) {
-            moduleSrcDirs.add(new File((File) module.projectDir, 'src'))
-            moduleClassesDirs.add(module.sourceSets.main.output.classesDir)
+        if (widgetSetModules) {
+            for (def module : widgetSetModules) {
+                moduleSrcDirs.add(new File((File) module.projectDir, 'src'))
+                moduleClassesDirs.add(module.sourceSets.main.output.classesDir)
+            }
         }
 
         compilerClassPath.addAll(moduleSrcDirs)
@@ -877,10 +883,15 @@ class CubaWebToolkit extends ProjectAllWebToolkit {
     }
 
     @Override
+    protected void checkWidgetSetModules() {
+        // do nothing
+    }
+
+    @Override
     protected List collectClassPathEntries() {
         def gwtBuildingArtifacts = []
         def compilerClassPath = []
-        if (project.configurations.gwtBuilding) {
+        if (project.configurations.findByName('gwtBuilding')) {
             gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
             def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
             if (validationApiArtifact) {
@@ -922,12 +933,14 @@ class CubaWebToolkit extends ProjectAllWebToolkit {
                 compilerClassPath.add(sourceArtifact.jarFile)
         }
 
-        if (!(widgetSetModules instanceof Collection))
-            widgetSetModules = Collections.singletonList(widgetSetModules)
+        if (widgetSetModules) {
+            if (!(widgetSetModules instanceof Collection))
+                widgetSetModules = Collections.singletonList(widgetSetModules)
 
-        for (def widgetSetModule: widgetSetModules) {
-            compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
-            compilerClassPath.add(widgetSetModule.sourceSets.main.output.classesDir)
+            for (def widgetSetModule : widgetSetModules) {
+                compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
+                compilerClassPath.add(widgetSetModule.sourceSets.main.output.classesDir)
+            }
         }
 
         compilerClassPath.add(project.sourceSets.main.output.classesDir)
