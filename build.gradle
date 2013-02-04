@@ -4,7 +4,7 @@ apply plugin: 'maven'
 apply plugin: 'idea'
 
 group = 'com.haulmont.gradle'
-version = '1.5.1-SNAPSHOT'
+version = '1.5-SNAPSHOT'
 
 ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
 ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
