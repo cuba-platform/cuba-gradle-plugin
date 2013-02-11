@@ -983,27 +983,27 @@ class CubaWebThemeCreation extends DefaultTask {
     def buildCssTheme(themeDir, destFile) {
 
         if (!themeDir.isDirectory()) {
-            throw new IllegalArgumentException("ThemeDir should be a directory");
+            throw new IllegalArgumentException("ThemeDir should be a directory")
         }
 
         def themeName = themeDir.getName()
         def combinedCss = new StringBuilder()
         combinedCss.append("/* Automatically created css file from subdirectories. */\n")
 
-        final File[] subdir = themeDir.listFiles();
+        final File[] subdir = themeDir.listFiles()
 
         Arrays.sort(subdir, new Comparator<File>() {
             @Override
             public int compare(File arg0, File arg1) {
-                return (arg0).compareTo(arg1);
+                return (arg0).compareTo(arg1)
             }
-        });
+        })
 
         for (final File dir: subdir) {
-            String name = dir.getName();
-            String filename = dir.getPath() + "/" + name + ".css";
+            String name = dir.getName()
+            String filename = dir.getPath() + "/" + name + ".css"
 
-            final File cssFile = new File(filename);
+            final File cssFile = new File(filename)
             if (cssFile.isFile()) {
                 combinedCss.append("\n")
                 combinedCss.append("/* >>>>> ").append(cssFile.getName()).append(" <<<<< */")
@@ -1035,23 +1035,104 @@ class CubaWebThemeCreation extends DefaultTask {
         def themePath = themeDir.absolutePath
 
         if (!themePath.endsWith("/")) {
-            themePath += "/";
+            themePath += "/"
         }
 
         if (destFile.indexOf(".") == -1) {
-            destFile += ".css";
+            destFile += ".css"
         }
 
         def themeFileName = themePath + destFile
-        BufferedWriter out = new BufferedWriter(new FileWriter(themeFileName));
+        BufferedWriter out = new BufferedWriter(new FileWriter(themeFileName))
 
         CssCompressor compressor = new CssCompressor(new StringReader(combinedCss.toString()))
         compressor.compress(out, 0)
 
-        out.close();
+        out.close()
 
         project.logger.info(">>> compiled CSS to " + themePath + destFile
-                + " (" + combinedCss.toString().length() + " bytes)");
+                + " (" + combinedCss.toString().length() + " bytes)")
+    }
+}
+
+class CubaWebScssThemeCreation extends DefaultTask {
+    def themes = []
+    def scssDir = 'themes'
+    def destDir = "${project.buildDir}/web/VAADIN/themes"
+    def compress = true
+
+    def dirFilter = new FileFilter() {
+        @Override
+        boolean accept(File pathname) {
+            return pathname.isDirectory() && !pathname.name.startsWith(".")
+        }
+    }
+
+    CubaWebScssThemeCreation() {
+        setDescription('Compile scss styles in theme')
+    }
+
+    @TaskAction
+    def buildThemes() {
+        if (destDir instanceof String)
+            destDir = project.file(destDir)
+
+        if (scssDir instanceof String)
+            scssDir = project.file(scssDir)
+
+        if (themes.empty) {
+            project.logger.info(">>> scan directory '${scssDir}' for themes")
+            for (File themeDir : project.files(scssDir).listFiles(dirFilter))
+                themes.add(themeDir)
+        }
+
+        themes.each { def themeDir ->
+            if (themeDir instanceof String)
+                themeDir = new File(scssDir, themeDir)
+
+            def themeDestDir = new File(destDir, themeDir.name)
+
+            project.copy {
+                from themeDir
+                into themeDestDir
+                exclude {
+                    it.file.name.startsWith('.') || it.file.name.endsWith('.scss')
+                }
+            }
+
+            project.logger.info(">>> compile theme '${themeDir.name}'")
+
+            def scssFilePath = project.file("${themeDir}/styles.scss").absolutePath
+            def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
+
+            project.javaexec {
+                main = 'com.vaadin.sass.SassCompiler'
+                classpath = project.sourceSets.main.compileClasspath
+                args = [scssFilePath, cssFilePath]
+                jvmArgs = []
+            }
+
+            if (compress) {
+                project.logger.info(">>> compress theme '${themeDir.name}'")
+
+                def compressedFile = new File(cssFilePath + '.compressed')
+                def cssFile = new File(cssFilePath)
+
+                def cssReader = new FileReader(cssFile)
+                BufferedWriter out = new BufferedWriter(new FileWriter(compressedFile))
+
+                CssCompressor compressor = new CssCompressor(cssReader)
+                compressor.compress(out, 0)
+
+                out.close()
+                cssReader.close()
+
+                cssFile.delete()
+                compressedFile.renameTo(cssFile)
+            }
+
+            project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
+        }
     }
 }
 
@@ -1060,7 +1141,7 @@ class CubaWebThemeCreation extends DefaultTask {
  */
 class CubaEnhanceStyles extends DefaultTask {
 
-    private static final String URL_REGEX = "(?:@import\\s*(?:url\\(\\s*)?|url\\(\\s*).(?:\\.|[^)\"'?])*";
+    private static final String URL_REGEX = "(?:@import\\s*(?:url\\(\\s*)?|url\\(\\s*).(?:\\.|[^)\"'?])*"
 
     def webContentDir
 
@@ -1090,31 +1171,31 @@ class CubaEnhanceStyles extends DefaultTask {
     }
 
     def enhanceTheme(File themeDir) {
-        String releaseTimestamp = Long.toString(new Date().getTime());
+        String releaseTimestamp = Long.toString(new Date().getTime())
 
         final File[] files = themeDir.listFiles(new FileFilter() {
             @Override
             public boolean accept(File pathname) {
-                return pathname.isFile() && pathname.getName().endsWith(".css");
+                return pathname.isFile() && pathname.getName().endsWith(".css")
             }
-        });
+        })
 
         for (final File file: files) {
-            StringBuffer enhanceFile = new StringBuffer();
+            StringBuffer enhanceFile = new StringBuffer()
 
             BufferedReader br = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(file)));
-            String strLine;
+                    new InputStreamReader(new FileInputStream(file)))
+            String strLine
             while ((strLine = br.readLine()) != null) {
-                strLine = strLine.replaceAll(URL_REGEX, '$0?' + releaseTimestamp);
-                enhanceFile.append(strLine);
-                enhanceFile.append("\n");
+                strLine = strLine.replaceAll(URL_REGEX, '$0?' + releaseTimestamp)
+                enhanceFile.append(strLine)
+                enhanceFile.append("\n")
             }
-            br.close();
-            BufferedWriter out = new BufferedWriter(new FileWriter(file.getPath()));
-            out.write(enhanceFile.toString());
-            out.close();
-            project.logger.info(">>> enhance CSS: " + file.getName());
+            br.close()
+            BufferedWriter out = new BufferedWriter(new FileWriter(file.getPath()))
+            out.write(enhanceFile.toString())
+            out.close()
+            project.logger.info(">>> enhance CSS: " + file.getName())
         }
     }
 }
