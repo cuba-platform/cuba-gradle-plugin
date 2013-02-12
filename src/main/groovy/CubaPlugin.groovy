@@ -7,7 +7,12 @@
 import com.yahoo.platform.yui.compressor.CssCompressor
 import org.apache.commons.io.FilenameUtils
 import org.apache.commons.io.FileUtils
+import org.carrot2.labs.smartsprites.SmartSpritesParameters
+import org.carrot2.labs.smartsprites.SpriteBuilder
+import org.carrot2.labs.smartsprites.message.MessageLog
+import org.carrot2.labs.smartsprites.message.PrintStreamMessageSink
 import org.gradle.api.internal.project.DefaultAntBuilder
+import org.kohsuke.args4j.CmdLineParser
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1060,6 +1065,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
     def compress = true
+    def sprites = false
+    def cleanup = true
 
     def dirFilter = new FileFilter() {
         @Override
@@ -1112,6 +1119,37 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 jvmArgs = []
             }
 
+            if (sprites) {
+                project.logger.info(">>> compile sprites for theme '${themeDir.name}'")
+
+                def compiledSpritesDir = new File(themeDestDir, 'compiled')
+                if (!compiledSpritesDir.exists())
+                    compiledSpritesDir.mkdir()
+
+                def processedFile = new File(themeDestDir, 'styles-sprite.css')
+                def cssFile = new File(cssFilePath)
+
+                // process
+                final SmartSpritesParameters parameters = new SmartSpritesParameters();
+                final CmdLineParser parser = new CmdLineParser(parameters);
+
+                parser.parseArgument('--root-dir-path', themeDestDir.absolutePath,
+                                     '--document-root-dir-path', themeDestDir.absolutePath)
+
+                // Get parameters form system properties
+                final MessageLog messageLog = new MessageLog(new PrintStreamMessageSink(System.out, parameters.getLogLevel()));
+                new SpriteBuilder(parameters, messageLog).buildSprites();
+
+                def dirsToDelete = []
+                // remove sprites directories
+                themeDestDir.eachDirRecurse { if ('sprites'.equals(it.name)) dirsToDelete.add(it) }
+                dirsToDelete.each { it.deleteDir() }
+
+                // replace file
+                cssFile.delete()
+                processedFile.renameTo(cssFile)
+            }
+
             if (compress) {
                 project.logger.info(">>> compress theme '${themeDir.name}'")
 
@@ -1131,7 +1169,27 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 compressedFile.renameTo(cssFile)
             }
 
+            if (cleanup) {
+                // remove empty directories
+                recursiveVisitDir(themeDestDir, { File f ->
+                    boolean isEmpty = f.list().length == 0
+                    if (isEmpty) {
+                        project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())}")
+                        f.deleteDir()
+                    }
+                })
+            }
+
             project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
+        }
+    }
+
+    def recursiveVisitDir(File dir, Closure apply) {
+        for (def f : dir.listFiles()) {
+            if (f.exists() && f.isDirectory()) {
+                recursiveVisitDir(f, apply)
+                apply(f)
+            }
         }
     }
 }
