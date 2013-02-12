@@ -1133,8 +1133,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 final SmartSpritesParameters parameters = new SmartSpritesParameters();
                 final CmdLineParser parser = new CmdLineParser(parameters);
 
-                parser.parseArgument('--root-dir-path', themeDestDir.absolutePath,
-                                     '--document-root-dir-path', themeDestDir.absolutePath)
+                parser.parseArgument('--root-dir-path', themeDestDir.absolutePath)
 
                 // Get parameters form system properties
                 final MessageLog messageLog = new MessageLog(new PrintStreamMessageSink(System.out, parameters.getLogLevel()));
@@ -1146,8 +1145,10 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 dirsToDelete.each { it.deleteDir() }
 
                 // replace file
-                cssFile.delete()
-                processedFile.renameTo(cssFile)
+                if (processedFile.exists()) {
+                    cssFile.delete()
+                    processedFile.renameTo(cssFile)
+                }
             }
 
             if (compress) {
@@ -1165,8 +1166,10 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 out.close()
                 cssReader.close()
 
-                cssFile.delete()
-                compressedFile.renameTo(cssFile)
+                if (compressedFile.exists()) {
+                    cssFile.delete()
+                    compressedFile.renameTo(cssFile)
+                }
             }
 
             if (cleanup) {
