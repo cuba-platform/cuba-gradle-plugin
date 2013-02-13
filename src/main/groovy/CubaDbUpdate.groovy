@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2011 Haulmont Technology Ltd. All Rights Reserved.
+ * Haulmont Technology proprietary and confidential.
+ * Use is subject to license terms.
+ */
+
 import groovy.sql.Sql
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.text.StrMatcher
@@ -5,11 +11,14 @@ import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.tasks.TaskAction
 
 /**
- * 
  * @author krivopustov
  * @version $Id$
  */
 class CubaDbUpdate extends CubaDbTask {
+
+    CubaDbUpdate() {
+        setGroup('Database')
+    }
 
     @TaskAction
     def updateDb() {

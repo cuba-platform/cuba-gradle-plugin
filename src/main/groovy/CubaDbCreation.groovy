@@ -1,7 +1,12 @@
+/*
+ * Copyright (c) 2011 Haulmont Technology Ltd. All Rights Reserved.
+ * Haulmont Technology proprietary and confidential.
+ * Use is subject to license terms.
+ */
+
 import org.gradle.api.tasks.TaskAction
 
 /**
- * 
  * @author krivopustov
  * @version $Id$
  */
@@ -10,6 +15,10 @@ class CubaDbCreation extends CubaDbTask {
     def driverClasspath
     def dropDbSql
     def createDbSql
+
+    CubaDbCreation() {
+        setGroup('Database')
+    }
 
     @TaskAction
     def createDb() {

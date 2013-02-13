@@ -4,26 +4,16 @@
  * Use is subject to license terms.
  */
 
-import com.yahoo.platform.yui.compressor.CssCompressor
-import org.apache.commons.io.FilenameUtils
-import org.apache.commons.io.FileUtils
-import org.carrot2.labs.smartsprites.SmartSpritesParameters
-import org.carrot2.labs.smartsprites.SpriteBuilder
-import org.carrot2.labs.smartsprites.message.MessageLog
-import org.carrot2.labs.smartsprites.message.PrintStreamMessageSink
-import org.gradle.api.internal.project.DefaultAntBuilder
-import org.kohsuke.args4j.CmdLineParser
+import org.gradle.api.DefaultTask
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.file.FileCollection
+import org.gradle.api.tasks.*
+import org.gradle.api.tasks.bundling.Zip
 
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import org.gradle.api.DefaultTask
-import org.gradle.api.Plugin
-import org.gradle.api.Project
-import org.gradle.api.internal.file.collections.SimpleFileCollection
-import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.bundling.Zip
-import groovyx.gpars.GParsPool
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -230,6 +220,18 @@ class CubaDbScriptsAssembling extends DefaultTask {
         setDescription('Gathers database scripts from module and its dependencies')
     }
 
+    @OutputDirectory
+    def File getOutputDirectory() {
+        return project.file("${project.buildDir}/db")
+    }
+
+    @InputFiles @SkipWhenEmpty @Optional
+    def FileCollection getSourceFiles() {
+        return project.fileTree(new File(project.projectDir, 'db'), {
+            exclude '**/.*'
+        })
+    }
+
     @TaskAction
     def assemble() {
         if (project.configurations.getAsMap().dbscripts) {
@@ -324,6 +326,7 @@ class CubaDeployment extends DefaultTask {
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
+        setGroup('Development server')
     }
 
     @TaskAction
@@ -476,162 +479,7 @@ class CubaWarBuilding extends DefaultTask {
     }
 }
 
-class CubaWebStartCreation extends DefaultTask {
 
-    def jnlpTemplateName = "${project.projectDir}/webstart/template.jnlp"
-    def indexFileName
-    def baseHost = 'http://localhost:8080/'
-    def basePath = "${project.applicationName}-webstart"
-    def signJarsAlias = 'signJars'
-    def signJarsPassword = 'HaulmontSignJars'
-    def signJarsKeystore = "${project.projectDir}/webstart/sign-jars-keystore.jks"
-    def applicationSignJars = []
-    def jarSignerThreadCount = 4
-    def useSignerCache = true
-
-    def threadLocalAnt = new ThreadLocal<AntBuilder>()
-
-    CubaWebStartCreation() {
-        setDescription('Creates web start distribution')
-    }
-
-    @TaskAction
-    def create() {
-        File distDir = new File(project.buildDir, "distributions/${basePath}")
-        File libDir = new File(distDir, 'lib')
-        libDir.mkdirs()
-
-        File signerCacheDir = new File(project.buildDir, "jar-signer-cache")
-        if (!signerCacheDir.exists())
-            signerCacheDir.mkdir()
-
-        project.logger.info(">>> copying app libs from configurations.runtime to ${libDir}")
-
-        project.copy {
-            from project.configurations.runtime
-            from project.libsDir
-            into libDir
-            include { details ->
-                def name = details.file.name
-                return !(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar'))
-            }
-        }
-
-        project.logger.info(">>> signing jars in ${libDir}")
-
-		Date startStamp = new Date()
-
-        if (useSignerCache && applicationSignJars.empty) {
-            if (project.parent) {
-                project.parent.subprojects.each { subProject ->
-                    subProject.configurations.archives.allArtifacts.each {
-                        if (''.equals(it.classifier))
-                            applicationSignJars.add(it.name + '-' + subProject.version)
-                    }
-                }
-            }
-
-            project.logger.info(">>> do not cache jars: ${applicationSignJars}")
-        }
-		
-		GParsPool.withPool(jarSignerThreadCount) {
-			libDir.listFiles().eachParallel { File jarFile ->
-                try {
-                    project.logger.info(">>> started sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
-                    doSignFile(jarFile, signerCacheDir)
-                    project.logger.info(">>> finished sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
-                } catch (Exception e) {
-                    project.logger.error("failed to sign jar file $jarFile.name", e)
-                }
-			}
-		}
-		
-		Date endStamp = new Date()
-		long processTime = endStamp.getTime() - startStamp.getTime()		
-		
-		project.logger.info(">>> signing time: ${processTime}")
-
-        project.logger.info(">>> creating JNLP file from ${jnlpTemplateName}")
-
-        File jnlpTemplate = new File(jnlpTemplateName)
-        def jnlpNode = new XmlParser().parse(jnlpTemplate)
-
-        if (!baseHost.endsWith('/'))
-            baseHost += '/'
-
-        jnlpNode.@codebase = baseHost + basePath
-        def jnlpName = jnlpNode.@href
-
-        def resourcesNode = jnlpNode.resources[0]
-
-        libDir.listFiles().each {
-            resourcesNode.appendNode('jar', [href: "lib/${it.getName()}", download: 'eager'])
-        }
-
-        File jnlpFile = new File(distDir, jnlpName)
-        new XmlNodePrinter(new PrintWriter(new FileWriter(jnlpFile))).print(jnlpNode)
-
-        if (indexFileName) {
-            project.logger.info(">>> copying indes file from ${indexFileName} to ${distDir}")
-            project.copy {
-                from indexFileName
-                into distDir.getAbsolutePath()
-            }
-        }
-    }
-
-    void doSignFile(File jarFile, File signerCacheDir) {
-        def cachedJar = new File(signerCacheDir, jarFile.name)
-        def libraryName = FilenameUtils.getBaseName(jarFile.name)
-
-        if (useSignerCache && cachedJar.exists() &&
-                !libraryName.endsWith('-SNAPSHOT')
-                && !applicationSignJars.contains(libraryName)) {
-            project.logger.info(">>> use cached jar: ${jarFile}")
-            FileUtils.copyFile(cachedJar, jarFile)
-        } else {
-            project.logger.info(">>> sign: ${jarFile}")
-
-            def sharedAnt
-            if (threadLocalAnt.get())
-                sharedAnt = threadLocalAnt.get()
-            else {
-                sharedAnt = new DefaultAntBuilder(project)
-                threadLocalAnt.set(sharedAnt)
-            }
-
-            sharedAnt.signjar(jar: "${jarFile}", alias: signJarsAlias, keystore: signJarsKeystore,
-                              storepass: signJarsPassword, preservelastmodified: "true")
-
-            if (useSignerCache && !libraryName.endsWith('-SNAPSHOT')
-                    && !applicationSignJars.contains(libraryName)) {
-                project.logger.info(">>> cache jar: ${jarFile}")
-                FileUtils.copyFile(jarFile, cachedJar)
-            }
-        }
-    }
-}
-
-class CubaWebStartDeployment extends DefaultTask {
-
-    def basePath = "${project.applicationName}-webstart"
-
-    CubaWebStartDeployment() {
-        setDescription('Deploys web start distribution into the local Tomcat')
-    }
-
-    @TaskAction
-    def deploy() {
-        File distDir = new File(project.buildDir, "distributions/${basePath}")
-
-        project.logger.info(">>> copying web start distribution from ${distDir} to ${project.tomcatDir}/webapps/$basePath")
-
-        project.copy {
-            from distDir
-            into "${project.tomcatDir}/webapps/$basePath"
-        }
-    }
-}
 
 class CubaSetupTomcat extends DefaultTask {
 
@@ -639,6 +487,7 @@ class CubaSetupTomcat extends DefaultTask {
 
     CubaSetupTomcat() {
         setDescription('Sets up local Tomcat')
+        setGroup('Development server')
     }
 
     @TaskAction
@@ -661,6 +510,7 @@ class CubaStartTomcat extends DefaultTask {
 
     CubaStartTomcat() {
         setDescription('Starts local Tomcat')
+        setGroup('Development server')
     }
 
     @TaskAction
@@ -683,6 +533,7 @@ class CubaStopTomcat extends DefaultTask {
 
     CubaStopTomcat() {
         setDescription('Stops local Tomcat')
+        setGroup('Development server')
     }
 
     @TaskAction
@@ -706,6 +557,7 @@ class CubaDropTomcat extends DefaultTask {
 
     CubaDropTomcat() {
         setDescription('Deletes local Tomcat')
+        setGroup('Development server')
     }
 
     @TaskAction
@@ -735,528 +587,6 @@ class CubaDropTomcat extends DefaultTask {
                 }
             }
             project.delete(dir)
-        }
-    }
-}
-
-class ProjectAllWebToolkit extends DefaultTask {
-
-    String widgetSetsDir
-    List widgetSetModules
-    String widgetSetClass
-    Map compilerArgs
-
-    private def defaultCompilerArgs = [
-           '-style' : 'OBF',
-           '-localWorkers' : Runtime.getRuntime().availableProcessors(),
-           '-logLevel' : 'INFO'
-    ]
-
-    private def compilerJvmArgs = new HashSet([
-            '-Xmx512m', '-Xss8m', '-XX:MaxPermSize=256m', '-Djava.awt.headless=true'
-    ])
-
-    ProjectAllWebToolkit() {
-        setDescription('Builds GWT widgetset in project-all')
-    }
-
-    @TaskAction
-    def buildGwt() {
-        if (!widgetSetsDir)
-            throw new IllegalStateException('Please specify \'String widgetSetsDir\' for build GWT')
-
-        if (!widgetSetClass)
-            throw new IllegalStateException('Please specify \'String widgetSetClass\' for build GWT')
-
-        checkWidgetSetModules()
-
-        File widgetSetsDirectory = new File(this.widgetSetsDir)
-        if (!widgetSetsDirectory.exists()) {
-            List compilerClassPath = collectClassPathEntries()
-            List gwtCompilerArgs = collectCompilerArgs(widgetSetsDirectory.absolutePath)
-            List gwtCompilerJvmArgs = collectCompilerJvmArgs()
-
-            project.javaexec {
-                main = 'com.google.gwt.dev.Compiler'
-                classpath = new SimpleFileCollection(compilerClassPath)
-                args = gwtCompilerArgs
-                jvmArgs = gwtCompilerJvmArgs
-            }
-
-            new File(widgetSetsDirectory, 'WEB-INF').deleteDir()
-        } else {
-            println "Widgetsets dir exists, skip build GWT"
-        }
-    }
-
-    protected void checkWidgetSetModules() {
-        if (!widgetSetModules || widgetSetModules.isEmpty())
-            throw new IllegalStateException('Please specify not empty \'Collection widgetSetModules\' for build GWT')
-    }
-
-    def jvmArgs(String... jvmArgs) {
-        compilerJvmArgs.addAll(Arrays.asList(jvmArgs))
-    }
-
-    protected List collectCompilerJvmArgs() {
-        println('JVM Args:')
-        println(compilerJvmArgs)
-
-        return new LinkedList(compilerJvmArgs)
-    }
-
-    protected List collectCompilerArgs(warPath) {
-        List args = []
-
-        args.add('-war')
-        args.add(warPath)
-
-        for (def entry : defaultCompilerArgs.entrySet()) {
-            args.add(entry.getKey())
-            args.add(getCompilerArg(entry.getKey()))
-        }
-
-        args.add(widgetSetClass)
-
-        println('GWT Compiler args: ')
-        println(args)
-
-        return args
-    }
-
-    protected def getCompilerArg(argName) {
-        if (compilerArgs && compilerArgs.containsKey(argName))
-            return compilerArgs.get(argName)
-        else
-            return defaultCompilerArgs.get(argName)
-    }
-
-    protected List collectClassPathEntries() {
-        def compilerClassPath = []
-        if (project.configurations.findByName('gwtBuilding')) {
-            def gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
-
-            def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
-            if (validationApiArtifact) {
-                File validationSrcDir = validationApiArtifact.file
-                compilerClassPath.add(validationSrcDir)
-            }
-        }
-
-        def moduleClassesDirs = []
-        def moduleSrcDirs = []
-        if (widgetSetModules) {
-            for (def module : widgetSetModules) {
-                moduleSrcDirs.add(new File((File) module.projectDir, 'src'))
-                moduleClassesDirs.add(module.sourceSets.main.output.classesDir)
-            }
-        }
-
-        compilerClassPath.addAll(moduleSrcDirs)
-        compilerClassPath.addAll(moduleClassesDirs)
-
-        compilerClassPath.add(project.sourceSets.main.compileClasspath.getAsPath())
-        compilerClassPath.add(project.sourceSets.main.output.classesDir)
-        return compilerClassPath
-    }
-}
-
-class CubaWebToolkit extends ProjectAllWebToolkit {
-
-    def inheritedArtifacts
-
-    private def excludes = [ ]
-
-    CubaWebToolkit() {
-        setDescription('Builds GWT widgetset')
-    }
-
-    def excludeJars(String... artifacts) {
-        excludes.addAll(artifacts)
-    }
-
-    private static class InheritedArtifact {
-        def name
-        def jarFile
-    }
-
-    boolean excludedArtifact(String name) {
-        for (def artifactName : excludes)
-            if (name.contains(artifactName))
-                return true
-        return false
-    }
-
-    @Override
-    protected void checkWidgetSetModules() {
-        // do nothing
-    }
-
-    @Override
-    protected List collectClassPathEntries() {
-        def gwtBuildingArtifacts = []
-        def compilerClassPath = []
-        if (project.configurations.findByName('gwtBuilding')) {
-            gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
-            def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
-            if (validationApiArtifact) {
-                File validationSrcDir = validationApiArtifact.file
-                compilerClassPath.add(validationSrcDir)
-            }
-        }
-        def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
-
-        def mainClasspath = project.sourceSets.main.compileClasspath.findAll { !excludedArtifact(it.name) }
-
-        if (inheritedArtifacts) {
-            def inheritedWidgetSets = []
-            def inheritedSources = []
-            for (def artifactName: inheritedArtifacts) {
-                def artifact = providedArtefacts.find { it.name == artifactName }
-                if (artifact)
-                    inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
-                def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
-                if (artifactSource)
-                    inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
-            }
-
-            // unpack inhertited toolkit (widget sets)
-            for (InheritedArtifact toolkit: inheritedWidgetSets) {
-                def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
-                if (toolkitArtifact) {
-                    File toolkitJar = toolkitArtifact.file
-                    File toolkitClassesDir = new File("${project.buildDir}/tmp/${toolkit.name}-classes")
-                    project.copy {
-                        from project.zipTree(toolkitJar)
-                        into toolkitClassesDir
-                    }
-                    mainClasspath.add(0, toolkitClassesDir)
-                }
-            }
-
-            for (InheritedArtifact sourceArtifact: inheritedSources)
-                compilerClassPath.add(sourceArtifact.jarFile)
-        }
-
-        if (widgetSetModules) {
-            if (!(widgetSetModules instanceof Collection))
-                widgetSetModules = Collections.singletonList(widgetSetModules)
-
-            for (def widgetSetModule : widgetSetModules) {
-                compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
-                compilerClassPath.add(widgetSetModule.sourceSets.main.output.classesDir)
-            }
-        }
-
-        compilerClassPath.add(project.sourceSets.main.output.classesDir)
-
-        compilerClassPath.addAll(mainClasspath)
-
-        return compilerClassPath
-    }
-}
-
-class CubaWebThemeCreation extends DefaultTask {
-
-    def themes
-    def cssDir
-    def destDir
-
-    CubaWebThemeCreation() {
-        setDescription('Builds GWT themes')
-    }
-
-    @TaskAction
-    def buildThemes() {
-        project.logger.info('>>> copying themes to outDir')
-        File outDir = new File(destDir)
-        outDir.mkdirs()
-        themes.each {
-            def themeName = it['themeName']
-            def themeInclude = themeName + '/**'
-            project.copy {
-                from cssDir
-                into outDir
-                include themeInclude
-            }
-            def destFile = it['destFile'] != null ? it['destFile'] : 'styles-include.css'
-            project.logger.info('>>> build theme ' + themeName)
-            buildCssTheme(new File(outDir, '/' + themeName), destFile)
-        }
-    }
-
-    def buildCssTheme(themeDir, destFile) {
-
-        if (!themeDir.isDirectory()) {
-            throw new IllegalArgumentException("ThemeDir should be a directory")
-        }
-
-        def themeName = themeDir.getName()
-        def combinedCss = new StringBuilder()
-        combinedCss.append("/* Automatically created css file from subdirectories. */\n")
-
-        final File[] subdir = themeDir.listFiles()
-
-        Arrays.sort(subdir, new Comparator<File>() {
-            @Override
-            public int compare(File arg0, File arg1) {
-                return (arg0).compareTo(arg1)
-            }
-        })
-
-        for (final File dir: subdir) {
-            String name = dir.getName()
-            String filename = dir.getPath() + "/" + name + ".css"
-
-            final File cssFile = new File(filename)
-            if (cssFile.isFile()) {
-                combinedCss.append("\n")
-                combinedCss.append("/* >>>>> ").append(cssFile.getName()).append(" <<<<< */")
-                combinedCss.append("\n")
-
-                BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(cssFile)))
-                String strLine
-                while ((strLine = br.readLine()) != null) {
-                    String urlPrefix = "../" + themeName + "/"
-
-                    if (strLine.indexOf("url(../") > 0) {
-                        strLine = strLine.replaceAll("url\\(../", "url\\(" + urlPrefix)
-
-                    } else {
-                        strLine = strLine.replaceAll("url\\(", "url\\(" + urlPrefix + name + "/")
-
-                    }
-                    combinedCss.append(strLine)
-                    combinedCss.append("\n")
-                }
-                br.close()
-                // delete obsolete css and empty directories
-                cssFile.delete()
-            }
-            if (dir.isDirectory() && ((dir.listFiles() == null) || (dir.listFiles().length == 0)))
-                dir.delete()
-        }
-
-        def themePath = themeDir.absolutePath
-
-        if (!themePath.endsWith("/")) {
-            themePath += "/"
-        }
-
-        if (destFile.indexOf(".") == -1) {
-            destFile += ".css"
-        }
-
-        def themeFileName = themePath + destFile
-        BufferedWriter out = new BufferedWriter(new FileWriter(themeFileName))
-
-        CssCompressor compressor = new CssCompressor(new StringReader(combinedCss.toString()))
-        compressor.compress(out, 0)
-
-        out.close()
-
-        project.logger.info(">>> compiled CSS to " + themePath + destFile
-                + " (" + combinedCss.toString().length() + " bytes)")
-    }
-}
-
-class CubaWebScssThemeCreation extends DefaultTask {
-    def themes = []
-    def scssDir = 'themes'
-    def destDir = "${project.buildDir}/web/VAADIN/themes"
-    def compress = true
-    def sprites = false
-    def cleanup = true
-
-    def dirFilter = new FileFilter() {
-        @Override
-        boolean accept(File pathname) {
-            return pathname.isDirectory() && !pathname.name.startsWith(".")
-        }
-    }
-
-    CubaWebScssThemeCreation() {
-        setDescription('Compile scss styles in theme')
-    }
-
-    @TaskAction
-    def buildThemes() {
-        if (destDir instanceof String)
-            destDir = project.file(destDir)
-
-        if (scssDir instanceof String)
-            scssDir = project.file(scssDir)
-
-        if (themes.empty) {
-            project.logger.info(">>> scan directory '${scssDir}' for themes")
-            for (File themeDir : project.files(scssDir).listFiles(dirFilter))
-                themes.add(themeDir)
-        }
-
-        themes.each { def themeDir ->
-            if (themeDir instanceof String)
-                themeDir = new File(scssDir, themeDir)
-
-            def themeDestDir = new File(destDir, themeDir.name)
-
-            project.copy {
-                from themeDir
-                into themeDestDir
-                exclude {
-                    it.file.name.startsWith('.') || it.file.name.endsWith('.scss')
-                }
-            }
-
-            project.logger.info(">>> compile theme '${themeDir.name}'")
-
-            def scssFilePath = project.file("${themeDir}/styles.scss").absolutePath
-            def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
-
-            project.javaexec {
-                main = 'com.vaadin.sass.SassCompiler'
-                classpath = project.sourceSets.main.compileClasspath
-                args = [scssFilePath, cssFilePath]
-                jvmArgs = []
-            }
-
-            if (sprites) {
-                project.logger.info(">>> compile sprites for theme '${themeDir.name}'")
-
-                def compiledSpritesDir = new File(themeDestDir, 'compiled')
-                if (!compiledSpritesDir.exists())
-                    compiledSpritesDir.mkdir()
-
-                def processedFile = new File(themeDestDir, 'styles-sprite.css')
-                def cssFile = new File(cssFilePath)
-
-                // process
-                final SmartSpritesParameters parameters = new SmartSpritesParameters();
-                final CmdLineParser parser = new CmdLineParser(parameters);
-
-                parser.parseArgument('--root-dir-path', themeDestDir.absolutePath)
-
-                // Get parameters form system properties
-                final MessageLog messageLog = new MessageLog(new PrintStreamMessageSink(System.out, parameters.getLogLevel()));
-                new SpriteBuilder(parameters, messageLog).buildSprites();
-
-                def dirsToDelete = []
-                // remove sprites directories
-                themeDestDir.eachDirRecurse { if ('sprites'.equals(it.name)) dirsToDelete.add(it) }
-                dirsToDelete.each { it.deleteDir() }
-
-                // replace file
-                if (processedFile.exists()) {
-                    cssFile.delete()
-                    processedFile.renameTo(cssFile)
-                }
-            }
-
-            if (compress) {
-                project.logger.info(">>> compress theme '${themeDir.name}'")
-
-                def compressedFile = new File(cssFilePath + '.compressed')
-                def cssFile = new File(cssFilePath)
-
-                def cssReader = new FileReader(cssFile)
-                BufferedWriter out = new BufferedWriter(new FileWriter(compressedFile))
-
-                CssCompressor compressor = new CssCompressor(cssReader)
-                compressor.compress(out, 0)
-
-                out.close()
-                cssReader.close()
-
-                if (compressedFile.exists()) {
-                    cssFile.delete()
-                    compressedFile.renameTo(cssFile)
-                }
-            }
-
-            if (cleanup) {
-                // remove empty directories
-                recursiveVisitDir(themeDestDir, { File f ->
-                    boolean isEmpty = f.list().length == 0
-                    if (isEmpty) {
-                        project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())}")
-                        f.deleteDir()
-                    }
-                })
-            }
-
-            project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
-        }
-    }
-
-    def recursiveVisitDir(File dir, Closure apply) {
-        for (def f : dir.listFiles()) {
-            if (f.exists() && f.isDirectory()) {
-                recursiveVisitDir(f, apply)
-                apply(f)
-            }
-        }
-    }
-}
-
-/**
- * Enhance styles in target webContentDir
- */
-class CubaEnhanceStyles extends DefaultTask {
-
-    private static final String URL_REGEX = "(?:@import\\s*(?:url\\(\\s*)?|url\\(\\s*).(?:\\.|[^)\"'?])*"
-
-    def webContentDir
-
-    CubaEnhanceStyles() {
-        setDescription('Enhance styles in theme')
-    }
-
-    @TaskAction
-    def enhanceStyles() {
-        project.logger.info('>>> enchance styles')
-
-        File contentDir
-        if (webContentDir instanceof File)
-            contentDir = webContentDir
-        else
-            contentDir = new File(webContentDir)
-
-        File themesRoot = new File(contentDir, '/VAADIN/themes/')
-        if (themesRoot.exists()) {
-            themesRoot.eachFile { themeDir ->
-                if (themeDir.isDirectory()) {
-                    project.logger.info(">>> enhance includes for theme ${themeDir.name}")
-                    enhanceTheme(themeDir)
-                }
-            }
-        }
-    }
-
-    def enhanceTheme(File themeDir) {
-        String releaseTimestamp = Long.toString(new Date().getTime())
-
-        final File[] files = themeDir.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File pathname) {
-                return pathname.isFile() && pathname.getName().endsWith(".css")
-            }
-        })
-
-        for (final File file: files) {
-            StringBuffer enhanceFile = new StringBuffer()
-
-            BufferedReader br = new BufferedReader(
-                    new InputStreamReader(new FileInputStream(file)))
-            String strLine
-            while ((strLine = br.readLine()) != null) {
-                strLine = strLine.replaceAll(URL_REGEX, '$0?' + releaseTimestamp)
-                enhanceFile.append(strLine)
-                enhanceFile.append("\n")
-            }
-            br.close()
-            BufferedWriter out = new BufferedWriter(new FileWriter(file.getPath()))
-            out.write(enhanceFile.toString())
-            out.close()
-            project.logger.info(">>> enhance CSS: " + file.getName())
         }
     }
 }
