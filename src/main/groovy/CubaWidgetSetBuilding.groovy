@@ -91,6 +91,13 @@ class CubaWidgetSetBuilding extends CubaWidgetSetTask {
             }
         }
 
+        if (dependencyModules) {
+            for (def module : dependencyModules) {
+                compilerClassPath.add(new File((File) module.projectDir, 'src'))
+                compilerClassPath.add(module.sourceSets.main.output.classesDir)
+            }
+        }
+
         compilerClassPath.add(project.sourceSets.main.output.classesDir)
 
         compilerClassPath.addAll(mainClasspath)

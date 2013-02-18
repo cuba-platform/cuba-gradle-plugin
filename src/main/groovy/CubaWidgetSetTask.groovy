@@ -21,6 +21,7 @@ abstract class CubaWidgetSetTask extends DefaultTask {
 
     String widgetSetsDir
     List widgetSetModules = []
+    List dependencyModules = []
     String widgetSetClass
     Map compilerArgs
 
@@ -48,6 +49,8 @@ abstract class CubaWidgetSetTask extends DefaultTask {
         File widgetSetsDirectory = new File(this.widgetSetsDir)
         if (widgetSetsDirectory.exists())
             widgetSetsDirectory.deleteDir()
+
+        widgetSetsDirectory.mkdir()
 
         List compilerClassPath = collectClassPathEntries()
         List gwtCompilerArgs = collectCompilerArgs(widgetSetsDirectory.absolutePath)
@@ -135,6 +138,13 @@ abstract class CubaWidgetSetTask extends DefaultTask {
         def moduleSrcDirs = []
         if (widgetSetModules) {
             for (def module : widgetSetModules) {
+                moduleSrcDirs.add(new File((File) module.projectDir, 'src'))
+                moduleClassesDirs.add(module.sourceSets.main.output.classesDir)
+            }
+        }
+
+        if (dependencyModules) {
+            for (def module : dependencyModules) {
                 moduleSrcDirs.add(new File((File) module.projectDir, 'src'))
                 moduleClassesDirs.add(module.sourceSets.main.output.classesDir)
             }
