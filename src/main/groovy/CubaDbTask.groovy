@@ -21,6 +21,7 @@ public abstract class CubaDbTask extends DefaultTask {
     def dbName
     def dbUser
     def dbPassword
+    def driverClasspath
     protected def dbUrl
     protected def driver
     protected File dbDir
@@ -37,14 +38,29 @@ public abstract class CubaDbTask extends DefaultTask {
             dbUrl = "jdbc:jtds:sqlserver://$host/$dbName"
             if (!delimiter)
                 delimiter = '^'
+        } else if (dbms == 'oracle') {
+            driver = 'oracle.jdbc.OracleDriver'
+            dbUrl = "jdbc:oracle:thin:@//$host/$dbName"
+            if (!delimiter)
+                delimiter = '^'
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
 
         dbDir = new File(project.buildDir, dbFolder)
 
-        project.configurations.jdbc.fileCollection { true }.files.each { File file ->
-            GroovyObject.class.classLoader.addURL(file.toURI().toURL())
+        if (!driverClasspath) {
+            driverClasspath = project.configurations.jdbc.fileCollection { true }.asPath
+            project.configurations.jdbc.fileCollection { true }.files.each { File file ->
+                GroovyObject.class.classLoader.addURL(file.toURI().toURL())
+            }
+        } else {
+            driverClasspath.tokenize(File.pathSeparator).each { String path ->
+                def url = new File(path).toURI().toURL()
+                GroovyObject.class.classLoader.addURL(url)
+            }
         }
+        project.logger.info(">>> driverClasspath: $driverClasspath")
+
     }
 
     protected List<File> getUpdateScripts() {

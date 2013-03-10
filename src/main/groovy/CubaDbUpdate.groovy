@@ -24,17 +24,19 @@ class CubaDbUpdate extends CubaDbTask {
     def updateDb() {
         init()
 
-        List<File> files = getUpdateScripts()
-        List<String> scripts = getExecutedScripts()
-        files.each { File file ->
-            String name = getScriptName(file)
-            if (!scripts.contains(name)) {
-                executeScript(file)
-                markScript(name, false)
+        try {
+            List<File> files = getUpdateScripts()
+            List<String> scripts = getExecutedScripts()
+            files.each { File file ->
+                String name = getScriptName(file)
+                if (!scripts.contains(name)) {
+                    executeScript(file)
+                    markScript(name, false)
+                }
             }
+        } finally {
+            closeSql()
         }
-
-        closeSql()
     }
 
     protected void executeScript(File file) {

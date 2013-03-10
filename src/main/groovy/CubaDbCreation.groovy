@@ -12,9 +12,9 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaDbCreation extends CubaDbTask {
 
-    def driverClasspath
     def dropDbSql
     def createDbSql
+    def oracleSystemPassword = 'manager'
 
     CubaDbCreation() {
         setGroup('Database')
@@ -25,9 +25,6 @@ class CubaDbCreation extends CubaDbTask {
         init()
 
         def masterUrl
-
-        if (!driverClasspath)
-            driverClasspath = project.configurations.jdbc.fileCollection { true }.asPath
 
         if (dbms == 'postgres') {
             masterUrl = "jdbc:postgresql://$host/postgres"
@@ -41,6 +38,20 @@ class CubaDbCreation extends CubaDbTask {
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
+        } else if (dbms == 'oracle') {
+            masterUrl = "jdbc:oracle:thin:@//$host/orcl"
+            if (!dropDbSql)
+                dropDbSql = "drop user $dbUser cascade;"
+            if (!createDbSql)
+                createDbSql =
+"""create user $dbUser identified by $dbPassword default tablespace users;
+alter user $dbUser quota unlimited on users;
+grant create session,
+    create table, create view, create procedure, create trigger, create sequence,
+    alter any table, alter any procedure, alter any trigger,
+    delete any table,
+    drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
+    to $dbUser;"""
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
 
@@ -50,7 +61,8 @@ class CubaDbCreation extends CubaDbTask {
                     classpath: driverClasspath,
                     driver: driver,
                     url: masterUrl,
-                    userid: dbUser, password: dbPassword,
+                    userid: dbms == 'oracle' ? 'system' : dbUser,
+                    password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
                     autocommit: true,
                     encoding: "UTF-8",
                     dropDbSql
@@ -64,39 +76,42 @@ class CubaDbCreation extends CubaDbTask {
                 classpath: driverClasspath,
                 driver: driver,
                 url: masterUrl,
-                userid: dbUser, password: dbPassword,
+                userid: dbms == 'oracle' ? 'system' : dbUser,
+                password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
                 autocommit: true,
                 encoding: "UTF-8",
                 createDbSql
         )
 
-        getSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
-                "SCRIPT_NAME varchar(300) not null primary key, " +
-                "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
-                "IS_INIT integer default 0)")
+        try {
+            getSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
+                    "SCRIPT_NAME varchar${dbms == 'oracle' ? '2' : ''}(300) not null primary key, " +
+                    "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
+                    "IS_INIT integer default 0)")
 
-        getInitScripts().each { File file ->
-            project.logger.warn("Executing SQL script: ${file.absolutePath}")
-            project.ant.sql(
-                    classpath: driverClasspath,
-                    src: file.absolutePath,
-                    delimiter: delimiter,
-                    driver: driver,
-                    url: dbUrl,
-                    userid: dbUser, password: dbPassword,
-                    autocommit: true,
-                    encoding: "UTF-8"
-            )
-            String name = getScriptName(file)
-            markScript(name, true)
+            getInitScripts().each { File file ->
+                project.logger.warn("Executing SQL script: ${file.absolutePath}")
+                project.ant.sql(
+                        classpath: driverClasspath,
+                        src: file.absolutePath,
+                        delimiter: delimiter,
+                        driver: driver,
+                        url: dbUrl,
+                        userid: dbUser, password: dbPassword,
+                        autocommit: true,
+                        encoding: "UTF-8"
+                )
+                String name = getScriptName(file)
+                markScript(name, true)
+            }
+
+            getUpdateScripts().each { File file ->
+                String name = getScriptName(file)
+                markScript(name, true)
+            }
+        } finally {
+            closeSql()
         }
-
-        getUpdateScripts().each { File file ->
-            String name = getScriptName(file)
-            markScript(name, true)
-        }
-
-        closeSql()
     }
 
     private List<File> getInitScripts() {
