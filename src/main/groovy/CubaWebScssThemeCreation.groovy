@@ -24,6 +24,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def themes = []
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
+    def buildTimeStamp = ''
     def compress = true
     def sprites = false
     def cleanup = true
@@ -162,12 +163,15 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 })
             }
 
-            String buildTimeStamp = new SimpleDateFormat("yyyy_MM_dd_hh_mm").format(new Date());
-
             // update build timestamp
-            def cssFile = new File(cssFilePath)
-            String processedCss = cssFile.getText("UTF-8").replace("THEME_BUILD_VERSION", buildTimeStamp);
-            cssFile.write(processedCss, "UTF-8");
+            if (buildTimeStamp != null && !buildTimeStamp.isEmpty()) {
+                def cssFile = new File(cssFilePath)
+                def versionedFile = new File(cssFilePath + ".versioned")
+                String processedCss = cssFile.getText("UTF-8").replace("THEME_BUILD_VERSION", buildTimeStamp)
+                versionedFile.write(processedCss, "UTF-8")
+
+                versionedFile.renameTo(cssFile)
+            }
 
             project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
         }
