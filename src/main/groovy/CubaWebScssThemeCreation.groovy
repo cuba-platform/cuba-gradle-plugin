@@ -14,6 +14,8 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.kohsuke.args4j.CmdLineParser
 
+import java.text.SimpleDateFormat
+
 /**
  * @author artamonov
  * @version $Id$
@@ -159,6 +161,13 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     }
                 })
             }
+
+            String buildTimeStamp = new SimpleDateFormat("yyyy_MM_dd_hh_mm").format(new Date());
+
+            // update build timestamp
+            def cssFile = new File(cssFilePath)
+            String processedCss = cssFile.getText("UTF-8").replace("THEME_BUILD_VERSION", buildTimeStamp);
+            cssFile.write(processedCss, "UTF-8");
 
             project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
         }
