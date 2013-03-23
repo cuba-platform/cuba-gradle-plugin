@@ -15,6 +15,7 @@ import org.apache.openjpa.conf.OpenJPAConfiguration;
 import org.apache.openjpa.enhance.PCEnhancer;
 import org.apache.openjpa.lib.util.Localizer;
 import org.apache.openjpa.meta.ClassMetaData;
+import org.apache.openjpa.meta.FieldMetaData;
 import org.apache.openjpa.util.GeneralException;
 import org.apache.openjpa.util.OpenJPAException;
 import serp.bytecode.*;
@@ -56,7 +57,7 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
                 }
             }
 
-            enhanceSetters();
+            enhanceSetters(meta);
 
             _pc.declareInterface(ENHANCED_TYPE);
 
@@ -67,9 +68,16 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
         }
     }
 
-    private void enhanceSetters() throws NoSuchMethodException {
+    private void enhanceSetters(ClassMetaData meta) throws NoSuchMethodException {
         BCMethod[] methods = _managedType.getDeclaredMethods();
         Code code;
+
+        BCMethod[] propertyChangingMethods = _managedType.getMethods("propertyChanging",
+                new Class[]{String.class, int.class, Object.class});
+        boolean propertyChangingExists = propertyChangingMethods.length > 0;
+        if (!propertyChangingExists)
+            log.debug("Method propertyChanging() doesn't exist in " + _pc.getClassName());
+
         for (final BCMethod method : methods) {
             final String name = method.getName();
             if (method.isAbstract() || !name.startsWith("set") || method.getReturnType() != void.class)
@@ -79,8 +87,27 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
 
             final String fieldName = StringUtils.uncapitalize(name.replaceFirst("set", ""));
 
+            if (propertyChangingExists) {
+                FieldMetaData fieldMeta = meta.getDeclaredField(fieldName);
+                int fieldIndex = fieldMeta != null ? fieldMeta.getDeclaredIndex() : -1;
+                // propertyChanging(<fieldName>, pcInheritedFieldCount + <fieldIndex>, <value>)
+                code.aload().setThis();
+                code.constant().setValue(fieldName);
+                if (fieldIndex > -1) {
+                    code.getstatic().setField("pcInheritedFieldCount", int.class);
+                    code.constant().setValue(fieldIndex);
+                    code.iadd();
+                } else {
+                    code.constant().setValue(fieldIndex);
+                }
+                code.aload().setLocal(1);
+                code.invokevirtual().setMethod("propertyChanging", void.class,
+                        new Class[]{String.class, int.class, Object.class});
+            }
+
             code.aload().setThis();
-            code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0], new Class[]{});
+            code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0],
+                    new Class[]{});
             code.astore().setLocal(2);
 
             code.afterLast();
@@ -99,13 +126,15 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
                         code.after(inst);
                         code.aload().setLocal(2);
                         code.aload().setLocal(1);
-                        code.invokestatic().setMethod(ObjectUtils.class, "equals", boolean.class, new Class[]{Object.class, Object.class});
+                        code.invokestatic().setMethod(ObjectUtils.class, "equals", boolean.class,
+                                new Class[]{Object.class, Object.class});
                         IfInstruction ifne = code.ifne();
                         code.aload().setThis();
                         code.constant().setValue(fieldName);
                         code.aload().setLocal(2);
                         code.aload().setLocal(1);
-                        code.invokevirtual().setMethod("propertyChanged", void.class, new Class[]{String.class, Object.class, Object.class});
+                        code.invokevirtual().setMethod("propertyChanged", void.class,
+                                new Class[]{String.class, Object.class, Object.class});
                         ifne.setTarget(vreturn);
                     }
                 }
