@@ -109,7 +109,7 @@ Use is subject to license terms.'''
                     node.@'project-jdk-name' = '1.7'
 
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                    node.@default = 'Haulmont'
+                    node.@default = 'cuba'
                     node = node.appendNode('copyright')
                     if (!project.hasProperty('copyright'))
                         node.appendNode('option', [name: 'notice', value: HAULMONT_COPYRIGHT])
@@ -118,10 +118,11 @@ Use is subject to license terms.'''
 
                     node.appendNode('option', [name: 'keyword', value: 'Copyright'])
                     node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                    node.appendNode('option', [name: 'myName', value: 'Haulmont'])
+                    node.appendNode('option', [name: 'myName', value: 'cuba'])
                     node.appendNode('option', [name: 'myLocal', value: 'true'])
 
-//                    provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = 'svn'
+                    if (project.hasProperty('vcs'))
+                        provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.vcs //'svn'
 
                     provider.node.component.find { it.@name == 'Encoding' }.@defaultCharsetForPropertiesFiles = 'UTF-8'
                 }
