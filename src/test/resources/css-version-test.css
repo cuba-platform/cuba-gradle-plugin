@@ -1,0 +1,18 @@
+.someClass1 {
+    background: url('picture1.png');
+}
+
+.someClass2 {
+    background: url("url/path/picture2.png");
+}
+
+.someClass3 {
+    background: transparent url(    picture3.png);
+}
+
+.someClass4 {
+    background: transparent url(    picture4.png      );
+}
+
+/* comment url(someClass.png) */
+

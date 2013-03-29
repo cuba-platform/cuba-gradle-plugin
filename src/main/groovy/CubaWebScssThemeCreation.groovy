@@ -14,7 +14,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.kohsuke.args4j.CmdLineParser
 
-import java.text.SimpleDateFormat
+import java.util.regex.Pattern
 
 /**
  * @author artamonov
@@ -163,13 +163,27 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 })
             }
 
-            // update build timestamp
+            // update build timestamp for urls
             if (buildTimeStamp != null && !buildTimeStamp.isEmpty()) {
+                project.logger.info(">>> add build timestamp to '${themeDir.name}'")
+
+                Pattern urlPattern = Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
+                // read
                 def cssFile = new File(cssFilePath)
                 def versionedFile = new File(cssFilePath + ".versioned")
-                String processedCss = cssFile.getText("UTF-8").replace("THEME_BUILD_VERSION", buildTimeStamp)
-                versionedFile.write(processedCss, "UTF-8")
-
+                def cssContent = cssFile.getText("UTF-8")
+                // find
+                def matcher = urlPattern.matcher(cssContent)
+                def urls = new HashSet<String>()
+                while (matcher.find()) {
+                    urls.add(matcher.group(1))
+                }
+                // replace
+                for (String url : urls) {
+                    cssContent = cssContent.replace(url, url + '?v=' + buildTimeStamp)
+                }
+                // write
+                versionedFile.write(cssContent, "UTF-8")
                 versionedFile.renameTo(cssFile)
             }
 
