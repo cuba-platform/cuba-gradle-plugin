@@ -3,8 +3,14 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'idea'
 
+def defaultVersion = '4.1-SNAPSHOT'
+def BUILD_VERSION = 'buildVersion'
+
+def artifactVersion = rootProject.hasProperty(BUILD_VERSION) ? rootProject[BUILD_VERSION] : defaultVersion
+def isSnapshot = artifactVersion.endsWith('-SNAPSHOT')
+
 group = 'com.haulmont.gradle'
-version = '1.5-SNAPSHOT'
+version = artifactVersion
 
 ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
 ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -51,7 +57,7 @@ uploadArchives.configure {
     repositories.mavenDeployer {
         name = 'httpDeployer'
         configuration = configurations.deployerJars
-        repository(url: "$repositoryUrl/repositories/snapshots") {
+        repository(url: "$repositoryUrl/repositories/" + (isSnapshot ? 'snapshots' : 'releases')) {
             authentication(userName: repositoryUser, password: repositoryPassword)
         }
     }
