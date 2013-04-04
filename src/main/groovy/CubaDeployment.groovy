@@ -1,7 +1,8 @@
+import groovy.io.FileType
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
-import groovy.io.FileType
 
+import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 /**
@@ -10,10 +11,9 @@ import java.util.regex.Pattern
  */
 class CubaDeployment extends DefaultTask {
 
+    private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
+    private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
     private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]{1}"     // split version string by '.' and '-' chars
-    private static final String DIGITAL_PATTERN = "\\d+"
-    private static final Pattern LIBRARY_NAME_PATTERN = ~/\S+-\d{1}/
-    private static final Pattern LIBRARY_VERSION_PATTERN = ~/-\d{1}\S+/
 
     def jarNames
     def appName
@@ -94,8 +94,11 @@ class CubaDeployment extends DefaultTask {
             doAfter.call()
         }
 
-        resolveDependences("${tomcatRootDir}/shared/lib")
-        resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
+        DependencyResolver resolver = new DependencyResolver(
+                libraryRoot: new File(tomcatRootDir),
+                logger: { String message -> project.logger.info(message) })
+        resolver.resolveDependences("${tomcatRootDir}/shared/lib")
+        resolver.resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
 
         project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         File webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
@@ -106,102 +109,122 @@ class CubaDeployment extends DefaultTask {
         jarNames = names
     }
 
-    def compareVersions(String aLibraryVersion, String bLibraryVersion) {
-        def labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
-        def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
+    public static class LibraryDefinition {
+        String name
+        String version
+    }
 
-        def maxLengthOfBothArrays
-        if (labelAVersionArray.size() >= labelBVersionArray.size())
-            maxLengthOfBothArrays = labelAVersionArray.size()
-        else{
-            maxLengthOfBothArrays = labelBVersionArray.size()
-            def temp = aLibraryVersion
-            aLibraryVersion = bLibraryVersion
-            bLibraryVersion = temp
+    public static class DependencyResolver {
+
+        Closure logger
+        File libraryRoot
+
+        LibraryDefinition getLibraryDefinition(String libraryName) {
+            def currentLibName
+            def currentLibVersion
+
+            Matcher m = LIBRARY_PATTERN.matcher(libraryName)
+            if (m.matches()) {
+                currentLibName = m.group(1)
+                currentLibVersion = m.group(2)
+            }
+            if ((currentLibName != null) && (currentLibVersion != null)) {
+                LibraryDefinition libraryDefinition = new LibraryDefinition()
+                libraryDefinition.name = currentLibName
+                libraryDefinition.version = currentLibVersion
+                return libraryDefinition
+            }
+            return null
         }
 
-        def digitalPattern = Pattern.compile(DIGITAL_PATTERN)
-        for (def i = 0; i < maxLengthOfBothArrays; i++) {
-            if (i < labelAVersionArray.size()) {
+        void resolveDependences(String path) {
+            def libraryNames = []
+            def dir = new File(path)
+            dir.eachFileRecurse(FileType.FILES) { file ->
+                libraryNames << file.name
+            }
+            // filenames to remove
+            def removeSet = new HashSet<String>()
+            // key - nameOfLib , value = list of matched versions
+            def versionsMap = new HashMap<String, List<String>>()
+
+            for (String libraryName in libraryNames) {
+                LibraryDefinition curLibDef = getLibraryDefinition(libraryName)
+                if (curLibDef != null) {
+                    def currentLibName = curLibDef.name
+                    def currentLibVersion = curLibDef.version
+                    //fill versionsMap
+                    List<String> tempList = versionsMap.get(currentLibName)
+                    if (tempList != null)
+                        tempList.add(currentLibVersion)
+                    else {
+                        tempList = new LinkedList<String>()
+                        tempList.add(currentLibVersion)
+                        versionsMap.put(currentLibName, tempList)
+                    }
+                }
+            }
+
+            def relativePath = libraryRoot != null ? path.substring(libraryRoot.absolutePath.length()) : path
+            for (key in versionsMap.keySet()) {
+                def versionsList = versionsMap.get(key)
+                for (int i = 0; i < versionsList.size(); i++) {
+                    for (int j = i + 1; j < versionsList.size(); j++) {
+                        def versionToDelete = compareVersions(versionsList.get(i), versionsList.get(j))
+                        if (versionToDelete != null) {
+                            versionToDelete = key + "-" + versionToDelete + ".jar"
+                            removeSet.add(versionToDelete)
+                            def aNameLibrary = key + "-" + versionsList.get(i) + ".jar"
+                            def bNameLibrary = key + "-" + versionsList.get(j) + ".jar"
+                            if (logger)
+                                logger(">>> library ${relativePath}/${aNameLibrary} conflicts with ${bNameLibrary}")
+                        }
+                    }
+                }
+            }
+
+            removeSet.each { String fileName ->
+                new File(path + "/" + fileName).delete()
+                if (logger)
+                    logger(">>> library ${relativePath }/${fileName} has been removed")
+            }
+        }
+
+        def compareVersions(String aLibraryVersion, String bLibraryVersion) {
+            def labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
+            def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
+
+            def maxLengthOfBothArrays
+            if (labelAVersionArray.size() >= labelBVersionArray.size())
+                maxLengthOfBothArrays = labelAVersionArray.size()
+            else {
+                maxLengthOfBothArrays = labelBVersionArray.size()
+                def temp = aLibraryVersion
+                aLibraryVersion = bLibraryVersion
+                bLibraryVersion = temp
+            }
+
+            for (def i = 0; i < maxLengthOfBothArrays; i++) {
                 if (i < labelBVersionArray.size()) {
-                    def matcherA = digitalPattern.matcher(labelAVersionArray[i])
-                    def matcherB = digitalPattern.matcher(labelBVersionArray[i])
+                    def matcherA = DIGITAL_PATTERN.matcher(labelAVersionArray[i])
+                    def matcherB = DIGITAL_PATTERN.matcher(labelBVersionArray[i])
 
                     if (matcherA.matches() && !matcherB.matches()) return bLibraryVersion //labelA = number, labelB = string
                     if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion  //labelA = string, labelB = number
 
                     // both labels are numbers or strings
-                    if (labelAVersionArray[i].equals("RELEASE")&&(!matcherB.matches())) // labelA = RELEASE , labelB = string
-                        return bLibraryVersion
-                    if (labelBVersionArray[i].equals("RELEASE")&&(!matcherA.matches()))// labelB = RELEASE , labelA = string
-                        return aLibraryVersion
                     if (labelAVersionArray[i] > labelBVersionArray[i])
                         return bLibraryVersion
                     if (labelAVersionArray[i] < labelBVersionArray[i])
                         return aLibraryVersion
                     if (i == maxLengthOfBothArrays - 1) //equals
                         return aLibraryVersion
-
                 } else {
                     if (labelAVersionArray[i].equals("SNAPSHOT"))
                         return aLibraryVersion
                     return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
                 }
-            } else {
-                if (labelBVersionArray[i].equals("SNAPSHOT"))
-                    return bLibraryVersion
-                return aLibraryVersion  //labelAVersionArray.length < labelBVersionArray.length
             }
-        }
-    }
-
-    void resolveDependences(String path) {
-
-        def libraryNames = []
-        def dir = new File(path)
-        dir.eachFileRecurse(FileType.FILES) { file ->
-            libraryNames << file.name
-        }
-        // filenames to remove
-        def removeSet = new HashSet<String>()
-        // key - nameOfLib , value = list of matched versions
-        def versionsMap = new HashMap<String, List<String>>()
-
-        for (String libraryName in libraryNames) {
-            String currentLibVersion = libraryName.find(LIBRARY_VERSION_PATTERN)
-            currentLibVersion = currentLibVersion.substring(1, currentLibVersion.length() - 4)
-            String currentLibName = libraryName.find(LIBRARY_NAME_PATTERN)
-            currentLibName = currentLibName.substring(0, currentLibName.length() - 2)
-
-            List<String> tempList = versionsMap.get(currentLibName)
-            if (tempList != null)
-                tempList.add(currentLibVersion)
-            else {
-                tempList = new LinkedList<String>()
-                tempList.add(currentLibVersion)
-                versionsMap.put(currentLibName, tempList)
-            }
-        }
-        def relatedPath = path.substring(tomcatRootDir.length())
-        for (key in versionsMap.keySet()) {
-            def versionsList = versionsMap.get(key)
-            for (int i = 0; i < versionsList.size(); i++) {
-                for (int j = i + 1; j <  versionsList.size(); j++) {
-                    def versionToDelete = compareVersions(versionsList.get(i), versionsList.get(j))
-                    if (versionToDelete != null) {
-                        versionToDelete = key + "-" + versionToDelete + ".jar"
-                        removeSet.add(versionToDelete)
-                        def aNameLibrary = key + "-" + versionsList.get(i) + ".jar"
-                        def bNameLibrary = key + "-" + versionsList.get(j) + ".jar"
-                        project.logger.info(">>> library ${relatedPath}/${aNameLibrary} conflicts with ${bNameLibrary}")
-                    }
-                }
-            }
-        }
-
-        removeSet.each { String fileName ->
-            new File(path + "/" + fileName).delete()
-            project.logger.info(">>> library ${relatedPath }/${fileName} has been removed")
         }
     }
 }
