@@ -40,6 +40,7 @@ class CubaDeployment extends DefaultTask {
             from project.configurations.runtime
             into "${tomcatRootDir}/shared/lib"
             include { details ->
+                def name = details.file.name
                 return !(name.endsWith('-sources.jar')) && (jarNames.find { name.startsWith(it) } == null)
             }
         }
