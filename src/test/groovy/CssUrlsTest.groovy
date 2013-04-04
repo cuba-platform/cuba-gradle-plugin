@@ -6,8 +6,6 @@
 
 import org.apache.commons.io.IOUtils
 
-import java.util.regex.Pattern
-
 /**
  * @author artamonov
  * @version $Id$
@@ -15,9 +13,6 @@ import java.util.regex.Pattern
 class CssUrlsTest extends GroovyTestCase {
     void testUrlMatcher() {
         String cssContent = IOUtils.toString(getClass().getResourceAsStream('css-version-test.css'))
-
-        // replace comments
-        cssContent = cssContent.replaceAll('/\\*.*\\*/', '')
 
         def urls = ['picture1.png', 'url/path/picture2.png', 'picture3.png', 'picture4.png']
         def foundUrls = []

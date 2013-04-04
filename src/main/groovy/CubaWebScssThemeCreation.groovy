@@ -166,8 +166,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
             // update build timestamp for urls
             if (buildTimeStamp != null && !buildTimeStamp.isEmpty()) {
                 project.logger.info(">>> add build timestamp to '${themeDir.name}'")
-
-                Pattern urlPattern = Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
                 // read
                 def cssFile = new File(cssFilePath)
                 def versionedFile = new File(cssFilePath + ".versioned")
@@ -197,10 +195,14 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     static class CssUrlInspector {
-        private Pattern urlPattern = Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
+        private static final Pattern CSS_URL_PATTERN =
+            Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
 
         public Set<String> getUrls(String cssContent) {
-            def matcher = urlPattern.matcher(cssContent)
+            // replace comments
+            cssContent = cssContent.replaceAll('/\\*.*\\*/', '')
+
+            def matcher = CSS_URL_PATTERN.matcher(cssContent)
             def urls = new HashSet<String>()
             while (matcher.find()) {
                 urls.add(matcher.group(1))
