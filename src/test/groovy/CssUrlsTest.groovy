@@ -13,7 +13,7 @@ import java.util.regex.Pattern
  * @version $Id$
  */
 class CssUrlsTest extends GroovyTestCase {
-    void testUrlRegex() {
+    void testUrlMatcher() {
         String cssContent = IOUtils.toString(getClass().getResourceAsStream('css-version-test.css'))
 
         // replace comments
@@ -22,19 +22,12 @@ class CssUrlsTest extends GroovyTestCase {
         def urls = ['picture1.png', 'url/path/picture2.png', 'picture3.png', 'picture4.png']
         def foundUrls = []
 
-        // find urls
-        Pattern urlPattern = Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
+        def inspector = new CubaWebScssThemeCreation.CssUrlInspector()
 
-        def matcher = urlPattern.matcher(cssContent)
-        int index = 0;
-        while (matcher.find()) {
-            String url = matcher.group(1)
-            cssContent.replace(url, url + '')
-
+        for (String url : inspector.getUrls(cssContent)) {
             assertFalse(foundUrls.contains(url))
-            assertEquals(urls[index], url)
+            assertTrue(urls.contains(url))
 
-            index++;
             foundUrls.add(url)
         }
 

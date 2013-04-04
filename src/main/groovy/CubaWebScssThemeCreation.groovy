@@ -173,13 +173,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 def versionedFile = new File(cssFilePath + ".versioned")
                 def cssContent = cssFile.getText("UTF-8")
                 // find
-                def matcher = urlPattern.matcher(cssContent)
-                def urls = new HashSet<String>()
-                while (matcher.find()) {
-                    urls.add(matcher.group(1))
-                }
+                def inspector = new CssUrlInspector()
                 // replace
-                for (String url : urls) {
+                for (String url : inspector.getUrls(cssContent)) {
                     cssContent = cssContent.replace(url, url + '?v=' + buildTimeStamp)
                 }
                 // write
@@ -197,6 +193,19 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 recursiveVisitDir(f, apply)
                 apply(f)
             }
+        }
+    }
+
+    static class CssUrlInspector {
+        private Pattern urlPattern = Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
+
+        public Set<String> getUrls(String cssContent) {
+            def matcher = urlPattern.matcher(cssContent)
+            def urls = new HashSet<String>()
+            while (matcher.find()) {
+                urls.add(matcher.group(1))
+            }
+            return urls
         }
     }
 }
