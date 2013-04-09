@@ -1,22 +1,7 @@
 /*
- * Copyright (c) 2011 Haulmont Technology Ltd. All Rights Reserved.
+ * Copyright (c) 2013 Haulmont Technology Ltd. All Rights Reserved.
  * Haulmont Technology proprietary and confidential.
  * Use is subject to license terms.
-
- * Author: Konstantin Devyatkin
- * Created: 05.03.11 11:07
- *
- * $Id$
- */
-/*
- * Copyright (c) 2011 Haulmont Technology Ltd. All Rights Reserved.
- * Haulmont Technology proprietary and confidential.
- * Use is subject to license terms.
-
- * Author: Konstantin Devyatkin
- * Created: 03.03.11 14:06
- *
- * $Id$
  */
 
 import org.apache.commons.lang.ObjectUtils;
@@ -24,18 +9,17 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.openjpa.enhance.AsmAdaptor;
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
 import serp.bytecode.*;
 
-import java.io.*;
-import java.util.Collection;
-import java.util.LinkedList;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @author krivopustov
+ * @version $Id$
+ */
 public class CubaTransientEnhancer {
 
     private static Log log = LogFactory.getLog(CubaTransientEnhancer.class);
@@ -45,24 +29,32 @@ public class CubaTransientEnhancer {
             System.err.println("Error: metadata.xml is not specified");
             return;
         }
-        String metaConfigName = args[0];
 
         try {
-            Document document;
-            FileInputStream in = new FileInputStream(metaConfigName);
-            SAXReader xmlReader = new SAXReader();
-            try {
-                document = xmlReader.read(in);
-            } catch (DocumentException e) {
-                throw new RuntimeException(e);
+            Project project = new Project();
+            String outputDir = null;
+            List<BCClass> classes = new ArrayList<>();
+            int i = 0;
+            while (i < args.length) {
+                if ("-o".equals(args[i])) {
+                    if (i < args.length - 2) {
+                        outputDir = args[i + 1];
+                        i++;
+                    }
+                } else if (args[i].startsWith("-o")) {
+                    outputDir = args[i].substring(3);
+                } else {
+                    classes.add(project.loadClass(Class.forName(args[i])));
+                }
+                i++;
             }
-            Collection<BCClass> classes = getBCClasses(document);
+
             CubaTransientEnhancer enhancer = new CubaTransientEnhancer();
             for (BCClass cl : classes) {
                 log.info("enhancing: " + cl.getName());
                 enhancer.enhanceSetters(cl);
-                if (args.length > 1) {
-                    File file = getOutputFile(cl, args[1]);
+                if (!StringUtils.isEmpty(outputDir)) {
+                    File file = getOutputFile(cl, outputDir);
                     cl.write(file);
                     AsmAdaptor.write(cl, file); // see https://issues.apache.org/jira/browse/OPENJPA-2085
                 } else {
@@ -70,8 +62,9 @@ public class CubaTransientEnhancer {
                     AsmAdaptor.write(cl); // see https://issues.apache.org/jira/browse/OPENJPA-2085
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | ClassNotFoundException e) {
             log.error("Error", e);
+            System.exit(-1);
         }
     }
 
@@ -119,25 +112,5 @@ public class CubaTransientEnhancer {
             code.calculateMaxStack();
             code.calculateMaxLocals();
         }
-    }
-
-    private static Collection<BCClass> getBCClasses(Document document) {
-        Project project = new Project();
-
-        Collection<BCClass> classes = new LinkedList<BCClass>();
-        List<Element> metaModels = document.getRootElement().elements("metadata-model");
-        for (Element metaModel : metaModels) {
-            List<Element> elements = metaModel.elements("class");
-            for (Element classElement : elements) {
-                try {
-                      classes.add(project.loadClass(Class.forName(classElement.getText())));
-                } catch (ClassNotFoundException e) {
-                    log.error("Error", e);
-                }
-            }
-        }
-
-        return classes;
-
     }
 }
