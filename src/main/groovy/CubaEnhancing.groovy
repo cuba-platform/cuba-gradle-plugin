@@ -18,28 +18,24 @@ class CubaEnhancing extends DefaultTask {
 
     @InputFiles
     def List getInputFiles() {
-        getClassNames().collect { name ->
+        getClassNames(persistenceXml).collect { name ->
             new File("$project.buildDir/classes/main/${name.replace('.', '/')}.class")
         }
     }
 
     @OutputFiles
     def List getOutputFiles() {
-        getClassNames().collect { name ->
+        getClassNames(persistenceXml).collect { name ->
             new File("$project.buildDir/enhanced-classes/main/${name.replace('.', '/')}.class")
         }
     }
 
-    private List getClassNames() {
-        if (persistenceXml) {
-            File f = new File(persistenceXml)
-            if (f.exists()) {
-                def persistence = new XmlParser().parse(f)
-                def pu = persistence.'persistence-unit'[0]
-                pu.'class'.collect {
-                    it.name().toString()
-                }
-            }
+    static List getClassNames(String persistenceXml) {
+        File f = new File(persistenceXml)
+        if (f.exists()) {
+            def persistence = new XmlParser().parse(f)
+            def pu = persistence.'persistence-unit'[0]
+            pu.'class'.collect { it.value()[0] }
         }
     }
 

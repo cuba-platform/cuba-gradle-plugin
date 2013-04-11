@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright (c) 2012 Haulmont Technology Ltd. All Rights Reserved.
+  ~ Haulmont Technology proprietary and confidential.
+  ~ Use is subject to license terms.
+  -->
+
+<persistence xmlns="http://java.sun.com/xml/ns/persistence" version="1.0">
+    <persistence-unit name="cuba" transaction-type="RESOURCE_LOCAL">
+        <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
+
+        <class>com.haulmont.cuba.core.entity.BaseUuidEntity</class>
+        <class>com.haulmont.cuba.core.entity.StandardEntity</class>
+        <class>com.haulmont.cuba.core.entity.Server</class>
+
+        <properties>
+            <property name="openjpa.Log" value="log4j"/>
+
+            <property name="openjpa.ConnectionFactoryProperties" value="PrettyPrint=true, PrettyPrintLineLength=72, PrintParameters=true"/>
+
+            <property name="openjpa.jdbc.SchemaFactory" value="native(ForeignKeys=true)"/>
+
+            <property name="openjpa.DetachState" value="loaded(DetachedStateField=true, DetachedStateManager=true)"/>
+
+            <property name="openjpa.IgnoreChanges" value="true"/>
+
+            <property name="openjpa.jdbc.SubclassFetchMode" value="none"/>
+
+            <property name="openjpa.Compatibility" value="SuperclassDiscriminatorStrategyByDefault=false"/>
+
+            <!-- OpenJPA-2.1.1: have to switch it off because these caches don't work properly with FetchPlans -->
+            <property name="openjpa.jdbc.QuerySQLCache"
+                      value="false"/>
+            <property name="openjpa.jdbc.FinderCache"
+                      value="false"/>
+        </properties>
+    </persistence-unit>
+</persistence>
