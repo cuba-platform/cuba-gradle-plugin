@@ -13,5 +13,7 @@ class CubaModularWidgetSetBuilding extends CubaWidgetSetTask {
     CubaModularWidgetSetBuilding() {
         setDescription('Builds GWT widgetset in project-all')
         setGroup('Web resources')
+        // set default task dependsOn
+        setDependsOn(project.getTasksByName('compileJava', false))
     }
 }

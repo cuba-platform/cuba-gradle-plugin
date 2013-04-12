@@ -1,19 +1,30 @@
+/*
+ * Copyright (c) 2013 Haulmont Technology Ltd. All Rights Reserved.
+ * Haulmont Technology proprietary and confidential.
+ * Use is subject to license terms.
+ */
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 
 /**
- * 
+ * Enhances entity classes specified in persistence xml
+ *
  * @author krivopustov
  * @version $Id$
  */
 class CubaEnhancing extends DefaultTask {
 
-    def persistenceXml
+    String persistenceXml
 
     CubaEnhancing() {
         setDescription('Enhances persistent classes')
+        setGroup('Compile')
+        // set default task dependsOn
+        setDependsOn(project.getTasksByName('compileJava', false))
+        project.getTasksByName('classes', false).each { it.dependsOn(this) }
     }
 
     @InputFiles

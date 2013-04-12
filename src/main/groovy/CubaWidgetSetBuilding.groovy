@@ -17,6 +17,8 @@ class CubaWidgetSetBuilding extends CubaWidgetSetTask {
     CubaWidgetSetBuilding() {
         setDescription('Builds GWT widgetset')
         setGroup('Web resources')
+        // set default task dependsOn
+        setDependsOn(project.getTasksByName('compileJava', false))
     }
 
     def excludeJars(String... artifacts) {

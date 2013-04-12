@@ -1,10 +1,17 @@
+/*
+ * Copyright (c) 2013 Haulmont Technology Ltd. All Rights Reserved.
+ * Haulmont Technology proprietary and confidential.
+ * Use is subject to license terms.
+ */
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 
 /**
- * 
+ * Enhances specified transient entity classes
+ *
  * @author krivopustov
  * @version $Id$
  */
@@ -14,6 +21,10 @@ class CubaEnhanceTransient extends DefaultTask {
 
     CubaEnhanceTransient() {
         setDescription('Enhances transient entities')
+        setGroup('Compile')
+        // set default task dependsOn
+        setDependsOn(project.getTasksByName('compileJava', false))
+        project.getTasksByName('classes', false).each { it.dependsOn(this) }
     }
 
     @InputFiles
