@@ -47,7 +47,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         setDescription('Builds GWT widgetset')
         setGroup('Web resources')
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('classes', false))
+        setDependsOn(project.getTasksByName('compileJava', false))
     }
 
     @TaskAction
@@ -154,7 +154,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     boolean excludedArtifact(String name) {
-        return excludes.find { it.name.contains(name) } != null
+        return excludes.find { it.contains(name) } != null
     }
 
     protected List collectClassPathEntries() {
