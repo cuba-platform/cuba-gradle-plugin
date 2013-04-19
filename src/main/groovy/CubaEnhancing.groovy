@@ -28,7 +28,7 @@ class CubaEnhancing extends DefaultTask {
         project.getTasksByName('classes', false).each { it.dependsOn(this) }
         // add default provided dependency on cuba-plugin
         project.dependencies {
-            provided(new InputStreamReader(getClass().getResourceAsStream(CubaPlugin.VERSION_RESOURCE)).text)
+            provided(CubaPlugin.getArtifactDefinition())
         }
     }
 

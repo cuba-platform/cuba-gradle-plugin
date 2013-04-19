@@ -213,6 +213,10 @@ Use is subject to license terms.'''
         Path enhPath = enhClassesPath.resolve(relPath)
         return Files.exists(enhPath)
     }
+
+    public static String getArtifactDefinition() {
+        return new InputStreamReader(getClass().getResourceAsStream(VERSION_RESOURCE)).text
+    }
 }
 
 class CubaDbScriptsAssembling extends DefaultTask {
