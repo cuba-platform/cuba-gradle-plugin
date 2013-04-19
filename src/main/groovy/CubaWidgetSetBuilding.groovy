@@ -4,105 +4,233 @@
  * Use is subject to license terms.
  */
 
+import org.gradle.api.DefaultTask
+import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
+import org.gradle.api.artifacts.ModuleDependency
+import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.collections.SimpleFileCollection
+import org.gradle.api.logging.LogLevel
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.SkipWhenEmpty
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.TaskAction
+
 /**
  * @author artamonov
  * @version $Id$
  */
-class CubaWidgetSetBuilding extends CubaWidgetSetTask {
+class CubaWidgetSetBuilding extends DefaultTask {
 
-    def inheritedArtifacts
+    String widgetSetsDir
+    String widgetSetClass
+    List<Project> widgetSetModules = []
+    Map compilerArgs
 
     private def excludes = []
+
+    private def defaultCompilerArgs = [
+            '-style': 'OBF',
+            '-localWorkers': Runtime.getRuntime().availableProcessors(),
+            '-logLevel': 'INFO'
+    ]
+
+    private def compilerJvmArgs = new HashSet([
+            '-Xmx512m', '-Xss8m', '-XX:MaxPermSize=256m', '-Djava.awt.headless=true'
+    ])
 
     CubaWidgetSetBuilding() {
         setDescription('Builds GWT widgetset')
         setGroup('Web resources')
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileJava', false))
+        setDependsOn(project.getTasksByName('classes', false))
+    }
+
+    @TaskAction
+    def buildWidgetSet() {
+        if (!widgetSetsDir)
+            throw new IllegalStateException('Please specify \'String widgetSetsDir\' for build GWT')
+
+        if (!widgetSetClass)
+            throw new IllegalStateException('Please specify \'String widgetSetClass\' for build GWT')
+
+        File widgetSetsDirectory = new File(this.widgetSetsDir)
+        if (widgetSetsDirectory.exists())
+            widgetSetsDirectory.deleteDir()
+
+        widgetSetsDirectory.mkdir()
+
+        List compilerClassPath = collectClassPathEntries()
+        List gwtCompilerArgs = collectCompilerArgs(widgetSetsDirectory.absolutePath)
+        List gwtCompilerJvmArgs = collectCompilerJvmArgs()
+
+        project.javaexec {
+            main = 'com.google.gwt.dev.Compiler'
+            classpath = new SimpleFileCollection(compilerClassPath)
+            args = gwtCompilerArgs
+            jvmArgs = gwtCompilerJvmArgs
+        }
+
+        new File(widgetSetsDirectory, 'WEB-INF').deleteDir()
+    }
+
+    @OutputDirectory
+    def File getOutputDirectory() {
+        return new File(this.widgetSetsDir)
+    }
+
+    @InputFiles @SkipWhenEmpty @Optional
+    def FileCollection getSourceFiles() {
+        def sources = []
+        def files = new ArrayList<File>()
+
+        sources.addAll(project.sourceSets.main.java.srcDirs)
+        sources.addAll(project.sourceSets.main.output.classesDir)
+        sources.addAll(project.sourceSets.main.output.resourcesDir)
+
+        Configuration widgetSetBuildingConfiguration = project.configurations.findByName('widgetSetBuilding')
+        if (widgetSetBuildingConfiguration) {
+            for (Project module in widgetSetModules) {
+                sources.addAll(module.sourceSets.main.java.srcDirs)
+                sources.addAll(module.sourceSets.main.output.classesDir)
+                sources.addAll(module.sourceSets.main.output.resourcesDir)
+            }
+        }
+
+        sources.each { File sourceDir ->
+            if (sourceDir.exists()) {
+                project.fileTree(sourceDir, { exclude '**/.*' }).each { File sourceFile ->
+                    files.add(sourceFile)
+                }
+            }
+        }
+
+        return new SimpleFileCollection(files)
+    }
+
+    def jvmArgs(String... jvmArgs) {
+        compilerJvmArgs.addAll(Arrays.asList(jvmArgs))
+    }
+
+    protected List collectCompilerJvmArgs() {
+        println('JVM Args:')
+        println(compilerJvmArgs)
+
+        return new LinkedList(compilerJvmArgs)
+    }
+
+    protected List collectCompilerArgs(warPath) {
+        List args = []
+
+        args.add('-war')
+        args.add(warPath)
+
+        for (def entry : defaultCompilerArgs.entrySet()) {
+            args.add(entry.getKey())
+            args.add(getCompilerArg(entry.getKey()))
+        }
+
+        args.add(widgetSetClass)
+
+        println('GWT Compiler args: ')
+        println(args)
+
+        return args
+    }
+
+    protected def getCompilerArg(argName) {
+        if (compilerArgs && compilerArgs.containsKey(argName))
+            return compilerArgs.get(argName)
+        else
+            return defaultCompilerArgs.get(argName)
     }
 
     def excludeJars(String... artifacts) {
         excludes.addAll(artifacts)
     }
 
-    private static class InheritedArtifact {
-        def name
-        def jarFile
-    }
-
     boolean excludedArtifact(String name) {
-        for (def artifactName : excludes)
-            if (name.contains(artifactName))
-                return true
-        return false
+        return excludes.find { it.name.contains(name) } != null
     }
 
-    @Override
     protected List collectClassPathEntries() {
-        def gwtBuildingArtifacts = []
         def compilerClassPath = []
-        if (project.configurations.findByName('gwtBuilding')) {
-            gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
-            def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
-            if (validationApiArtifact) {
-                File validationSrcDir = validationApiArtifact.file
-                compilerClassPath.add(validationSrcDir)
-            }
-        }
-        def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
 
-        def mainClasspath = project.sourceSets.main.compileClasspath.findAll { !excludedArtifact(it.name) }
+        Configuration widgetSetBuildingConfiguration = project.configurations.findByName('widgetSetBuilding')
 
-        if (inheritedArtifacts) {
-            def inheritedWidgetSets = []
-            def inheritedSources = []
-            for (def artifactName : inheritedArtifacts) {
-                def artifact = providedArtefacts.find { it.name == artifactName }
-                if (artifact)
-                    inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
-                def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
-                if (artifactSource)
-                    inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
-            }
-
-            // unpack inhertited toolkit (widget sets)
-            for (InheritedArtifact toolkit : inheritedWidgetSets) {
-                def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
-                if (toolkitArtifact) {
-                    File toolkitJar = toolkitArtifact.file
-                    File toolkitClassesDir = new File("${project.buildDir}/tmp/${toolkit.name}-classes")
-                    project.copy {
-                        from project.zipTree(toolkitJar)
-                        into toolkitClassesDir
+        if (widgetSetBuildingConfiguration) {
+            // try to add sources to all artifacts in widgetSetBuilding
+            for (Dependency dependencyItem in widgetSetBuildingConfiguration.dependencies.collect()) {
+                // add sources dependency to widgetSetBuilding configuration
+                if (!(dependencyItem instanceof ProjectDependency)) {
+                    project.dependencies {
+                        widgetSetBuilding(
+                                group: dependencyItem.group,
+                                name: dependencyItem.name,
+                                version: dependencyItem.version,
+                                classifier: 'sources'
+                        )
                     }
-                    mainClasspath.add(0, toolkitClassesDir)
                 }
             }
 
-            for (InheritedArtifact sourceArtifact : inheritedSources)
-                compilerClassPath.add(sourceArtifact.jarFile)
-        }
+            def widgetSetBuildingResolvedArtifacts = widgetSetBuildingConfiguration.resolvedConfiguration.getResolvedArtifacts()
+            for (def dependencyItem in widgetSetBuildingConfiguration.dependencies) {
+                if (dependencyItem instanceof ProjectDependency) {
+                    Project dependencyProject = dependencyItem.dependencyProject
 
-        if (widgetSetModules) {
-            if (!(widgetSetModules instanceof Collection))
-                widgetSetModules = Collections.singletonList(widgetSetModules)
+                    SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
-            for (def widgetSetModule : widgetSetModules) {
-                compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
-                compilerClassPath.add(widgetSetModule.sourceSets.main.output.classesDir)
+                    compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
+                    compilerClassPath.add(dependencyMainSourceSet.output.classesDir)
+                    compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
+                    compilerClassPath.addAll(
+                            dependencyMainSourceSet.compileClasspath.findAll {
+                                !excludedArtifact(it.name) && !compilerClassPath.contains(it)
+                            }
+                    )
+
+                    project.logger.debug("Widget set building Module: ${dependencyProject.name}")
+
+                } else if (dependencyItem instanceof ModuleDependency) {
+                    // find resolved artifacts and add it to compiler classpath
+                    dependencyItem.getArtifacts().each { def dependencyArtifact ->
+                        def resolvedDependencyArtifact = widgetSetBuildingResolvedArtifacts.find {
+                            a -> a.name == dependencyArtifact.name && dependencyArtifact.classifier == a.classifier
+                        }
+
+                        if (resolvedDependencyArtifact) {
+                            compilerClassPath.add(resolvedDependencyArtifact.file)
+
+                            project.logger.debug("Widget set building Artifact: ${resolvedDependencyArtifact.file}")
+                        }
+                    }
+                }
             }
         }
 
-        if (dependencyModules) {
-            for (def module : dependencyModules) {
-                compilerClassPath.add(new File((File) module.projectDir, 'src'))
-                compilerClassPath.add(module.sourceSets.main.output.classesDir)
+        SourceSet mainSourceSet = project.sourceSets.main
+
+        compilerClassPath.addAll(mainSourceSet.java.srcDirs)
+        compilerClassPath.add(mainSourceSet.output.classesDir)
+        compilerClassPath.add(mainSourceSet.output.resourcesDir)
+        compilerClassPath.addAll(
+                mainSourceSet.compileClasspath.findAll {
+                    !excludedArtifact(it.name) && !compilerClassPath.contains(it)
+                }
+        )
+
+        if (project.logger.isEnabled(LogLevel.DEBUG)) {
+            def sb = new StringBuilder()
+            for (def classPathEntry : compilerClassPath) {
+                sb.append(String.valueOf(classPathEntry)).append("\n")
             }
+            project.logger.debug("GWT Compiler ClassPath: \n${sb.toString()}")
         }
-
-        compilerClassPath.add(project.sourceSets.main.output.classesDir)
-
-        compilerClassPath.addAll(mainClasspath)
 
         return compilerClassPath
     }
