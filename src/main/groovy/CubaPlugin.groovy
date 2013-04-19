@@ -215,7 +215,7 @@ Use is subject to license terms.'''
     }
 
     public static String getArtifactDefinition() {
-        return new InputStreamReader(getClass().getResourceAsStream(VERSION_RESOURCE)).text
+        return new InputStreamReader(CubaPlugin.class.getResourceAsStream(VERSION_RESOURCE)).text
     }
 }
 
