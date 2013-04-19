@@ -43,6 +43,12 @@ dependencies {
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
 }
 
+task signVersion() << {
+    new File("$buildDir/classes/main/cuba-plugin.version").write("${project.group}:${project.name}:${project.version}")
+}
+
+classes.dependsOn signVersion
+
 task sourceJar(type: Jar) {
     from sourceSets.main.groovy
     from sourceSets.main.resources

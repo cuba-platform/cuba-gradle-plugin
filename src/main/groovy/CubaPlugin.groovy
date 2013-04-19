@@ -21,6 +21,8 @@ class CubaPlugin implements Plugin<Project> {
 Haulmont Technology proprietary and confidential.
 Use is subject to license terms.'''
 
+    public static final String VERSION_RESOURCE = "cuba-plugin.version"
+
     @Override
     void apply(Project project) {
         project.logger.info(">>> applying to project $project.name")
@@ -199,7 +201,7 @@ Use is subject to license terms.'''
         }
     }
 
-    def isEnhanced(File file, File buildDir) {
+    protected isEnhanced(File file, File buildDir) {
         Path path = file.toPath()
         Path classesPath = Paths.get(buildDir.toString(), 'classes/main')
         if (!path.startsWith(classesPath))
@@ -267,7 +269,6 @@ class CubaDbScriptsAssembling extends DefaultTask {
         }
     }
 }
-
 
 class CubaWarBuilding extends DefaultTask {
 
@@ -342,8 +343,6 @@ class CubaWarBuilding extends DefaultTask {
         project.delete(tmpWarDir)
     }
 }
-
-
 
 class CubaSetupTomcat extends DefaultTask {
 

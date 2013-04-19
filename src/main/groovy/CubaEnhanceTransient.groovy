@@ -25,6 +25,10 @@ class CubaEnhanceTransient extends DefaultTask {
         // set default task dependsOn
         setDependsOn(project.getTasksByName('compileJava', false))
         project.getTasksByName('classes', false).each { it.dependsOn(this) }
+        // add default provided dependency on cuba-plugin
+        project.dependencies {
+            provided(new InputStreamReader(getClass().getResourceAsStream(CubaPlugin.VERSION_RESOURCE)).text)
+        }
     }
 
     @InputFiles
