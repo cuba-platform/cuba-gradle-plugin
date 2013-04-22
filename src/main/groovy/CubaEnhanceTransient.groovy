@@ -25,9 +25,13 @@ class CubaEnhanceTransient extends DefaultTask {
         // set default task dependsOn
         setDependsOn(project.getTasksByName('compileJava', false))
         project.getTasksByName('classes', false).each { it.dependsOn(this) }
-        // add default provided dependency on cuba-plugin
+        // add default assist dependency on cuba-plugin
+        def assistConfiguration = project.configurations.findByName("assist")
+        if (!assistConfiguration)
+            project.configurations.add("enhance").extendsFrom(project.configurations.getByName("provided"))
+
         project.dependencies {
-            provided(CubaPlugin.getArtifactDefinition())
+            enhance(CubaPlugin.getArtifactDefinition())
         }
     }
 
@@ -46,11 +50,15 @@ class CubaEnhanceTransient extends DefaultTask {
     }
 
     @TaskAction
-    def enhance() {
+    def enhanceClasses() {
         project.logger.info(">>> enhancing classes: $classes")
         project.javaexec {
             main = 'CubaTransientEnhancer'
-            classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
+            classpath(
+                    project.sourceSets.main.compileClasspath,
+                    project.sourceSets.main.output.classesDir,
+                    project.configurations.enhance.asPath
+            )
             args(classes + "-o $project.buildDir/enhanced-classes/main")
         }
     }

@@ -5,7 +5,6 @@
  */
 
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
@@ -26,9 +25,13 @@ class CubaEnhancing extends DefaultTask {
         // set default task dependsOn
         setDependsOn(project.getTasksByName('compileJava', false))
         project.getTasksByName('classes', false).each { it.dependsOn(this) }
-        // add default provided dependency on cuba-plugin
+        // add default assist dependency on cuba-plugin
+        def assistConfiguration = project.configurations.findByName("assist")
+        if (!assistConfiguration)
+            project.configurations.add("enhance").extendsFrom(project.configurations.getByName("provided"))
+
         project.dependencies {
-            provided(CubaPlugin.getArtifactDefinition())
+            enhance(CubaPlugin.getArtifactDefinition())
         }
     }
 
@@ -56,7 +59,7 @@ class CubaEnhancing extends DefaultTask {
     }
 
     @TaskAction
-    def enhance() {
+    def enhanceClasses() {
         if (persistenceXml) {
             File f = new File(persistenceXml)
             if (f.exists()) {
@@ -76,7 +79,11 @@ class CubaEnhancing extends DefaultTask {
 
                 project.javaexec {
                     main = 'org.apache.openjpa.enhance.PCEnhancer'
-                    classpath(project.sourceSets.main.compileClasspath, project.sourceSets.main.output.classesDir)
+                    classpath(
+                            project.sourceSets.main.compileClasspath,
+                            project.sourceSets.main.output.classesDir,
+                            project.configurations.enhance.asPath
+                    )
                     args('-properties', tmpFile, '-d', "$project.buildDir/enhanced-classes/main")
                 }
             }
