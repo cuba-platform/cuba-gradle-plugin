@@ -82,7 +82,7 @@ class CubaEnhancing extends DefaultTask {
                     classpath(
                             project.sourceSets.main.compileClasspath,
                             project.sourceSets.main.output.classesDir,
-                            project.configurations.enhance.asPath
+                            project.configurations.enhance
                     )
                     args('-properties', tmpFile, '-d', "$project.buildDir/enhanced-classes/main")
                 }
