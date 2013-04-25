@@ -130,6 +130,23 @@ Use is subject to license terms.'''
                     provider.node.component.find { it.@name == 'Encoding' }.@defaultCharsetForPropertiesFiles = 'UTF-8'
                 }
             }
+            project.idea.workspace.iws.withXml { provider ->
+                def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
+                def listNode = runManagerNode.list.find { it }
+                if (listNode.@size == '0') {
+                    project.logger.info(">>> Creating remote configuration ")
+                    def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
+                    confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
+                    confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
+                    confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
+                    confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
+                    confNode.appendNode('option', [name: 'PORT', value: '8787'])
+                    confNode.appendNode('method')
+                    listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
+                    listNode.@size = 1;
+                    runManagerNode.@selected = 'Remote.localhost:8787'
+                }
+            }
         }
     }
 
