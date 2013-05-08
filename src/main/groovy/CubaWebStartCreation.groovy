@@ -112,12 +112,22 @@ class CubaWebStartCreation extends DefaultTask {
         new XmlNodePrinter(new PrintWriter(new FileWriter(jnlpFile))).print(jnlpNode)
 
         if (indexFileName) {
-            project.logger.info(">>> copying indes file from ${indexFileName} to ${distDir}")
+            project.logger.info(">>> copying index file from ${indexFileName} to ${distDir}")
             project.copy {
                 from indexFileName
                 into distDir.getAbsolutePath()
             }
         }
+
+        project.logger.info(">>> creating empty web.xml file")
+        File webInfDir = new File(distDir, 'WEB-INF')
+        webInfDir.mkdirs();
+        File webXmlFile = new File(webInfDir, 'web.xml')
+        webXmlFile.write("""<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+         version="2.5"/>""")
     }
 
     void doSignFile(File jarFile, File signerCacheDir) {
