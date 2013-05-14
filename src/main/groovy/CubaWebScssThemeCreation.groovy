@@ -4,12 +4,14 @@
  * Use is subject to license terms.
  */
 
+
 import com.yahoo.platform.yui.compressor.CssCompressor
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.MessageLog
 import org.carrot2.labs.smartsprites.message.PrintStreamMessageSink
 import org.gradle.api.DefaultTask
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
@@ -18,7 +20,6 @@ import org.gradle.api.tasks.*
 import org.kohsuke.args4j.CmdLineParser
 
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.regex.Pattern
 
 /**
@@ -54,6 +55,28 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
+
+        addVaadinThemesDependency(project)
+    }
+
+    // used static function due to 'themes' field clashes with 'themes' configuration in dependency closure
+    static addVaadinThemesDependency(Project project) {
+        def themesConf = project.configurations.findByName('themes')
+        if (!themesConf)
+            project.configurations.add('themes')
+        // find vaadin version
+        def vaadinLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
+            it.name.startsWith('vaadin-')
+        }
+        // add default vaadin-themes dependency
+        if (vaadinLib) {
+            def dependency = vaadinLib.moduleVersion.id
+            project.logger.info(">>> add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
+
+            project.dependencies {
+                themes(group: dependency.group, name: 'vaadin-themes', version: dependency.version)
+            }
+        }
     }
 
     @OutputDirectory
@@ -154,6 +177,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
         // copy includes to build dir
         includes.each { File includeThemeDir ->
             project.logger.info(">>> copy includes from '${includeThemeDir.name}'")
+            if (!includeThemeDir.exists())
+                throw new FileNotFoundException("Could not found include dir ${includeThemeDir.absolutePath}")
 
             project.copy {
                 from includeThemeDir
@@ -164,6 +189,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
         // copy include resources
         includes.each { File includeThemeDir ->
             project.logger.info(">>> copy resources from '${includeThemeDir.name}'")
+            if (!includeThemeDir.exists())
+                throw new FileNotFoundException("Could not found include dir ${includeThemeDir.absolutePath}")
 
             def themeDestDir = new File(destinationDirectory, includeThemeDir.name)
 
@@ -176,6 +203,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             def themeSourceDir = new File(themesTmp, themeName)
             def themeDestDir = new File(destinationDirectory, themeName)
+
+            if (!themeSourceDir.exists())
+                throw new FileNotFoundException("Could not found include dir ${themeSourceDir.absolutePath}")
 
             copyIncludeResources(themeSourceDir, themeDestDir)
         }
