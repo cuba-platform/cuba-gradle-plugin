@@ -34,7 +34,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def themes = []
 
     // copy resources from specified themes
-    def requiresResourcesFrom = []
+    def requiresResourcesFrom = ['base']
 
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
