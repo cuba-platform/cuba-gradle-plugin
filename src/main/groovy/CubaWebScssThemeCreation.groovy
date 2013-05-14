@@ -10,10 +10,15 @@ import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.MessageLog
 import org.carrot2.labs.smartsprites.message.PrintStreamMessageSink
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
+import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.*
 import org.kohsuke.args4j.CmdLineParser
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.regex.Pattern
 
 /**
@@ -21,9 +26,19 @@ import java.util.regex.Pattern
  * @version $Id$
  */
 class CubaWebScssThemeCreation extends DefaultTask {
+
+    // additional scss root from modules
+    def includes = []
+
+    // theme names to build
     def themes = []
+
+    // copy resources from specified themes
+    def requiresResourcesFrom = []
+
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
+
     def buildTimeStamp = ''
     def compress = true
     def sprites = false
@@ -48,37 +63,144 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @InputFiles @SkipWhenEmpty @Optional
     def FileCollection getSourceFiles() {
+        def files = new ArrayList<File>()
         def themeDirs = themes.empty ?
                     project.files(scssDir).listFiles(dirFilter) :
                     themes.collect {new File(project.file(scssDir), it)}
 
-        return project.fileTree(scssDir, {
+        project.fileTree(scssDir, {
             for (def themeDir : themeDirs)
                 include "${themeDir.name}/**"
             exclude '**/.*'
-        })
+        }).each { def file ->
+            files.add(file)
+        }
+
+        includes.each { def include ->
+            File includeDir
+            if (include instanceof String)
+                includeDir = project.rootProject.file(include)
+            else
+                includeDir = include
+
+            project.rootProject.fileTree(includeDir, {
+                exclude '**/.*'
+            }).each {def file ->
+                files.add(file)
+            }
+        }
+
+        return new SimpleFileCollection(files)
     }
 
     @TaskAction
     def buildThemes() {
-        if (destDir instanceof String)
-            destDir = project.file(destDir)
+        File themesTmp = project.file("${project.buildDir}/themes-tmp")
+        if (themesTmp.exists())
+            themesTmp.deleteDir()
+        themesTmp.mkdir()
 
+        File destinationDirectory
+        if (destDir instanceof String)
+            destinationDirectory = project.file(destDir)
+        else
+            destinationDirectory = destDir as File
+
+        File stylesDirecrory
         if (scssDir instanceof String)
-            scssDir = project.file(scssDir)
+            stylesDirecrory = project.file(scssDir)
+        else
+            stylesDirecrory = scssDir as File
 
         if (themes.empty) {
-            project.logger.info(">>> scan directory '${scssDir}' for themes")
-            for (File themeDir : project.files(scssDir).listFiles(dirFilter))
+            project.logger.info(">>> scan directory '${stylesDirecrory}' for themes")
+            for (File themeDir : project.files(stylesDirecrory).listFiles(dirFilter))
                 themes.add(themeDir)
+        }
+
+        // unpack dependencies to destDir
+        Configuration themesConf = project.configurations.findByName('themes')
+        if (themesConf) {
+            def themesResolvedArtifacts = themesConf.resolvedConfiguration.getResolvedArtifacts()
+            themesResolvedArtifacts.each { ResolvedArtifact artifact ->
+                project.logger.info(">>> unpack themes artifact ${artifact.name}")
+
+                File tmpDir = Files.createTempDirectory('themes_' + artifact.name).toFile()
+                try {
+                    project.copy {
+                        from project.zipTree(artifact.file.absolutePath)
+                        into tmpDir
+                    }
+
+                    File artifactThemesRoot = tmpDir
+                    // if used vaadin-style theme artifact
+                    def vaadinThemesRoot = new File(tmpDir, 'VAADIN/themes')
+                    if (vaadinThemesRoot.exists()) {
+                        artifactThemesRoot = vaadinThemesRoot
+                    }
+
+                    artifactThemesRoot.eachDir { File dir ->
+                        project.copy {
+                            from dir
+                            into new File(themesTmp, dir.name)
+                        }
+                    }
+                } finally {
+                    tmpDir.deleteDir()
+                }
+            }
+        }
+
+        // copy includes to build dir
+        includes.each { File includeThemeDir ->
+            project.logger.info(">>> copy includes from '${includeThemeDir.name}'")
+
+            project.copy {
+                from includeThemeDir
+                into new File(themesTmp, includeThemeDir.name)
+            }
+        }
+
+        // copy include resources
+        includes.each { File includeThemeDir ->
+            project.logger.info(">>> copy resources from '${includeThemeDir.name}'")
+
+            def themeDestDir = new File(destinationDirectory, includeThemeDir.name)
+
+            copyIncludeResources(includeThemeDir, themeDestDir)
+        }
+
+        // copy include resources
+        requiresResourcesFrom.each { String themeName ->
+            project.logger.info(">>> copy resources from '${themeName}'")
+
+            def themeSourceDir = new File(themesTmp, themeName)
+            def themeDestDir = new File(destinationDirectory, themeName)
+
+            copyIncludeResources(themeSourceDir, themeDestDir)
         }
 
         themes.each { def themeDir ->
             if (themeDir instanceof String)
-                themeDir = new File(scssDir, themeDir)
+                themeDir = new File(stylesDirecrory, themeDir)
 
-            def themeDestDir = new File(destDir, themeDir.name)
+            def themeBuildDir = new File(themesTmp, themeDir.name)
+            def themeDestDir = new File(destinationDirectory, themeDir.name)
+            if (!themeDestDir.exists())
+                themeDestDir.mkdir()
 
+            project.logger.info(">>> copy theme '${themeDir.name}' to build directory")
+            // copy theme to build directory
+            project.copy {
+                from themeDir
+                into themeBuildDir
+                exclude {
+                    it.file.name.startsWith('.')
+                }
+            }
+
+            project.logger.info(">>> copy theme resources for '${themeDir.name}'")
+            // copy resources
             project.copy {
                 from themeDir
                 into themeDestDir
@@ -89,7 +211,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             project.logger.info(">>> compile theme '${themeDir.name}'")
 
-            def scssFilePath = project.file("${themeDir}/styles.scss").absolutePath
+            def scssFilePath = project.file("${themeBuildDir}/styles.scss").absolutePath
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
 
             project.javaexec {
@@ -157,7 +279,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 recursiveVisitDir(themeDestDir, { File f ->
                     boolean isEmpty = f.list().length == 0
                     if (isEmpty) {
-                        project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())}")
+                        project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDir.name}'")
                         f.deleteDir()
                     }
                 })
@@ -182,6 +304,29 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
 
             project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
+        }
+
+        themesTmp.deleteDir()
+    }
+
+    def copyIncludeResources(File themeSourceDir, File themeDestDir) {
+        project.copy {
+            from themeSourceDir
+            into themeDestDir
+            exclude {
+                it.file.name.startsWith('.') || 'favicon.ico' == it.file.name || it.file.name.endsWith('.scss') || it.file.name.endsWith('.css')
+            }
+        }
+
+        if (cleanup) {
+            // remove empty directories
+            recursiveVisitDir(themeDestDir, { File f ->
+                boolean isEmpty = f.list().length == 0
+                if (isEmpty) {
+                    project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDestDir.name}'")
+                    f.deleteDir()
+                }
+            })
         }
     }
 
