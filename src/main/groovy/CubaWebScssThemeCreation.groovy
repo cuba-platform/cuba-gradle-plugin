@@ -4,7 +4,6 @@
  * Use is subject to license terms.
  */
 
-
 import com.yahoo.platform.yui.compressor.CssCompressor
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
@@ -230,9 +229,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
 
             project.logger.info(">>> copy theme resources for '${themeDir.name}'")
-            // copy resources
+            // copy resources from themeBuildDir, override may be used
             project.copy {
-                from themeDir
+                from themeBuildDir
                 into themeDestDir
                 exclude {
                     it.file.name.startsWith('.') || it.file.name.endsWith('.scss')
