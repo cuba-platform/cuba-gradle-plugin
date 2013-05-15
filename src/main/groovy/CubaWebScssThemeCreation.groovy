@@ -87,7 +87,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def FileCollection getSourceFiles() {
         def files = new ArrayList<File>()
         def themeDirs = themes.empty ?
-                    project.files(scssDir).listFiles(dirFilter) :
+                    project.file(scssDir).listFiles(dirFilter) :
                     themes.collect {new File(project.file(scssDir), it)}
 
         project.fileTree(scssDir, {
@@ -136,7 +136,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         if (themes.empty) {
             project.logger.info(">>> scan directory '${stylesDirecrory}' for themes")
-            for (File themeDir : project.files(stylesDirecrory).listFiles(dirFilter))
+            for (File themeDir : project.file(stylesDirecrory).listFiles(dirFilter))
                 themes.add(themeDir)
         }
 
