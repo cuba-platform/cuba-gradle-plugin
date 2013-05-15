@@ -10,6 +10,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ProjectDependency
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
@@ -28,7 +29,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
     String widgetSetsDir
     String widgetSetClass
-    List<Project> widgetSetModules = []
     Map compilerArgs
 
     private def excludes = []
@@ -94,10 +94,22 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         Configuration widgetSetBuildingConfiguration = project.configurations.findByName('widgetSetBuilding')
         if (widgetSetBuildingConfiguration) {
-            for (Project module in widgetSetModules) {
-                sources.addAll(module.sourceSets.main.java.srcDirs)
-                sources.addAll(module.sourceSets.main.output.classesDir)
-                sources.addAll(module.sourceSets.main.output.resourcesDir)
+            for (def dependencyItem in widgetSetBuildingConfiguration.dependencies) {
+                if (dependencyItem instanceof ProjectDependency) {
+                    Project dependencyProject = dependencyItem.dependencyProject
+
+                    Configuration compileConf = dependencyProject.configurations.getByName('compile')
+                    def artifacts = compileConf.resolvedConfiguration.getResolvedArtifacts()
+                    def vaadinClientArtifact = artifacts.find { ResolvedArtifact artifact ->
+                        artifact.name == 'vaadin-client'
+                    }
+
+                    if (vaadinClientArtifact) {
+                        sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
+                        sources.addAll(dependencyProject.sourceSets.main.output.classesDir)
+                        sources.addAll(dependencyProject.sourceSets.main.output.resourcesDir)
+                    }
+                }
             }
         }
 
