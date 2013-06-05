@@ -90,16 +90,14 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
             if (propertyChangingExists) {
                 FieldMetaData fieldMeta = meta.getDeclaredField(fieldName);
                 int fieldIndex = fieldMeta != null ? fieldMeta.getDeclaredIndex() : -1;
+                if (fieldIndex == -1)
+                    continue;
                 // propertyChanging(<fieldName>, pcInheritedFieldCount + <fieldIndex>, <value>)
                 code.aload().setThis();
                 code.constant().setValue(fieldName);
-                if (fieldIndex > -1) {
-                    code.getstatic().setField("pcInheritedFieldCount", int.class);
-                    code.constant().setValue(fieldIndex);
-                    code.iadd();
-                } else {
-                    code.constant().setValue(fieldIndex);
-                }
+                code.getstatic().setField("pcInheritedFieldCount", int.class);
+                code.constant().setValue(fieldIndex);
+                code.iadd();
                 code.aload().setLocal(1);
                 code.invokevirtual().setMethod("propertyChanging", void.class,
                         new Class[]{String.class, int.class, Object.class});
