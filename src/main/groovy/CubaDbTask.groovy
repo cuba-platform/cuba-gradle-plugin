@@ -15,7 +15,7 @@ import groovy.sql.Sql
 public abstract class CubaDbTask extends DefaultTask {
 
     def dbms
-    def delimiter
+    def delimiter = '^'
     def host = 'localhost'
     def dbFolder = 'db'
     def dbName
@@ -31,18 +31,15 @@ public abstract class CubaDbTask extends DefaultTask {
         if (dbms == 'postgres') {
             driver = 'org.postgresql.Driver'
             dbUrl = "jdbc:postgresql://$host/$dbName"
-            if (!delimiter)
-                delimiter = '^'
         } else if (dbms == 'mssql') {
             driver = 'net.sourceforge.jtds.jdbc.Driver'
             dbUrl = "jdbc:jtds:sqlserver://$host/$dbName"
-            if (!delimiter)
-                delimiter = '^'
         } else if (dbms == 'oracle') {
             driver = 'oracle.jdbc.OracleDriver'
             dbUrl = "jdbc:oracle:thin:@//$host/$dbName"
-            if (!delimiter)
-                delimiter = '^'
+        } else if (dbms == 'hsql') {
+            driver = 'org.hsqldb.jdbc.JDBCDriver'
+            dbUrl = "jdbc:hsqldb:hsql://$host/$dbName"
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
 

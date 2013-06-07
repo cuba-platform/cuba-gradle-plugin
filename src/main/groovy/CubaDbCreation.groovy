@@ -52,6 +52,10 @@ grant create session,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
     to $dbUser;"""
+        } else if (dbms == 'hsql') {
+            masterUrl = "jdbc:hsqldb:hsql://$host/$dbName"
+            if (!dropDbSql)
+                dropDbSql = "drop schema public cascade;"
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
 
@@ -71,17 +75,19 @@ grant create session,
             project.logger.warn(e.getMessage())
         }
 
-        project.logger.warn("Executing SQL: $createDbSql")
-        project.ant.sql(
-                classpath: driverClasspath,
-                driver: driver,
-                url: masterUrl,
-                userid: dbms == 'oracle' ? 'system' : dbUser,
-                password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
-                autocommit: true,
-                encoding: "UTF-8",
-                createDbSql
-        )
+        if (createDbSql) {
+            project.logger.warn("Executing SQL: $createDbSql")
+            project.ant.sql(
+                    classpath: driverClasspath,
+                    driver: driver,
+                    url: masterUrl,
+                    userid: dbms == 'oracle' ? 'system' : dbUser,
+                    password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
+                    autocommit: true,
+                    encoding: "UTF-8",
+                    createDbSql
+            )
+        }
 
         try {
             getSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
