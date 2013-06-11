@@ -125,6 +125,7 @@ grant create session,
         if (dbDir.exists()) {
             String[] moduleDirs = dbDir.list()
             Arrays.sort(moduleDirs)
+            project.logger.info("[getInitScripts] modules: $moduleDirs")
             for (String moduleDirName: moduleDirs) {
                 File moduleDir = new File(dbDir, moduleDirName)
                 File initDir = new File(moduleDir, "init")
@@ -136,9 +137,14 @@ grant create session,
                         }
                     })
                     Arrays.sort(scriptFiles)
+                    project.logger.info("[getInitScripts] files: $scriptFiles")
                     files.addAll(Arrays.asList(scriptFiles))
+                } else {
+                    project.logger.info("[getInitScripts] $scriptDir doesn't exist")
                 }
             }
+        } else {
+            project.logger.info("[getInitScripts] $dbDir doesn't exist")
         }
         return files
     }
