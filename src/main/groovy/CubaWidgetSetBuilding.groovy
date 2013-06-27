@@ -47,16 +47,16 @@ class CubaWidgetSetBuilding extends DefaultTask {
         setDescription('Builds GWT widgetset')
         setGroup('Web resources')
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileJava', false))
+        setDependsOn(project.getTasksByName('classes', false))
     }
 
     @TaskAction
     def buildWidgetSet() {
         if (!widgetSetsDir)
-            throw new IllegalStateException('Please specify \'String widgetSetsDir\' for build GWT')
+            throw new IllegalStateException('Please specify \'String widgetSetsDir\' for build widgetset')
 
         if (!widgetSetClass)
-            throw new IllegalStateException('Please specify \'String widgetSetClass\' for build GWT')
+            throw new IllegalStateException('Please specify \'String widgetSetClass\' for build widgetset')
 
         File widgetSetsDirectory = new File(this.widgetSetsDir)
         if (widgetSetsDirectory.exists())
@@ -83,8 +83,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return new File(this.widgetSetsDir)
     }
 
-    @InputFiles @SkipWhenEmpty @Optional
+    @InputFiles @SkipWhenEmpty
     def FileCollection getSourceFiles() {
+        project.logger.info("Analyze source projects for widgetset building in ${project.name}")
+
         def sources = []
         def files = new ArrayList<File>()
 
@@ -105,6 +107,8 @@ class CubaWidgetSetBuilding extends DefaultTask {
                     }
 
                     if (vaadinClientArtifact) {
+                        project.logger.info("\tFound source project ${dependencyProject.name} for widgetset building")
+
                         sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
                         sources.addAll(dependencyProject.sourceSets.main.output.classesDir)
                         sources.addAll(dependencyProject.sourceSets.main.output.resourcesDir)
@@ -130,6 +134,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
     protected List collectCompilerJvmArgs() {
         println('JVM Args:')
+        print('\t')
         println(compilerJvmArgs)
 
         return new LinkedList(compilerJvmArgs)
@@ -149,6 +154,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         args.add(widgetSetClass)
 
         println('GWT Compiler args: ')
+        print('\t')
         println(args)
 
         return args
@@ -239,7 +245,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         if (project.logger.isEnabled(LogLevel.DEBUG)) {
             def sb = new StringBuilder()
             for (def classPathEntry : compilerClassPath) {
-                sb.append(String.valueOf(classPathEntry)).append("\n")
+                sb.append('\t' + String.valueOf(classPathEntry)).append("\n")
             }
             project.logger.debug("GWT Compiler ClassPath: \n${sb.toString()}")
         }
