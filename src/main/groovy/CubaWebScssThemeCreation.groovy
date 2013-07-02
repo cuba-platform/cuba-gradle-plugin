@@ -62,7 +62,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     static addVaadinThemesDependency(Project project) {
         def themesConf = project.configurations.findByName('themes')
         if (!themesConf)
-            project.configurations.add('themes')
+            project.configurations.create('themes')
         // find vaadin version
         def vaadinLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
             it.name.startsWith('vaadin-')

@@ -28,7 +28,7 @@ class CubaEnhancing extends DefaultTask {
         // add default assist dependency on cuba-plugin
         def enhanceConfiguration = project.configurations.findByName("enhance")
         if (!enhanceConfiguration)
-            project.configurations.add("enhance").extendsFrom(project.configurations.getByName("provided"))
+            project.configurations.create("enhance").extendsFrom(project.configurations.getByName("provided"))
 
         project.dependencies {
             enhance(CubaPlugin.getArtifactDefinition())

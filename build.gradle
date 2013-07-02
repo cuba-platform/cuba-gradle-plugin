@@ -39,7 +39,7 @@ dependencies {
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(group: 'com.carrotsearch', name: 'smartsprites', version: '0.2.8')
     compile(gradleApi())
-    groovy(localGroovy())
+    compile(localGroovy())
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
 }
 
