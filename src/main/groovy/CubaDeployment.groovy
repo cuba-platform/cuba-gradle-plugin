@@ -47,7 +47,7 @@ class CubaDeployment extends DefaultTask {
             into "${tomcatRootDir}/shared/lib"
             include { details ->
                 def name = details.file.name
-                return !(name.endsWith('-sources.jar')) && !name.endsWith('tests.jar') && (jarNames.find { name.startsWith(it) } == null)
+                return !(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && (jarNames.find { name.startsWith(it) } == null)
             }
         }
 
