@@ -28,6 +28,8 @@ class CubaDeployment extends DefaultTask {
     def webcontentExclude = []
     def dbScriptsExcludes = []
 
+    def sharedlibResolve = true
+
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
         setGroup('Development server')
@@ -101,11 +103,13 @@ class CubaDeployment extends DefaultTask {
             doAfter.call()
         }
 
-        DependencyResolver resolver = new DependencyResolver(
-                libraryRoot: new File(tomcatRootDir),
-                logger: { String message -> project.logger.info(message) })
-        resolver.resolveDependences("${tomcatRootDir}/shared/lib")
-        resolver.resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
+        if (sharedlibResolve) {
+            DependencyResolver resolver = new DependencyResolver(
+                    libraryRoot: new File("${tomcatRootDir}"),
+                    logger: { String message -> project.logger.info(message) })
+            resolver.resolveDependences("${tomcatRootDir}/shared/lib")
+            resolver.resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
+        }
 
         project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         File webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
@@ -193,7 +197,7 @@ class CubaDeployment extends DefaultTask {
             removeSet.each { String fileName ->
                 new File(path + "/" + fileName).delete()
                 if (logger)
-                    logger(">>> library ${relativePath }/${fileName} has been removed")
+                    logger(">>> remove library ${relativePath }/${fileName}")
             }
         }
 
@@ -202,13 +206,18 @@ class CubaDeployment extends DefaultTask {
             def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
 
             def maxLengthOfBothArrays
-            if (labelAVersionArray.size() >= labelBVersionArray.size())
+            if (labelAVersionArray.size() >= labelBVersionArray.size()) {
                 maxLengthOfBothArrays = labelAVersionArray.size()
-            else {
+            } else {
                 maxLengthOfBothArrays = labelBVersionArray.size()
+
                 def temp = aLibraryVersion
                 aLibraryVersion = bLibraryVersion
                 bLibraryVersion = temp
+
+                def tempArr = labelAVersionArray
+                labelAVersionArray = labelBVersionArray
+                labelBVersionArray = tempArr
             }
 
             for (def i = 0; i < maxLengthOfBothArrays; i++) {
