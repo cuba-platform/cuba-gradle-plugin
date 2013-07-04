@@ -98,17 +98,17 @@ class CubaDeployment extends DefaultTask {
             into "${tomcatRootDir}/webapps/$appName"
         }
 
-        if (doAfter) {
-            project.logger.info(">>> calling doAfter")
-            doAfter.call()
-        }
-
         if (sharedlibResolve) {
             DependencyResolver resolver = new DependencyResolver(
                     libraryRoot: new File("${tomcatRootDir}"),
                     logger: { String message -> project.logger.info(message) })
             resolver.resolveDependences("${tomcatRootDir}/shared/lib")
             resolver.resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
+        }
+
+        if (doAfter) {
+            project.logger.info(">>> calling doAfter")
+            doAfter.call()
         }
 
         project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
