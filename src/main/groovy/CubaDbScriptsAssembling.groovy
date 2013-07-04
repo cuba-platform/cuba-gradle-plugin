@@ -31,7 +31,7 @@ class CubaDbScriptsAssembling extends DefaultTask {
         return project.file("${project.buildDir}/db")
     }
 
-    @InputFiles @SkipWhenEmpty @Optional
+    @InputFiles
     def FileCollection getSourceFiles() {
         return project.fileTree(new File(project.projectDir, 'db'), {
             exclude '**/.*'
