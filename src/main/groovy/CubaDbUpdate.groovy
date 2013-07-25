@@ -6,6 +6,7 @@
 
 import groovy.sql.Sql
 import org.apache.commons.io.FileUtils
+import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.text.StrMatcher
 import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.tasks.TaskAction
@@ -50,11 +51,13 @@ class CubaDbUpdate extends CubaDbTask {
                 script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
         Sql sql = getSql()
         while (tokenizer.hasNext()) {
-            String sqlCommand = tokenizer.nextToken()
-            if (sqlCommand.trim().toLowerCase().startsWith("select")) {
-                sql.execute(sqlCommand)
-            } else {
-                sql.executeUpdate(sqlCommand)
+            String sqlCommand = tokenizer.nextToken().trim()
+            if (!StringUtils.isEmpty(sqlCommand)) {
+                if (sqlCommand.toLowerCase().startsWith("select")) {
+                    sql.execute(sqlCommand)
+                } else {
+                    sql.executeUpdate(sqlCommand)
+                }
             }
         }
     }
