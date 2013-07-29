@@ -240,6 +240,7 @@ Use is subject to license terms.'''
                     throw new IllegalStateException("=========== License agreement is not accepted ===========")
                 }
 
+                file.parentFile.mkdirs()
                 props.setProperty("accepted", "true")
                 props.store(file.newDataOutputStream(), "")
             }
