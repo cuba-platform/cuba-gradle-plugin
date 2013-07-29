@@ -178,6 +178,8 @@ Use is subject to license terms.'''
             }
         }
 
+        project.assemble.doFirst { acceptLicense(project) }
+
         // Ensure there will be no duplicates in jars
         project.jar {
             exclude { details -> !details.isDirectory() && isEnhanced(details.file, project.buildDir) }
@@ -199,6 +201,7 @@ Use is subject to license terms.'''
         }
 
         if (project.idea) {
+            project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
             project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
             project.idea.module.inheritOutputDirs = true
@@ -216,6 +219,31 @@ Use is subject to license terms.'''
                     rootNode.children().add(srcIdx, enhNode)
                 }
             }
+        }
+    }
+
+    private void acceptLicense(Project project) {
+        if (!project.rootProject.hasProperty('licenseAgreementAccepted')) {
+            boolean saved = false
+            Properties props = new Properties()
+            File file = new File("${System.getProperty('user.home')}/.haulmont/license.properties")
+            if (file.exists()) {
+                props.load(file.newDataInputStream())
+                saved = Boolean.parseBoolean(props.getProperty("accepted"))
+            }
+            if (!saved) {
+                project.ant.echo('Please read the following license agreement carefully')
+                project.ant.echo(getClass().classLoader.getResourceAsStream('cubaLicenseAgreement.txt').text)
+                project.ant.input(message: '\nDo you accept the license agreement? (Y - yes, N - no)', addproperty: 'licenseAgreement')
+
+                if (project.ant.licenseAgreement.toLowerCase() != 'y' && project.ant.licenseAgreement.toLowerCase() != 'yes') {
+                    throw new IllegalStateException("=========== License agreement is not accepted ===========")
+                }
+
+                props.setProperty("accepted", "true")
+                props.store(file.newDataOutputStream(), "")
+            }
+            project.rootProject.ext.licenseAgreementAccepted = true
         }
     }
 
