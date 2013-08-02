@@ -5,6 +5,8 @@
  */
 
 import com.yahoo.platform.yui.compressor.CssCompressor
+import org.apache.commons.io.FileUtils
+import org.apache.commons.lang.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.MessageLog
@@ -35,6 +37,12 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     // copy resources from specified themes
     def requiresResourcesFrom = ['base']
+
+    // exclude selectors from result css
+    def excludedSelectors = []
+
+    // exlude subdirectories from themes
+    def excludedPaths = []
 
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
@@ -301,6 +309,38 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     cssFile.delete()
                     compressedFile.renameTo(cssFile)
                 }
+
+                // remove specified selectors
+                if (excludedSelectors && !excludedSelectors.isEmpty()) {
+                    project.logger.info(">>> strip theme '${themeDir.name}'")
+                    if (project.logger.isInfoEnabled()) {
+                        def selectorsInfo = StringUtils.join(excludedSelectors, '\n\t')
+                        project.logger.info(">>> remove selectors:\n\t${selectorsInfo}")
+                    }
+
+                    cssFile = new File(cssFilePath)
+                    def strippedFile = new File(cssFilePath + '.stripped')
+
+                    cssReader = new FileReader(cssFile)
+                    out = new BufferedWriter(new FileWriter(strippedFile))
+
+                    String line
+                    while ((line = cssReader.readLine()) != null) {
+                        if (excludedSelectors.find({ String it -> line.contains(it) }) == null) {
+                            out.println(line)
+                        } else if (project.logger.isDebugEnabled()) {
+                            project.logger.debug(">>> remove css statement '${line}'")
+                        }
+                    }
+
+                    out.close()
+                    cssReader.close()
+
+                    if (strippedFile.exists()) {
+                        cssFile.delete()
+                        strippedFile.renameTo(cssFile)
+                    }
+                }
             }
 
             if (cleanup) {
@@ -312,6 +352,15 @@ class CubaWebScssThemeCreation extends DefaultTask {
                         f.deleteDir()
                     }
                 })
+
+                // remove specified subdirectories
+                for (String path : excludedPaths) {
+                    def dir = new File(destinationDirectory, path)
+                    if (dir.exists()) {
+                        project.logger.info(">>> remove excluded path ${path}")
+                        FileUtils.deleteDirectory(dir)
+                    }
+                }
             }
 
             // update build timestamp for urls
