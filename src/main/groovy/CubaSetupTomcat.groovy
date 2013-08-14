@@ -25,9 +25,27 @@ class CubaSetupTomcat extends DefaultTask {
         project.configurations.tomcat.files.each { dep ->
             project.copy {
                 from project.zipTree(dep.absolutePath)
+                into "$tomcatRootDir/tmp"
+            }
+        }
+        new File("$tomcatRootDir/tmp").eachDirMatch(~/apache-tomcat-.*/) { File dir ->
+            project.copy {
+                from dir
+                into tomcatRootDir
+                exclude '**/webapps/*'
+                exclude '**/work/*'
+                exclude '**/temp/*'
+            }
+        }
+        project.delete("$tomcatRootDir/tmp")
+
+        project.configurations.tomcatInit.files.each { dep ->
+            project.copy {
+                from project.zipTree(dep.absolutePath)
                 into tomcatRootDir
             }
         }
+
         ant.chmod(osfamily: 'unix', perm: 'a+x') {
             fileset(dir: "${tomcatRootDir}/bin", includes: '*.sh')
         }
