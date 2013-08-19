@@ -233,9 +233,14 @@ Use is subject to license terms.'''
                 saved = Boolean.parseBoolean(props.getProperty("accepted"))
             }
             if (!saved) {
-                project.ant.echo('Please read the following license agreement carefully')
-                project.ant.echo(getClass().classLoader.getResourceAsStream('cubaLicenseAgreement.txt').text)
-                project.ant.input(message: '\nDo you accept the license agreement? (Y - yes, N - no)', addproperty: 'licenseAgreement')
+                def license = '''
+================================================================
+   Do you accept the terms of the Developer license agreement
+      published at http://www.cuba-platform.com/license ?
+                     (Y - yes, N - no)
+================================================================
+'''
+                project.ant.input(message: license, addproperty: 'licenseAgreement')
 
                 if (project.ant.licenseAgreement.toLowerCase() != 'y' && project.ant.licenseAgreement.toLowerCase() != 'yes') {
                     throw new IllegalStateException("=========== License agreement is not accepted ===========")
