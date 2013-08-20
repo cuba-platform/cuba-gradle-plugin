@@ -43,7 +43,7 @@ class CubaHsqlStart extends CubaHsqlTask {
             }
             List<String> paths = [];
             configuration.resolve().each { paths.add(it.absolutePath) }
-            String classpath = driverClasspath + ";" + paths.join(";");
+            String classpath = driverClasspath + File.pathSeparator + paths.join(File.pathSeparator);
 
             ant.java(classname: CubaHSQLDBServer.class.name, classpath: classpath, fork: true, spawn: true, dir: dbDataDir.absolutePath) {
                 arg(value: "\"${dbDataDir.absolutePath}\" \"${dbName}\"")

@@ -1,3 +1,5 @@
+import org.apache.commons.lang.StringUtils;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
@@ -22,7 +24,7 @@ public class CubaHSQLDBServer extends JFrame {
 
     public static final String SERVER_CLASS = "org.hsqldb.server.Server";
 
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         final boolean validInit = args.length > 1;
         final String dbPath = validInit ? args[0] : null;
         final String dbName = validInit ? args[1] : null;
@@ -48,7 +50,8 @@ public class CubaHSQLDBServer extends JFrame {
                         });
                     }
                 } else {
-                    monitor.setStatus("Db name or path is not specified, use: java CubaHSQLDBServer <DB Path> <DB Name>");
+                    String argStr = StringUtils.join(args, ' ');
+                    monitor.setStatus(String.format("Invalid usage (args: '%s')", argStr));
                 }
             }
         });
