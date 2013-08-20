@@ -33,6 +33,7 @@ public class CubaHSQLDBServer extends JFrame {
             public void run() {
                 final CubaHSQLDBServer monitor = new CubaHSQLDBServer();
                 monitor.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+                monitor.setLocationRelativeTo(null);
                 monitor.setVisible(true);
 
                 if (validInit) {
