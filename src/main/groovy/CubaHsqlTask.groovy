@@ -4,8 +4,8 @@
  * Use is subject to license terms.
  */
 
+
 import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.TaskAction
 
 /**
  * @author krivopustov
@@ -13,8 +13,8 @@ import org.gradle.api.tasks.TaskAction
  */
 abstract class CubaHsqlTask extends DefaultTask {
 
-    def driverClasspath
-    def dbName
+    def String driverClasspath
+    def String dbName
     def File dbDataDir
 
     protected void init() {
@@ -36,4 +36,4 @@ abstract class CubaHsqlTask extends DefaultTask {
         }
         project.logger.info(">>> driverClasspath: $driverClasspath")
     }
- }
+}
