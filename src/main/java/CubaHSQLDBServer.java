@@ -2,8 +2,9 @@ import org.apache.commons.lang.StringUtils;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.*;
+import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
@@ -52,7 +53,7 @@ public class CubaHSQLDBServer extends JFrame {
                     }
                 } else {
                     String argStr = StringUtils.join(args, ' ');
-                    monitor.setStatus(String.format("Invalid usage (args: '%s')", argStr));
+                    monitor.setStatus(String.format("Invalid usage (args: '%s')\na", argStr));
                 }
             }
         });
@@ -61,59 +62,99 @@ public class CubaHSQLDBServer extends JFrame {
     private CubaHSQLDBServer() {
         Font monospaced = Font.decode("monospaced");
 
-        statusField = new JTextField(80);
-        statusField.setFont(monospaced);
-        statusField.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+        statusArea = new JTextArea(2, 80);
+        statusArea.setFont(monospaced);
+        statusArea.setMargin(new Insets(5, 5, 5, 5));
         exceptionArea = new JTextArea(26, 80);
         exceptionArea.setFont(monospaced);
-        exceptionWrapperContainer = new JPanel();
+        exceptionArea.setMargin(new Insets(5, 5, 5, 5));
+        JPanel exceptionWrapperContainer = new JPanel();
+        exceptionWrapperContainer.setLayout(new BorderLayout(0, 0));
+        exceptionWrapperContainer.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+        exceptionWrapperContainer.add(exceptionArea);
+        JPanel statusWrapperContainer = new JPanel();
+        statusWrapperContainer.setLayout(new BorderLayout(0, 0));
+        statusWrapperContainer.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+        statusWrapperContainer.add(statusArea);
+        addCopyPopup(statusArea);
+        addCopyPopup(exceptionArea);
 
-        LayoutBuilder.create(exceptionWrapperContainer, BoxLayout.Y_AXIS)
+        exceptionBox = new JPanel();
+        LayoutBuilder.create(exceptionBox, BoxLayout.Y_AXIS)
                 .addSpace(5)
-                .addComponent(exceptionArea);
+                .addComponent(exceptionWrapperContainer);
 
         LayoutBuilder.create(this.getContentPane(), BoxLayout.X_AXIS)
                 .addSpace(5)
                 .addContainer(BoxLayout.Y_AXIS)
                 .addSpace(5)
-                .addComponent(statusField)
-                .addComponent(exceptionWrapperContainer)
+                .addComponent(statusWrapperContainer)
+                .addComponent(exceptionBox)
                 .addSpace(5)
                 .returnToParent()
                 .addSpace(5);
 
-        statusField.setEditable(false);
+        statusArea.setEditable(false);
         exceptionArea.setEditable(false);
-        exceptionWrapperContainer.setVisible(false);
-        exceptionArea.setBorder(BorderFactory.createLineBorder(Color.BLACK, 1));
+        exceptionBox.setVisible(false);
         exceptionArea.setBackground(new Color(255, 255, 212));
         this.pack();
         this.setResizable(false);
         this.setTitle("HSQLDB Server");
     }
 
+    private void addCopyPopup(final JTextArea source) {
+        final JPopupMenu popup = new JPopupMenu();
+        popup.add(new AbstractAction("Copy to clipboard") {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                StringSelection contents = new StringSelection(source.getText());
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(contents, contents);
+            }
+        });
+        source.add(popup);
+        source.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popup.show(source, e.getX(), e.getY());
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    popup.show(source, e.getX(), e.getY());
+                }
+            }
+        });
+    }
+
     public void setStatus(String status) {
-        this.statusField.setEditable(true);
-        this.statusField.setText(status);
-        this.statusField.setEditable(false);
+        this.statusArea.setEditable(true);
+        setTextPreserveSize(this.statusArea, status);
+        this.statusArea.setEditable(false);
     }
 
     public void setException(Throwable exception) {
-        this.exceptionWrapperContainer.setVisible(true);
+        this.exceptionBox.setVisible(true);
         this.exceptionArea.setEditable(true);
         if (exception != null) {
             StringWriter buffer = new StringWriter();
             PrintWriter writer = new PrintWriter(buffer);
             exception.printStackTrace(writer);
-
-            Dimension size = this.exceptionArea.getPreferredSize();
-            this.exceptionArea.setText(buffer.toString());
-            this.exceptionArea.setPreferredSize(size);
+            setTextPreserveSize(this.exceptionArea, buffer.toString());
         } else {
             this.exceptionArea.setText(null);
         }
         this.exceptionArea.setEditable(false);
         this.pack();
+    }
+
+    private void setTextPreserveSize(JTextArea target, String text) {
+        Dimension size = target.getPreferredSize();
+        target.setText(text);
+        target.setPreferredSize(size);
     }
 
     public HSQLServer startServer(String dbPath, String dbName) {
@@ -122,10 +163,12 @@ public class CubaHSQLDBServer extends JFrame {
             HSQLServer server = ServerObjectProxy.newInstance(serverClass);
             server.setDaemon(true);
             server.setDatabaseName(0, dbName);
-            server.setDatabasePath(0, dbPath);
+            server.setDatabasePath(0, getDbPath(dbPath, dbName));
             server.start();
 
-            ServerStatusChecker checker = new ServerStatusChecker(this, server);
+            String format = String.format("Status: %s Port: %s\nDB name: '%s' DB path: '%s'",
+                    "%s", server.getPort(), dbName, dbPath);
+            ServerStatusChecker checker = new ServerStatusChecker(this, server, format);
             checker.schedule();
             return server;
         } catch (InstantiationException | IllegalAccessException | RuntimeException e) {
@@ -139,9 +182,14 @@ public class CubaHSQLDBServer extends JFrame {
         }
     }
 
-    private JTextField statusField;
+    private String getDbPath(String dbPath, String dbName) {
+        File dbDir = new File(dbPath, dbName);
+        return new File(dbDir, dbName).getAbsolutePath();
+    }
+
+    private JTextArea statusArea;
     private JTextArea exceptionArea;
-    private JPanel exceptionWrapperContainer;
+    private JPanel exceptionBox;
 
     /**
      * org.hsqldb.server.Server real method signatures used for object proxy.
@@ -253,10 +301,10 @@ public class CubaHSQLDBServer extends JFrame {
             timer.schedule(this, 1000, 1000);
         }
 
-        private ServerStatusChecker(CubaHSQLDBServer monitor, HSQLServer server) {
+        private ServerStatusChecker(CubaHSQLDBServer monitor, HSQLServer server, String statusFormat) {
             this.monitor = monitor;
             this.server = server;
-            this.portInfo = String.format(" Port: %d", server.getPort());
+            this.statusFormat = statusFormat;
             this.serverStatuses = new HashMap<Integer, String>() {{
                 put(0, "SC_DATABASE_SHUTDOWN");
                 put(1, "SERVER_STATE_ONLINE");
@@ -280,7 +328,7 @@ public class CubaHSQLDBServer extends JFrame {
                                 timer.cancel();
                             }
                         }
-                        monitor.setStatus("Status: " + serverStatuses.get(state) + portInfo);
+                        monitor.setStatus(String.format(statusFormat, serverStatuses.get(state)));
                     } catch (RuntimeException e) {
                         monitor.setStatus("Runtime exception");
                         monitor.setException(e);
@@ -294,6 +342,6 @@ public class CubaHSQLDBServer extends JFrame {
         private HSQLServer server;
         private CubaHSQLDBServer monitor;
         private Map<Integer, String> serverStatuses;
-        private String portInfo;
+        private String statusFormat;
     }
 }
