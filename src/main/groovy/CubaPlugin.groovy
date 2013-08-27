@@ -221,6 +221,33 @@ Use is subject to license terms.'''
                 }
             }
         }
+
+        if (project.eclipse) {
+            project.logger.info ">>> configuring Eclipse module $project.name"
+
+            project.eclipse.classpath {
+                plusConfigurations += project.configurations.provided
+                file.whenMerged { classpath ->
+                    classpath.entries.removeAll { entry ->
+                        entry.path.contains('build/enhanced-classes')
+                    }
+                }
+            }
+
+            if (project.name.endsWith('-global')) {
+                project.eclipse.classpath.file.withXml { provider ->
+                    def root = provider.asNode()
+
+                    Node entry = root.appendNode('classpathentry')
+                    entry.@kind = 'lib'
+                    entry.@path = "$project.buildDir/enhanced-classes"
+                    entry.@exported = 'true'
+
+                    root.children().remove(entry)
+                    root.children().add(0, entry)
+                }
+            }
+        }
     }
 
     private void acceptLicense(Project project) {
