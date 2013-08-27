@@ -104,7 +104,7 @@ Use is subject to license terms.'''
             listeningPort = '8787'
         }
 
-        if (project.idea) {
+        if (project.hasProperty('idea')) {
             project.logger.info ">>> configuring IDEA project"
             project.idea.project.ipr {
                 withXml { provider ->
@@ -201,7 +201,7 @@ Use is subject to license terms.'''
             }
         }
 
-        if (project.idea) {
+        if (project.hasProperty('idea')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
             project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
@@ -222,7 +222,7 @@ Use is subject to license terms.'''
             }
         }
 
-        if (project.eclipse) {
+        if (project.hasProperty('eclipse')) {
             project.logger.info ">>> configuring Eclipse module $project.name"
 
             project.eclipse.classpath {
