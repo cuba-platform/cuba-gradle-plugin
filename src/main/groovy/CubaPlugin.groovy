@@ -214,11 +214,16 @@ Use is subject to license terms.'''
                     it.name() == 'orderEntry' && it.@type == 'module-library' &&
                         it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
                 }
-                if (enhNode) {
-                    int srcIdx = rootNode.children().findIndexOf { it.name() == 'orderEntry' && it.@type == 'sourceFolder' }
-                    rootNode.children().remove(enhNode)
-                    rootNode.children().add(srcIdx, enhNode)
+                int srcIdx = rootNode.children().findIndexOf { it.name() == 'orderEntry' && it.@type == 'sourceFolder' }
+                if (!enhNode && project.name.endsWith('-global')) {
+                    enhNode = rootNode.appendNode('orderEntry', [type: 'module-library', exported: '', scope: 'RUNTIME'])
+                    Node libNode = enhNode.appendNode('library')
+                    libNode.appendNode('CLASSES').appendNode('root', [url: 'file://$MODULE_DIR$/build/enhanced-classes/main'])
+                    libNode.appendNode('JAVADOC')
+                    libNode.appendNode('SOURCES')
                 }
+                rootNode.children().remove(enhNode)
+                rootNode.children().add(srcIdx, enhNode)
             }
         }
 
