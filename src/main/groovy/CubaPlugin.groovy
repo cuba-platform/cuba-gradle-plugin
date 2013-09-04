@@ -267,7 +267,7 @@ Use is subject to license terms.'''
             if (!saved) {
                 def license = '''
 ================================================================
-   Do you accept the terms of the Developer license agreement
+       Do you accept the terms of CUBA license agreement
       published at http://www.cuba-platform.com/license ?
                      (Y - yes, N - no)
 ================================================================
