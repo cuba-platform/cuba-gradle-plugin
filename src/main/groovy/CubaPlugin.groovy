@@ -104,6 +104,12 @@ Use is subject to license terms.'''
             listeningPort = '8787'
         }
 
+        project.task([type: CubaWebCompressor], 'compress') {
+            tomcatRootDir = project.tomcatDir
+            listeningPort = '8787'
+        }
+
+
         if (project.hasProperty('idea')) {
             project.logger.info ">>> configuring IDEA project"
             project.idea.project.ipr {
