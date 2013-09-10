@@ -68,14 +68,14 @@ public abstract class CubaDbTask extends DefaultTask {
             Arrays.sort(moduleDirs)
             for (String moduleDirName : moduleDirs) {
                 File moduleDir = new File(dbDir, moduleDirName)
-                File initDir = new File(moduleDir, "update")
+                File initDir = new File(moduleDir, 'update')
                 File scriptDir = new File(initDir, dbms)
                 if (scriptDir.exists()) {
                     List files = new ArrayList(FileUtils.listFiles(scriptDir, null, true))
                     URI scriptDirUri = scriptDir.toURI()
 
                     List sqlFiles = files
-                        .findAll { File f -> f.name.endsWith(".sql") }
+                        .findAll { File f -> f.name.endsWith('.sql') || f.name.endsWith('.groovy') }
                         .sort { File f1, File f2 ->
                             URI f1Uri = scriptDirUri.relativize(f1.toURI());
                             URI f2Uri = scriptDirUri.relativize(f2.toURI());
@@ -94,7 +94,6 @@ public abstract class CubaDbTask extends DefaultTask {
         String dir = dbDir.getCanonicalPath()
         return path.substring(dir.length() + 1).replace("\\", "/")
     }
-
 
     protected void markScript(String name, boolean init) {
         Sql sql = getSql()
