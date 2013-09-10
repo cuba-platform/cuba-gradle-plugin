@@ -59,12 +59,19 @@ artifacts {
     archives sourceJar
 }
 
+def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl :
+    "http://repository.haulmont.com:8587/nexus/content/repositories/${project.isSnapshot ? 'snapshots' : 'releases'}"
+def uploadUser = project.hasProperty('uploadUser') ? project.uploadUser :
+    System.getenv('HAULMONT_REPOSITORY_USER')
+def uploadPassword = project.hasProperty('uploadPassword') ? project.uploadPassword :
+    System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+
 uploadArchives.configure {
     repositories.mavenDeployer {
         name = 'httpDeployer'
         configuration = configurations.deployerJars
-        repository(url: "$repositoryUrl/repositories/" + (isSnapshot ? 'snapshots' : 'releases')) {
-            authentication(userName: repositoryUser, password: repositoryPassword)
+        repository(url: uploadUrl) {
+            authentication(userName: uploadUser, password: uploadPassword)
         }
     }
 }
