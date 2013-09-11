@@ -60,7 +60,7 @@ artifacts {
 }
 
 def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl :
-    "http://repository.haulmont.com:8587/nexus/content/repositories/${project.isSnapshot ? 'snapshots' : 'releases'}"
+    "http://repository.haulmont.com:8587/nexus/content/repositories/${isSnapshot ? 'snapshots' : 'releases'}"
 def uploadUser = project.hasProperty('uploadUser') ? project.uploadUser :
     System.getenv('HAULMONT_REPOSITORY_USER')
 def uploadPassword = project.hasProperty('uploadPassword') ? project.uploadPassword :
