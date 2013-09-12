@@ -37,11 +37,10 @@ class CubaWebCompressor extends DefaultTask {
                 if (!resultFile.exists() && !resultFile.isFile())
                     resultFile.mkdirs()
                 if (fromFile.isFile()) {
-                    File resultPath = new File(StringUtils.substringBeforeLast(to,"\\"))
+                    File resultPath = new File(StringUtils.substringBeforeLast(to, "\\"))
                     resultPath.mkdirs()
                     compressFile(from, to)
-                }
-                else
+                } else
                     compressDirectory(from, to)
             } else
                 throw new RuntimeException(from + " not exist")
@@ -63,33 +62,39 @@ class CubaWebCompressor extends DefaultTask {
     public void compressJsFile(String from, String to) {
         FileReader reader = new FileReader(from)
         ErrorReporter reporter = new ToolErrorReporter(true);
-        JavaScriptCompressor compressor = new JavaScriptCompressor(reader, reporter);
         FileWriter writer = new FileWriter(to)
+        boolean isCompressed = false;
         try {
+            JavaScriptCompressor compressor = new JavaScriptCompressor(reader, reporter);
             compressor.compress(writer, 0, true, false, true, true)
+            isCompressed = true
         }
-        catch (Exception e){
-            project.logger.info(">>> File ${from} is NOT compressed")
+        catch (Exception e) {
+            project.logger.warn(">>> File ${from} is NOT compressed", e)
         }
         finally {
             reader.close()
             writer.close()
+            checkFile(isCompressed, to)
         }
     }
 
     public void compressCssFile(String from, String to) {
         FileReader reader = new FileReader(from)
-        CssCompressor compressor = new CssCompressor(reader);
         FileWriter writer = new FileWriter(to)
+        boolean isCompressed = false;
         try {
+            CssCompressor compressor = new CssCompressor(reader);
             compressor.compress(writer, 0)
+            isCompressed = true
         }
-        catch (Exception e){
-            project.logger.info(">>> File ${from} is NOT compressed")
+        catch (Exception e) {
+            project.logger.warn(">>> File ${from} is NOT compressed", e)
         }
         finally {
             reader.close()
             writer.close()
+            checkFile(isCompressed, to)
         }
     }
 
@@ -114,10 +119,17 @@ class CubaWebCompressor extends DefaultTask {
     }
 
     public String preparePath(String path) {
-        path = StringUtils.replace(path,"//","\\")
-        path = StringUtils.replace(path,"/","\\")
-        if (StringUtils.endsWith(path,"\\"))
-            path = StringUtils.substringBeforeLast(path,"\\")
+        path = StringUtils.replace(path, "//", "\\")
+        path = StringUtils.replace(path, "/", "\\")
+        if (StringUtils.endsWith(path, "\\"))
+            path = StringUtils.substringBeforeLast(path, "\\")
         return path
+    }
+
+    public void checkFile(Boolean isCompressed, String path) {
+        if (!isCompressed) {
+            File file = new File(path)
+            file.delete()
+        }
     }
 }
