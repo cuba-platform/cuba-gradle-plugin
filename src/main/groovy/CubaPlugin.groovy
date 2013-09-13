@@ -84,7 +84,7 @@ Use is subject to license terms.'''
 
         project.dependencies {
             tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '7.0.42', ext: 'zip')
-            tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.8', ext: 'zip')
+            tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.9', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat') {
