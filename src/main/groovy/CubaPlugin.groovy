@@ -18,9 +18,8 @@ import java.nio.file.Paths
  */
 class CubaPlugin implements Plugin<Project> {
 
-    def HAULMONT_COPYRIGHT = '''Copyright (c) $today.year Haulmont Technology Ltd. All Rights Reserved.
-Haulmont Technology proprietary and confidential.
-Use is subject to license terms.'''
+    def CUBA_COPYRIGHT = '''Copyright (c) 2008-$today.year Haulmont. All rights reserved.
+Use is subject to license terms, see http://www.cuba-platform.com/license for details.'''
 
     public static final String VERSION_RESOURCE = "cuba-plugin.version"
 
@@ -116,7 +115,7 @@ Use is subject to license terms.'''
                     node.@default = 'cuba'
                     node = node.appendNode('copyright')
                     if (!project.hasProperty('copyright'))
-                        node.appendNode('option', [name: 'notice', value: HAULMONT_COPYRIGHT])
+                        node.appendNode('option', [name: 'notice', value: CUBA_COPYRIGHT])
                     else
                         node.appendNode('option', [name: 'notice', value: project.copyright])
 
