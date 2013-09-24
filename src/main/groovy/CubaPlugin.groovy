@@ -146,6 +146,15 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     listNode.@size = 1;
                     runManagerNode.@selected = 'Remote.localhost:8787'
                 }
+
+                def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
+                def ignored = changeListManagerNode.ignored.find { it }
+                if (ignored == null) {
+                    project.logger.info(">>> Configure ignored files")
+                    changeListManagerNode.appendNode('ignored', [mask: '*.ipr'])
+                    changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
+                    changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
+                }
             }
         }
     }
