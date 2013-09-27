@@ -39,7 +39,9 @@ class CubaDeployment extends DefaultTask {
     def deploy() {
         project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
-            from project.configurations.jdbc
+            from project.configurations.jdbc {
+                exclude {f -> f.file.absolutePath.startsWith(file("${tomcatRootDir}/lib/").absolutePath)}
+            }
             into "${tomcatRootDir}/lib"
         }
         project.logger.info(">>> copying shared libs from configurations.runtime")
