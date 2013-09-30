@@ -40,7 +40,7 @@ class CubaDeployment extends DefaultTask {
         project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc {
-                exclude {f -> f.file.absolutePath.startsWith(file("${tomcatRootDir}/lib/").absolutePath)}
+                exclude {f -> f.file.absolutePath.startsWith(project.file("${tomcatRootDir}/lib/").absolutePath)}
             }
             into "${tomcatRootDir}/lib"
         }
