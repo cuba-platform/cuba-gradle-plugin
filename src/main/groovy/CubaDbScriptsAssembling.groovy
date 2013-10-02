@@ -61,7 +61,7 @@ class CubaDbScriptsAssembling extends DefaultTask {
                 if (!moduleDirName) {
                     def lastName = Arrays.asList(dir.list()).sort().last()
                     def num = lastName.substring(0, 2).toInteger()
-                    moduleDirName = "${num + 10}-${project.rootProject.name}"
+                    moduleDirName = "${Math.max(50, num + 10)}-${project.rootProject.name}"
                 }
                 project.copy {
                     project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
