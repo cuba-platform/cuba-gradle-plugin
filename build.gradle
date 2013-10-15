@@ -3,7 +3,7 @@ apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'idea'
 
-def defaultVersion = '4.2-SNAPSHOT'
+def defaultVersion = '5.1-SNAPSHOT'
 def BUILD_VERSION = 'buildVersion'
 
 def artifactVersion = rootProject.hasProperty(BUILD_VERSION) ? rootProject[BUILD_VERSION] : defaultVersion
