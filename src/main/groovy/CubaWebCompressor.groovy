@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2008-2013 Haulmont. All rights reserved.
+ * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
+ */
+
 import com.yahoo.platform.yui.compressor.JavaScriptCompressor
 import com.yahoo.platform.yui.compressor.CssCompressor
 import groovy.io.FileType
