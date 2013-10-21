@@ -208,6 +208,12 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             }
         }
 
+        // set module language level to 1.6 if it is -toolkit module
+        if (project.name.endsWith('-toolkit')) {
+            project.sourceCompatibility = '1.6'
+            project.targetCompatibility = '1.6'
+        }
+
         if (project.hasProperty('idea')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
@@ -221,6 +227,12 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     it.name() == 'orderEntry' && it.@type == 'module-library' &&
                         it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
                 }
+
+                // set module language level to 1.6 if it is -toolkit module
+                if (project.name.endsWith('-toolkit')) {
+                    rootNode.@LANGUAGE_LEVEL = 'JDK_1_6'
+                }
+
                 int srcIdx = rootNode.children().findIndexOf { it.name() == 'orderEntry' && it.@type == 'sourceFolder' }
                 if (!enhNode && project.name.endsWith('-global')) {
                     enhNode = rootNode.appendNode('orderEntry', [type: 'module-library', exported: '', scope: 'RUNTIME'])
