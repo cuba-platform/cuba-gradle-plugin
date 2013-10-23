@@ -62,7 +62,27 @@ class CubaWebScssThemeCreation extends DefaultTask {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
 
+        adjustVaadinVersion()
         addVaadinThemesDependency(project)
+    }
+
+    def adjustVaadinVersion() {
+        ResolvedArtifact vaadin6Lib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
+            it.name.startsWith('vaadin')
+        }
+        if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
+            project.logger.info(">>> use explicit vaadin-theme-compiler dependency for SCSS building")
+            // disable auto required resources from base
+            requiresResourcesFrom.remove('base')
+
+            def scssConf = project.configurations.findByName('scss')
+            if (!scssConf)
+                project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
+
+            project.dependencies {
+                scss(CubaPlugin.getArtifactDefinition())
+            }
+        }
     }
 
     // used static function due to 'themes' field clashes with 'themes' configuration in dependency closure
@@ -250,9 +270,24 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def scssFilePath = project.file("${themeBuildDir}/styles.scss").absolutePath
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
 
+            def scssClassPath = project.sourceSets.main.compileClasspath
+            def vaadinCompilerLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
+                it.name.startsWith('vaadin-theme-compiler')
+            }
+            if (!vaadinCompilerLib) {
+                project.logger.info(">>> vaadin-theme-compiler not found in compile classpath, try to use scss configuration")
+
+                Configuration scssConfiguration = project.configurations.getByName('scss')
+                def scssArtifacts = new ArrayList<File>()
+                scssConfiguration.resolvedConfiguration.resolvedArtifacts.each {
+                    scssArtifacts.add(it.file)
+                }
+                scssClassPath = new SimpleFileCollection(scssArtifacts)
+            }
+
             project.javaexec {
                 main = 'com.vaadin.sass.SassCompiler'
-                classpath = project.sourceSets.main.compileClasspath
+                classpath = scssClassPath
                 args = [scssFilePath, cssFilePath]
                 jvmArgs = []
             }
