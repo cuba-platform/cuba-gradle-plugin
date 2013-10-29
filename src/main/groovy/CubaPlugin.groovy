@@ -214,7 +214,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             project.targetCompatibility = '1.6'
         }
 
-        if (project.hasProperty('idea')) {
+        if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
             project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
