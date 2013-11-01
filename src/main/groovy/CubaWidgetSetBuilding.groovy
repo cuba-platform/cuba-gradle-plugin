@@ -14,7 +14,6 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.SourceSet
@@ -29,6 +28,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     String widgetSetsDir
     String widgetSetClass
     Map compilerArgs
+    boolean printCompilerClassPath = false
 
     private def excludes = []
 
@@ -247,6 +247,14 @@ class CubaWidgetSetBuilding extends DefaultTask {
                 sb.append('\t' + String.valueOf(classPathEntry)).append("\n")
             }
             project.logger.debug("GWT Compiler ClassPath: \n${sb.toString()}")
+            project.logger.debug("")
+        } else if (printCompilerClassPath) {
+            def sb = new StringBuilder()
+            for (def classPathEntry : compilerClassPath) {
+                sb.append('\t' + String.valueOf(classPathEntry)).append("\n")
+            }
+            println("GWT Compiler ClassPath: \n${sb.toString()}")
+            println("")
         }
 
         return compilerClassPath

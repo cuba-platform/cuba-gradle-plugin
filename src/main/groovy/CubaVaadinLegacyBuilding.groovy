@@ -6,10 +6,12 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
+import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.SkipWhenEmpty
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -22,9 +24,10 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
 
     String widgetSetsDir
     List widgetSetModules = []
-    List dependencyModules = []
     String widgetSetClass
     Map compilerArgs
+
+    boolean printCompilerClassPath = false
 
     def inheritedArtifacts
 
@@ -62,7 +65,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
 
         widgetSetsDirectory.mkdir()
 
-        List compilerClassPath = collectClassPathEntries()
+        Collection compilerClassPath = collectClassPathEntries()
         List gwtCompilerArgs = collectCompilerArgs(widgetSetsDirectory.absolutePath)
         List gwtCompilerJvmArgs = collectCompilerJvmArgs()
 
@@ -150,9 +153,9 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
             return defaultCompilerArgs.get(argName)
     }
 
-    protected List collectClassPathEntries() {
+    protected Collection collectClassPathEntries() {
         def gwtBuildingArtifacts = []
-        def compilerClassPath = []
+        def compilerClassPath = new LinkedHashSet()
         if (project.configurations.findByName('gwtBuilding')) {
             gwtBuildingArtifacts = project.configurations.gwtBuilding.resolvedConfiguration.getResolvedArtifacts()
             def validationApiArtifact = gwtBuildingArtifacts.find { a -> a.name == 'validation-api' }
@@ -163,7 +166,9 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
         }
         def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
 
-        def mainClasspath = project.sourceSets.main.compileClasspath.findAll { !excludedArtifact(it.name) }
+        def mainClasspath = project.sourceSets.main.compileClasspath.findAll {
+            !excludedArtifact(it.name)
+        }
 
         if (inheritedArtifacts) {
             def inheritedWidgetSets = []
@@ -207,21 +212,47 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
             }
 
             for (def widgetSetModule : widgetSetModules) {
-                compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
-                compilerClassPath.add(widgetSetModule.sourceSets.main.output.classesDir)
+                SourceSet widgetSetModuleSourceSet = widgetSetModule.sourceSets.main
+
+                compilerClassPath.addAll(widgetSetModuleSourceSet.java.srcDirs)
+                compilerClassPath.add(widgetSetModuleSourceSet.output.classesDir)
+                compilerClassPath.add(widgetSetModuleSourceSet.output.resourcesDir)
+                compilerClassPath.addAll(
+                        widgetSetModuleSourceSet.compileClasspath.findAll {
+                            !excludedArtifact(it.name)
+                        }
+                )
             }
         }
 
-        if (dependencyModules) {
-            for (def module : dependencyModules) {
-                compilerClassPath.add(new File((File) module.projectDir, 'src'))
-                compilerClassPath.add(module.sourceSets.main.output.classesDir)
-            }
-        }
+        SourceSet mainSourceSet = project.sourceSets.main
 
-        compilerClassPath.add(project.sourceSets.main.output.classesDir)
+        compilerClassPath.addAll(mainSourceSet.java.srcDirs)
+        compilerClassPath.add(mainSourceSet.output.classesDir)
+        compilerClassPath.add(mainSourceSet.output.resourcesDir)
+        compilerClassPath.addAll(
+                mainSourceSet.compileClasspath.findAll {
+                    !excludedArtifact(it.name)
+                }
+        )
 
         compilerClassPath.addAll(mainClasspath)
+
+        if (project.logger.isEnabled(LogLevel.DEBUG)) {
+            def sb = new StringBuilder()
+            for (def classPathEntry : compilerClassPath) {
+                sb.append('\t' + String.valueOf(classPathEntry)).append("\n")
+            }
+            project.logger.debug("GWT Compiler ClassPath: \n${sb.toString()}")
+            project.logger.debug("")
+        } else if (printCompilerClassPath) {
+            def sb = new StringBuilder()
+            for (def classPathEntry : compilerClassPath) {
+                sb.append('\t' + String.valueOf(classPathEntry)).append("\n")
+            }
+            println("GWT Compiler ClassPath: \n${sb.toString()}")
+            println("")
+        }
 
         return compilerClassPath
     }
