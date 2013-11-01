@@ -176,7 +176,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
 
                     inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
                 } else {
-                    println("[ERROR] Ignored inherited artifact ${artifact.name}. Add it to provided configuration")
+                    println("[ERROR] Ignored inherited artifact ${artifactName}. Add it to provided configuration")
                 }
 
                 def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
@@ -185,7 +185,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
 
                     inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
                 } else {
-                    println("[ERROR] Could not find inherited artifact sources " + artifact.name)
+                    println("[ERROR] Could not find inherited artifact sources " + artifactName)
                 }
             }
 
