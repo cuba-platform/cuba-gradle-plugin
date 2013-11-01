@@ -166,10 +166,6 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
         }
         def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
 
-        def mainClasspath = project.sourceSets.main.compileClasspath.findAll {
-            !excludedArtifact(it.name)
-        }
-
         if (inheritedArtifacts) {
             def inheritedWidgetSets = []
             def inheritedSources = []
@@ -217,11 +213,6 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
                 compilerClassPath.addAll(widgetSetModuleSourceSet.java.srcDirs)
                 compilerClassPath.add(widgetSetModuleSourceSet.output.classesDir)
                 compilerClassPath.add(widgetSetModuleSourceSet.output.resourcesDir)
-                compilerClassPath.addAll(
-                        widgetSetModuleSourceSet.compileClasspath.findAll {
-                            !excludedArtifact(it.name)
-                        }
-                )
             }
         }
 
@@ -236,7 +227,17 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
                 }
         )
 
-        compilerClassPath.addAll(mainClasspath)
+        if (widgetSetModules) {
+            // after modules add compile dependencies
+            for (def widgetSetModule : widgetSetModules) {
+                SourceSet widgetSetModuleSourceSet = widgetSetModule.sourceSets.main
+                compilerClassPath.addAll(
+                        widgetSetModuleSourceSet.compileClasspath.findAll {
+                            !excludedArtifact(it.name)
+                        }
+                )
+            }
+        }
 
         if (project.logger.isEnabled(LogLevel.DEBUG)) {
             def sb = new StringBuilder()
