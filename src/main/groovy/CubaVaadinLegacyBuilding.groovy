@@ -172,20 +172,20 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
             for (def artifactName : inheritedArtifacts) {
                 def artifact = providedArtefacts.find { it.name == artifactName }
                 if (artifact) {
-                    println("Use inherited artifact " + artifact.name)
+                    project.logger.info("Use inherited artifact " + artifact.name)
 
                     inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
                 } else {
-                    println("[ERROR] Ignored inherited artifact ${artifactName}. Add it to provided configuration")
+                    project.logger.error("Ignored inherited artifact ${artifactName}. Add it to provided configuration")
                 }
 
-                def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
+                def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName && it.classifier == 'sources' }
                 if (artifactSource) {
-                    println("Found inherited artifact sources " + artifact.name)
+                    project.logger.info("Found inherited artifact sources " + artifact.name)
 
                     inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
                 } else {
-                    println("[ERROR] Could not find inherited artifact sources " + artifactName)
+                    project.logger.error("Could not find inherited artifact sources " + artifactName)
                 }
             }
 
@@ -193,11 +193,15 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
                 def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
                 if (toolkitArtifact) {
                     File toolkitJar = toolkitArtifact.file
+                    project.logger.info(">> use artifact: " + toolkitArtifact.name + " " + toolkitJar.absolutePath)
+
                     compilerClassPath.add(toolkitJar)
                 }
             }
 
             for (InheritedArtifact sourceArtifact : inheritedSources) {
+                project.logger.info(">>  Add source artifact for: " + sourceArtifact.name + " " + sourceArtifact.jarFile.absolutePath)
+
                 compilerClassPath.add(sourceArtifact.jarFile)
             }
         }
