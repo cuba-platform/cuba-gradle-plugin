@@ -193,7 +193,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
                 def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
                 if (toolkitArtifact) {
                     File toolkitJar = toolkitArtifact.file
-                    mainClasspath.add(0, toolkitJar)
+                    compilerClassPath.add(toolkitJar)
                 }
             }
 
