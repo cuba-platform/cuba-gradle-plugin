@@ -81,7 +81,9 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
         return new File(this.widgetSetsDir)
     }
 
-    @InputFiles @SkipWhenEmpty @Optional
+    @InputFiles
+    @SkipWhenEmpty
+    @Optional
     def FileCollection getSourceFiles() {
         def fileCollection = []
         if (widgetSetModules) {
@@ -168,34 +170,41 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
             def inheritedSources = []
             for (def artifactName : inheritedArtifacts) {
                 def artifact = providedArtefacts.find { it.name == artifactName }
-                if (artifact)
+                if (artifact) {
+                    println("Use inherited artifact " + artifact.name)
+
                     inheritedWidgetSets.add(new InheritedArtifact(name: artifactName, jarFile: artifact.file))
+                } else {
+                    println("[ERROR] Ignored inherited artifact ${artifact.name}. Add it to provided configuration")
+                }
+
                 def artifactSource = gwtBuildingArtifacts.find { it.name == artifactName }
-                if (artifactSource)
+                if (artifactSource) {
+                    println("Found inherited artifact sources " + artifact.name)
+
                     inheritedSources.add(new InheritedArtifact(name: artifactName, jarFile: artifactSource.file))
+                } else {
+                    println("[ERROR] Could not find inherited artifact sources " + artifact.name)
+                }
             }
 
-            // unpack inhertited toolkit (widget sets)
             for (InheritedArtifact toolkit : inheritedWidgetSets) {
                 def toolkitArtifact = providedArtefacts.find { it.name == toolkit.name }
                 if (toolkitArtifact) {
                     File toolkitJar = toolkitArtifact.file
-                    File toolkitClassesDir = new File("${project.buildDir}/tmp/${toolkit.name}-classes")
-                    project.copy {
-                        from project.zipTree(toolkitJar)
-                        into toolkitClassesDir
-                    }
-                    mainClasspath.add(0, toolkitClassesDir)
+                    mainClasspath.add(0, toolkitJar)
                 }
             }
 
-            for (InheritedArtifact sourceArtifact : inheritedSources)
+            for (InheritedArtifact sourceArtifact : inheritedSources) {
                 compilerClassPath.add(sourceArtifact.jarFile)
+            }
         }
 
         if (widgetSetModules) {
-            if (!(widgetSetModules instanceof Collection))
+            if (!(widgetSetModules instanceof Collection)) {
                 widgetSetModules = Collections.singletonList(widgetSetModules)
+            }
 
             for (def widgetSetModule : widgetSetModules) {
                 compilerClassPath.add(new File(widgetSetModule.projectDir, 'src'))
