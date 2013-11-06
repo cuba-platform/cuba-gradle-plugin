@@ -104,6 +104,7 @@ public class CubaHSQLDBServer extends JFrame {
         exceptionBox.setVisible(false);
         exceptionArea.setBackground(new Color(255, 255, 212));
         this.pack();
+        this.setResizable(false);
         this.setTitle("HSQLDB Server");
     }
 
