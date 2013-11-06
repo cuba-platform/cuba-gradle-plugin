@@ -223,8 +223,9 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             // Enhanced classes library entry must go before source folder
             project.idea.module.iml.withXml { provider ->
                 Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
+
                 Node enhNode = rootNode.children().find {
-                    it.name() == 'orderEntry' && it.@type == 'module-library' &&
+                    it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
                         it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
                 }
 
@@ -233,7 +234,9 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     rootNode.@LANGUAGE_LEVEL = 'JDK_1_6'
                 }
 
-                int srcIdx = rootNode.children().findIndexOf { it.name() == 'orderEntry' && it.@type == 'sourceFolder' }
+                int srcIdx = rootNode.children().findIndexOf {
+                    it instanceof Node && it.name() == 'orderEntry' && it.@type == 'sourceFolder'
+                }
                 if (!enhNode && project.name.endsWith('-global')) {
                     enhNode = rootNode.appendNode('orderEntry', [type: 'module-library', exported: '', scope: 'RUNTIME'])
                     Node libNode = enhNode.appendNode('library')
