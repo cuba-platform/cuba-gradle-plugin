@@ -8,7 +8,6 @@ import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.text.StrMatcher
 import org.apache.commons.lang.text.StrTokenizer
-import org.apache.commons.logging.LogFactory
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -16,6 +15,8 @@ import org.gradle.api.tasks.TaskAction
  * @version $Id$
  */
 class CubaDbUpdate extends CubaDbTask {
+
+    private static final String SQL_COMMENT_PREFIX = "--"
 
     CubaDbUpdate() {
         setGroup('Database')
@@ -28,12 +29,18 @@ class CubaDbUpdate extends CubaDbTask {
         try {
             List<File> files = getUpdateScripts()
             List<String> scripts = getExecutedScripts()
-            files.each { File file ->
+            def toExecute = files.findAll { File file ->
                 String name = getScriptName(file)
-                if (!scripts.contains(name)) {
-                    executeScript(file)
-                    markScript(name, false)
-                }
+                !scripts.contains(name)
+            }
+
+            if (project.logger.isInfoEnabled()) {
+                project.logger.info("Updates: \n" + toExecute.collect{ "\t" + it.getAbsolutePath() }.join("\n") )
+            }
+
+            toExecute.each { File file ->
+                executeScript(file)
+                markScript(name, false)
             }
         } finally {
             closeSql()
@@ -44,8 +51,6 @@ class CubaDbUpdate extends CubaDbTask {
         project.logger.warn("Executing script " + file.getPath())
         if (file.name.endsWith('.sql'))
             executeSqlScript(file)
-        else if (file.name.endsWith('.groovy'))
-            executeGroovyScript(file);
     }
 
     protected void executeSqlScript(File file) {
@@ -56,7 +61,7 @@ class CubaDbUpdate extends CubaDbTask {
         while (tokenizer.hasNext()) {
             String sqlCommand = tokenizer.nextToken().trim()
             if (!StringUtils.isEmpty(sqlCommand)) {
-                if (sqlCommand.toLowerCase().startsWith("select")) {
+                if (isLikelySelect(sqlCommand)) {
                     sql.execute(sqlCommand)
                 } else {
                     sql.executeUpdate(sqlCommand)
@@ -65,33 +70,21 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
-    protected void executeGroovyScript(File file) {
-        try {
-            Class.forName(driver);
-        } catch (ClassNotFoundException ignored) {
-            project.logger.error("Unable to load driver class " + driver);
-            return;
+    // If first keyword is not SELECT then its probably not a select query.
+    protected boolean isLikelySelect(String sql) {
+        String[] lines = sql.split("\\r?\\n")
+        for (String line : lines) {
+            line = line.trim()
+            if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
+                return line.toLowerCase().startsWith("select")
+            }
         }
-
-        try {
-            String scriptRoot = file.getParentFile().getAbsolutePath();
-            ClassLoader classLoader = getClass().getClassLoader();
-            GroovyScriptEngine scriptEngine = new GroovyScriptEngine(scriptRoot, classLoader);
-
-            Binding bind = new Binding();
-            bind.setProperty("ds", new SingleConnectionDataSource(dbUrl, dbUser, dbPassword));
-            bind.setProperty("log", LogFactory.getLog(file.getName()));
-            bind.setProperty("postUpdate", new PostUpdateScripts(file));
-
-            scriptEngine.run(file.getAbsolutePath(), bind);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        return false
     }
 
     @Override
     protected List<File> getUpdateScripts() {
-        List<File> databaseScripts = new ArrayList<>();
+        List<File> databaseScripts = new ArrayList<>()
 
         if (dbDir.exists()) {
             String[] moduleDirs = dbDir.list()
@@ -105,34 +98,21 @@ class CubaDbUpdate extends CubaDbTask {
                     URI scriptDirUri = scriptDir.toURI()
 
                     List updateScripts = files
-                            .findAll { File f -> f.name.endsWith('.sql') | f.name.endsWith('.groovy') }
+                            .findAll { File f -> f.name.endsWith('.sql') }
                             .sort { File f1, File f2 ->
-                        URI f1Uri = scriptDirUri.relativize(f1.toURI());
-                        URI f2Uri = scriptDirUri.relativize(f2.toURI());
-                        f1Uri.getPath().compareTo(f2Uri.getPath());
+                        URI f1Uri = scriptDirUri.relativize(f1.toURI())
+                        URI f2Uri = scriptDirUri.relativize(f2.toURI())
+                        f1Uri.getPath().compareTo(f2Uri.getPath())
                     }
 
-                    databaseScripts.addAll(updateScripts);
+                    databaseScripts.addAll(updateScripts)
                 }
             }
         }
-        return databaseScripts;
+        return databaseScripts
     }
 
     protected List<String> getExecutedScripts() {
         return getSql().rows('select SCRIPT_NAME from SYS_DB_CHANGELOG').collect { row -> row.script_name }
-    }
-
-    public class PostUpdateScripts {
-
-        protected File file;
-
-        PostUpdateScripts(File file) {
-            this.file = file
-        }
-
-        public void add(Closure closure) {
-            project.logger.warn("Added post update action from file '${file.absolutePath}' will be ignored");
-        }
     }
 }
