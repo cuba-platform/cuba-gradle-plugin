@@ -40,6 +40,7 @@ class CubaDbUpdate extends CubaDbTask {
 
             toExecute.each { File file ->
                 executeScript(file)
+                String name = getScriptName(file)
                 markScript(name, false)
             }
         } finally {
