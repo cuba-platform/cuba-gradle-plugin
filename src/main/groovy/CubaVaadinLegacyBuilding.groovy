@@ -166,6 +166,26 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
         }
         def providedArtefacts = project.configurations.provided.resolvedConfiguration.getResolvedArtifacts()
 
+        SourceSet mainSourceSet = project.sourceSets.main
+
+        compilerClassPath.addAll(mainSourceSet.java.srcDirs)
+        compilerClassPath.add(mainSourceSet.output.classesDir)
+        compilerClassPath.add(mainSourceSet.output.resourcesDir)
+
+        if (widgetSetModules) {
+            if (!(widgetSetModules instanceof Collection)) {
+                widgetSetModules = Collections.singletonList(widgetSetModules)
+            }
+
+            for (def widgetSetModule : widgetSetModules) {
+                SourceSet widgetSetModuleSourceSet = widgetSetModule.sourceSets.main
+
+                compilerClassPath.addAll(widgetSetModuleSourceSet.java.srcDirs)
+                compilerClassPath.add(widgetSetModuleSourceSet.output.classesDir)
+                compilerClassPath.add(widgetSetModuleSourceSet.output.resourcesDir)
+            }
+        }
+
         if (inheritedArtifacts) {
             def inheritedWidgetSets = []
             def inheritedSources = []
@@ -206,25 +226,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
             }
         }
 
-        if (widgetSetModules) {
-            if (!(widgetSetModules instanceof Collection)) {
-                widgetSetModules = Collections.singletonList(widgetSetModules)
-            }
-
-            for (def widgetSetModule : widgetSetModules) {
-                SourceSet widgetSetModuleSourceSet = widgetSetModule.sourceSets.main
-
-                compilerClassPath.addAll(widgetSetModuleSourceSet.java.srcDirs)
-                compilerClassPath.add(widgetSetModuleSourceSet.output.classesDir)
-                compilerClassPath.add(widgetSetModuleSourceSet.output.resourcesDir)
-            }
-        }
-
-        SourceSet mainSourceSet = project.sourceSets.main
-
-        compilerClassPath.addAll(mainSourceSet.java.srcDirs)
-        compilerClassPath.add(mainSourceSet.output.classesDir)
-        compilerClassPath.add(mainSourceSet.output.resourcesDir)
+        // after modules add compile dependencies
         compilerClassPath.addAll(
                 mainSourceSet.compileClasspath.findAll {
                     !excludedArtifact(it.name)
