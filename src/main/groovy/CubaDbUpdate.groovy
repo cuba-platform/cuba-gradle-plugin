@@ -16,8 +16,6 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaDbUpdate extends CubaDbTask {
 
-    private static final String SQL_COMMENT_PREFIX = "--"
-
     CubaDbUpdate() {
         setGroup('Database')
     }
@@ -52,35 +50,6 @@ class CubaDbUpdate extends CubaDbTask {
         project.logger.warn("Executing script " + file.getPath())
         if (file.name.endsWith('.sql'))
             executeSqlScript(file)
-    }
-
-    protected void executeSqlScript(File file) {
-        String script = FileUtils.readFileToString(file)
-        StrTokenizer tokenizer = new StrTokenizer(
-                script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
-        Sql sql = getSql()
-        while (tokenizer.hasNext()) {
-            String sqlCommand = tokenizer.nextToken().trim()
-            if (!StringUtils.isEmpty(sqlCommand)) {
-                if (isLikelySelect(sqlCommand)) {
-                    sql.execute(sqlCommand)
-                } else {
-                    sql.executeUpdate(sqlCommand)
-                }
-            }
-        }
-    }
-
-    // If first keyword is not SELECT then its probably not a select query.
-    protected boolean isLikelySelect(String sql) {
-        String[] lines = sql.split("\\r?\\n")
-        for (String line : lines) {
-            line = line.trim()
-            if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
-                return line.toLowerCase().startsWith("select")
-            }
-        }
-        return false
     }
 
     @Override

@@ -89,23 +89,14 @@ grant create session,
         }
 
         try {
-            getSql().executeUpdate("create table SYS_DB_CHANGELOG(" +
+            getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                     "SCRIPT_NAME varchar${dbms == 'oracle' ? '2' : ''}(300) not null primary key, " +
                     "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
                     "IS_INIT integer default 0)")
 
             getInitScripts().each { File file ->
                 project.logger.warn("Executing SQL script: ${file.absolutePath}")
-                project.ant.sql(
-                        classpath: driverClasspath,
-                        src: file.absolutePath,
-                        delimiter: delimiter,
-                        driver: driver,
-                        url: dbUrl,
-                        userid: dbUser, password: dbPassword,
-                        autocommit: true,
-                        encoding: "UTF-8"
-                )
+                executeSqlScript(file)
                 String name = getScriptName(file)
                 markScript(name, true)
             }

@@ -3,6 +3,10 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
+
+import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang.text.StrMatcher
+import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.DefaultTask
 import org.apache.commons.io.FileUtils
 import groovy.sql.Sql
@@ -25,6 +29,8 @@ public abstract class CubaDbTask extends DefaultTask {
     protected def driver
     protected File dbDir
     protected Sql sqlInstance
+
+    private static final String SQL_COMMENT_PREFIX = "--"
 
     protected void init() {
         if (dbms == 'postgres') {
@@ -92,6 +98,35 @@ public abstract class CubaDbTask extends DefaultTask {
         String path = file.getCanonicalPath()
         String dir = dbDir.getCanonicalPath()
         return path.substring(dir.length() + 1).replace("\\", "/")
+    }
+
+    // If first keyword is not SELECT then its probably not a select query.
+    protected boolean isLikelySelect(String sql) {
+        String[] lines = sql.split("\\r?\\n")
+        for (String line : lines) {
+            line = line.trim()
+            if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
+                return line.toLowerCase().startsWith("select")
+            }
+        }
+        return false
+    }
+
+    protected void executeSqlScript(File file) {
+        String script = FileUtils.readFileToString(file)
+        StrTokenizer tokenizer = new StrTokenizer(
+                script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
+        Sql sql = getSql()
+        while (tokenizer.hasNext()) {
+            String sqlCommand = tokenizer.nextToken().trim()
+            if (!StringUtils.isEmpty(sqlCommand)) {
+                if (isLikelySelect(sqlCommand)) {
+                    sql.execute(sqlCommand)
+                } else {
+                    sql.executeUpdate(sqlCommand)
+                }
+            }
+        }
     }
 
     protected void markScript(String name, boolean init) {
