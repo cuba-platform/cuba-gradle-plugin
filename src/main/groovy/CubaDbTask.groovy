@@ -100,6 +100,17 @@ public abstract class CubaDbTask extends DefaultTask {
         return path.substring(dir.length() + 1).replace("\\", "/")
     }
 
+    protected boolean isEmpty(String sql) {
+        String[] lines = sql.split("\\r?\\n")
+        for (String line : lines) {
+            line = line.trim()
+            if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
+                return false
+            }
+        }
+        return true
+    }
+
     // If first keyword is not SELECT then its probably not a select query.
     protected boolean isLikelySelect(String sql) {
         String[] lines = sql.split("\\r?\\n")
@@ -119,7 +130,8 @@ public abstract class CubaDbTask extends DefaultTask {
         Sql sql = getSql()
         while (tokenizer.hasNext()) {
             String sqlCommand = tokenizer.nextToken().trim()
-            if (!StringUtils.isEmpty(sqlCommand)) {
+            if (!isEmpty(sqlCommand)) {
+                project.logger.info(">>> executing SQL: $sqlCommand")
                 if (isLikelySelect(sqlCommand)) {
                     sql.execute(sqlCommand)
                 } else {
