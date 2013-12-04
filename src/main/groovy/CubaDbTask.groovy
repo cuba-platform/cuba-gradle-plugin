@@ -124,7 +124,7 @@ public abstract class CubaDbTask extends DefaultTask {
     }
 
     protected void executeSqlScript(File file) {
-        String script = FileUtils.readFileToString(file)
+        String script = FileUtils.readFileToString(file, "UTF-8")
         StrTokenizer tokenizer = new StrTokenizer(
                 script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
         Sql sql = getSql()
