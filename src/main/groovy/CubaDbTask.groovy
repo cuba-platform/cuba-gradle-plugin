@@ -111,18 +111,6 @@ public abstract class CubaDbTask extends DefaultTask {
         return true
     }
 
-    // If first keyword is not SELECT then its probably not a select query.
-    protected boolean isLikelySelect(String sql) {
-        String[] lines = sql.split("\\r?\\n")
-        for (String line : lines) {
-            line = line.trim()
-            if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
-                return line.toLowerCase().startsWith("select")
-            }
-        }
-        return false
-    }
-
     protected void executeSqlScript(File file) {
         String script = FileUtils.readFileToString(file, "UTF-8")
         StrTokenizer tokenizer = new StrTokenizer(
@@ -132,11 +120,7 @@ public abstract class CubaDbTask extends DefaultTask {
             String sqlCommand = tokenizer.nextToken().trim()
             if (!isEmpty(sqlCommand)) {
                 project.logger.info(">>> executing SQL: $sqlCommand")
-                if (isLikelySelect(sqlCommand)) {
-                    sql.execute(sqlCommand)
-                } else {
-                    sql.executeUpdate(sqlCommand)
-                }
+                sql.execute(sqlCommand)
             }
         }
     }
