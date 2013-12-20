@@ -13,6 +13,7 @@ class CubaDbCreation extends CubaDbTask {
 
     def dropDbSql
     def createDbSql
+    def oracleSystemUser = 'system'
     def oracleSystemPassword = 'manager'
 
     CubaDbCreation() {
@@ -38,7 +39,7 @@ class CubaDbCreation extends CubaDbTask {
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
         } else if (dbms == 'oracle') {
-            masterUrl = "jdbc:oracle:thin:@//$host/orcl"
+            masterUrl = "jdbc:oracle:thin:@//$host/$dbName"
             if (!dropDbSql)
                 dropDbSql = "drop user $dbUser cascade;"
             if (!createDbSql)
@@ -58,13 +59,16 @@ grant create session,
         } else
             throw new UnsupportedOperationException("DBMS $dbms not supported")
 
+        def user = dbms == 'oracle' ? (oracleSystemUser ? oracleSystemUser : 'system') : dbUser
+        project.logger.warn("Using database URL: $masterUrl, user: $user")
+
         project.logger.warn("Executing SQL: $dropDbSql")
         try {
             project.ant.sql(
                     classpath: driverClasspath,
                     driver: driver,
                     url: masterUrl,
-                    userid: dbms == 'oracle' ? 'system' : dbUser,
+                    userid: user,
                     password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
                     autocommit: true,
                     encoding: "UTF-8",
@@ -80,7 +84,7 @@ grant create session,
                     classpath: driverClasspath,
                     driver: driver,
                     url: masterUrl,
-                    userid: dbms == 'oracle' ? 'system' : dbUser,
+                    userid: user,
                     password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
                     autocommit: true,
                     encoding: "UTF-8",
@@ -88,6 +92,7 @@ grant create session,
             )
         }
 
+        project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
         try {
             getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                     "SCRIPT_NAME varchar${dbms == 'oracle' ? '2' : ''}(300) not null primary key, " +
