@@ -31,9 +31,7 @@ public class CubaHSQLDBServer extends JFrame {
     public static final String SERVER_CLASS = "org.hsqldb.server.Server";
 
     public static void main(final String[] args) {
-        final boolean validInit = args.length > 1;
-        final String dbPath = validInit ? args[0] : null;
-        final String dbName = validInit ? args[1] : null;
+        final boolean validInit = args.length > 2;
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -43,7 +41,10 @@ public class CubaHSQLDBServer extends JFrame {
                 monitor.setVisible(true);
 
                 if (validInit) {
-                    final HSQLServer server = monitor.startServer(dbPath, dbName);
+                    Integer dbPort = Integer.valueOf(args[0]);
+                    String dbPath = args[1];
+                    String dbName = args[2];
+                    final HSQLServer server = monitor.startServer(dbPort, dbPath, dbName);
                     if (server != null) {
                         monitor.addWindowListener(new WindowAdapter() {
                             @Override
@@ -58,7 +59,8 @@ public class CubaHSQLDBServer extends JFrame {
                     }
                 } else {
                     String argStr = StringUtils.join(args, ' ');
-                    monitor.setStatus(String.format("Invalid usage (args: '%s')\na", argStr));
+                    monitor.setStatus(String.format(
+                            "Invalid usage (args: '%s')\nExpected arguments: <port> <dbPath> <dbName>", argStr));
                 }
             }
         });
@@ -162,11 +164,12 @@ public class CubaHSQLDBServer extends JFrame {
         target.setPreferredSize(size);
     }
 
-    public HSQLServer startServer(String dbPath, String dbName) {
+    public HSQLServer startServer(int dbPort, String dbPath, String dbName) {
         try {
             Class<?> serverClass = Class.forName(SERVER_CLASS);
             HSQLServer server = ServerObjectProxy.newInstance(serverClass);
             server.setDaemon(true);
+            server.setPort(dbPort);
             server.setDatabaseName(0, dbName);
             server.setDatabasePath(0, getDbPath(dbPath, dbName));
             server.start();
@@ -201,6 +204,7 @@ public class CubaHSQLDBServer extends JFrame {
      */
     private interface HSQLServer {
         int getPort();
+        void setPort(int port);
 
         int getState();
 
