@@ -22,6 +22,9 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
 
     private static final String ENHANCED_TYPE = "com.haulmont.cuba.core.sys.CubaEnhanced";
 
+    private static final String METAPROPERTY_ANNOTATION = "com.haulmont.chile.core.annotations.MetaProperty";
+    private static final String TRANSIENT_ANNOTATION = "javax.persistence.Transient";
+
     protected org.apache.commons.logging.Log log;
 
     protected static final Localizer _loc = Localizer.forPackage(PCEnhancer.class);
@@ -85,8 +88,12 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
             if (propertyChangingExists) {
                 FieldMetaData fieldMeta = meta.getDeclaredField(fieldName);
                 int fieldIndex = fieldMeta != null ? fieldMeta.getDeclaredIndex() : -1;
-                if (fieldIndex == -1)
+                if (fieldIndex == -1) {
+                    // enhance transient property
+                    enhanceTransientSetter(code, method, fieldName);
                     continue;
+                }
+
                 // propertyChanging(<fieldName>, pcInheritedFieldCount + <fieldIndex>, <value>)
                 code.aload().setThis();
                 code.constant().setValue(fieldName);
@@ -131,12 +138,61 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
                         ifne.setTarget(vreturn);
                     }
                 }
-
             }
 
             code.calculateMaxStack();
             code.calculateMaxLocals();
         }
+    }
+
+    protected void enhanceTransientSetter(Code code, BCMethod method, String fieldName) {
+        BCField declaredField = _managedType.getDeclaredField(fieldName);
+        if (declaredField == null) {
+            return;
+        }
+
+        Annotations fieldAnnotations = declaredField.getDeclaredRuntimeAnnotations(false);
+        if (fieldAnnotations == null
+                || fieldAnnotations.getAnnotation(TRANSIENT_ANNOTATION) == null) {
+            return;
+        }
+
+        Annotations methodAnnotations = method.getDeclaredRuntimeAnnotations(false);
+        if (fieldAnnotations.getAnnotation(METAPROPERTY_ANNOTATION) == null
+            && (methodAnnotations == null || methodAnnotations.getAnnotation(METAPROPERTY_ANNOTATION) == null)) {
+            return;
+        }
+
+        String name = method.getName();
+
+        LocalVariableTable table = code.getLocalVariableTable(false);
+        if (table.getLocalVariable(StringUtils.lowerCase(name.replace("set", "") + "_local")) != null) {
+            return;
+        }
+
+        code.aload().setThis();
+        table.addLocalVariable(StringUtils.lowerCase(name.replace("set", "") + "_local"), method.getParamTypes()[0]).setStartPc(5);
+        code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0], new Class[]{});
+        code.astore().setLocal(2);
+
+        code.afterLast();
+        Instruction vreturn = code.previous();
+        code.before(vreturn);
+
+        code.aload().setLocal(2);
+        code.aload().setLocal(1);
+        code.invokestatic().setMethod(ObjectUtils.class, "equals", boolean.class, new Class[]{Object.class, Object.class});
+        IfInstruction ifne = code.ifne();
+        code.aload().setThis();
+        code.constant().setValue(fieldName);
+        code.aload().setLocal(2);
+        code.aload().setLocal(1);
+        code.invokevirtual().setMethod("propertyChanged", void.class, new Class[]{String.class, Object.class, Object.class});
+
+        ifne.setTarget(vreturn);
+
+        code.calculateMaxStack();
+        code.calculateMaxLocals();
     }
 
     @Override
