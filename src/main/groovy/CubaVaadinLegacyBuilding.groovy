@@ -28,6 +28,7 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
     Map compilerArgs
 
     boolean printCompilerClassPath = false
+    boolean strict = true
 
     def inheritedArtifacts
 
@@ -132,6 +133,9 @@ class CubaVaadinLegacyBuilding extends DefaultTask {
 
         args.add('-war')
         args.add(warPath)
+
+        if (strict)
+            args.add('-strict')
 
         for (def entry : defaultCompilerArgs.entrySet()) {
             args.add(entry.getKey())

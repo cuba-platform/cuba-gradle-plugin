@@ -29,6 +29,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     String widgetSetClass
     Map compilerArgs
     boolean printCompilerClassPath = false
+    boolean strict = true
 
     private def excludes = []
 
@@ -144,6 +145,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         args.add('-war')
         args.add(warPath)
+
+        if (strict)
+            args.add('-strict')
 
         for (def entry : defaultCompilerArgs.entrySet()) {
             args.add(entry.getKey())
