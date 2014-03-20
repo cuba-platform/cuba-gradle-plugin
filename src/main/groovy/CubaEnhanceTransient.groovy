@@ -8,6 +8,8 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
 
+import java.util.regex.Pattern
+
 /**
  * Enhances specified transient entity classes
  *
@@ -16,7 +18,8 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaEnhanceTransient extends DefaultTask {
 
-    def classes = []
+    String metadataXml
+    String packageRegExp
 
     CubaEnhanceTransient() {
         setDescription('Enhances transient entities')
@@ -36,20 +39,21 @@ class CubaEnhanceTransient extends DefaultTask {
 
     @InputFiles
     def List getInputFiles() {
-        classes.collect { name ->
+        getClassNames(metadataXml).collect { name ->
             new File("$project.buildDir/classes/main/${name.replace('.', '/')}.class")
         }
     }
 
     @OutputFiles
     def List getOutputFiles() {
-        classes.collect { name ->
+        getClassNames(metadataXml).collect { name ->
             new File("$project.buildDir/enhanced-classes/main/${name.replace('.', '/')}.class")
         }
     }
 
     @TaskAction
     def enhanceClasses() {
+        def classes = getClassNames(metadataXml)
         project.logger.info(">>> enhancing classes: $classes")
         project.javaexec {
             main = 'CubaTransientEnhancer'
@@ -59,6 +63,23 @@ class CubaEnhanceTransient extends DefaultTask {
                     project.configurations.enhance
             )
             args(classes + "-o $project.buildDir/enhanced-classes/main")
+        }
+    }
+
+    private List getClassNames(String metadataXml) {
+        File f = new File(metadataXml)
+        if (f.exists()) {
+            def metadata = new XmlParser().parse(f)
+            def mm = metadata.'metadata-model'[0]
+            List allClasses = mm.'class'.collect { it.value()[0] }
+            if (packageRegExp) {
+                Pattern pattern = Pattern.compile(packageRegExp)
+                return allClasses.findAll { it.matches(pattern) }
+            } else
+                return allClasses
+        } else {
+            logger.error("File $metadataXml doesn't exist")
+            throw new IllegalArgumentException("File $metadataXml doesn't exist")
         }
     }
 }

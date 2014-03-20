@@ -48,12 +48,15 @@ class CubaEnhancing extends DefaultTask {
         }
     }
 
-    static List getClassNames(String persistenceXml) {
+    private List getClassNames(String persistenceXml) {
         File f = new File(persistenceXml)
         if (f.exists()) {
             def persistence = new XmlParser().parse(f)
             def pu = persistence.'persistence-unit'[0]
             pu.'class'.collect { it.value()[0] }
+        } else {
+            logger.error("File $persistenceXml doesn't exist")
+            throw new IllegalArgumentException("File $persistenceXml doesn't exist")
         }
     }
 

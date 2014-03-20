@@ -43,7 +43,13 @@ public class CubaTransientEnhancer {
                 } else if (args[i].startsWith("-o")) {
                     outputDir = args[i].substring(3);
                 } else {
-                    classes.add(project.loadClass(Class.forName(args[i])));
+                    try {
+                        Class<?> aClass = Class.forName(args[i]);
+                        classes.add(project.loadClass(aClass));
+                    } catch (ClassNotFoundException e) {
+                        log.error("Unable to load class " + args[i], e);
+                        System.exit(-1);
+                    }
                 }
                 i++;
             }
@@ -61,7 +67,7 @@ public class CubaTransientEnhancer {
                     AsmAdaptor.write(cl); // see https://issues.apache.org/jira/browse/OPENJPA-2085
                 }
             }
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             log.error("Error", e);
             System.exit(-1);
         }
