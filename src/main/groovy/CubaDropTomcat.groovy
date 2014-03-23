@@ -17,7 +17,7 @@ class CubaDropTomcat extends DefaultTask {
 
     CubaDropTomcat() {
         setDescription('Deletes local Tomcat')
-        setGroup('Development server')
+        setGroup('Deployment')
     }
 
     @TaskAction

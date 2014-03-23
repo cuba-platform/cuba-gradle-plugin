@@ -16,7 +16,7 @@ class CubaStopTomcat extends DefaultTask {
 
     CubaStopTomcat() {
         setDescription('Stops local Tomcat')
-        setGroup('Development server')
+        setGroup('Deployment')
     }
 
     @TaskAction

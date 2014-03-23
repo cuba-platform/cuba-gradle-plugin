@@ -18,7 +18,7 @@ class CubaStartTomcat extends DefaultTask {
 
     CubaStartTomcat() {
         setDescription('Starts local Tomcat')
-        setGroup('Development server')
+        setGroup('Deployment')
     }
 
     @TaskAction

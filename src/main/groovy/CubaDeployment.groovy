@@ -31,7 +31,7 @@ class CubaDeployment extends DefaultTask {
 
     CubaDeployment() {
         setDescription('Deploys applications for local usage')
-        setGroup('Development server')
+        setGroup('Deployment')
     }
 
     @TaskAction
