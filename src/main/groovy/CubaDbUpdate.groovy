@@ -3,11 +3,7 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
-import groovy.sql.Sql
 import org.apache.commons.io.FileUtils
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.text.StrMatcher
-import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.tasks.TaskAction
 
 /**
