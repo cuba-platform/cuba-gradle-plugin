@@ -61,9 +61,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
-
-        adjustVaadinVersion()
-        addVaadinThemesDependency(project)
     }
 
     def adjustVaadinVersion() {
@@ -144,6 +141,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @TaskAction
     def buildThemes() {
+        adjustVaadinVersion()
+        addVaadinThemesDependency(project)
+
         File themesTmp = project.file("${project.buildDir}/themes-tmp")
         if (themesTmp.exists())
             themesTmp.deleteDir()
