@@ -65,7 +65,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     def adjustVaadinVersion() {
         ResolvedArtifact vaadin6Lib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-            it.name.startsWith('vaadin')
+            it.name.equals('vaadin')
         }
         if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
             project.logger.info(">>> use explicit vaadin-theme-compiler dependency for SCSS building")
@@ -89,7 +89,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             project.configurations.create('themes')
         // find vaadin version
         def vaadinLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-            it.name.startsWith('vaadin-')
+            it.name.equals('vaadin-server')
         }
         // add default vaadin-themes dependency
         if (vaadinLib) {
