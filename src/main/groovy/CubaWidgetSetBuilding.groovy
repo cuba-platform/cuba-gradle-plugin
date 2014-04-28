@@ -62,10 +62,18 @@ class CubaWidgetSetBuilding extends DefaultTask {
         if (widgetSetsDirectory.exists())
             widgetSetsDirectory.deleteDir()
 
-        widgetSetsDirectory.mkdir()
+        // strip gwt-unitCache
+        File gwtTemp = project.file("build/gwt")
+        if (gwtTemp.exists()) {
+            gwtTemp.deleteDir()
+        }
+        gwtTemp.mkdir()
+
+        File gwtWidgetSetTemp = new File(gwtTemp, 'widgetset')
+        gwtWidgetSetTemp.mkdir()
 
         List compilerClassPath = collectClassPathEntries()
-        List gwtCompilerArgs = collectCompilerArgs(widgetSetsDirectory.absolutePath)
+        List gwtCompilerArgs = collectCompilerArgs(gwtWidgetSetTemp.absolutePath)
         List gwtCompilerJvmArgs = collectCompilerJvmArgs()
 
         project.javaexec {
@@ -75,7 +83,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
             jvmArgs = gwtCompilerJvmArgs
         }
 
-        new File(widgetSetsDirectory, 'WEB-INF').deleteDir()
+        new File(gwtWidgetSetTemp, 'WEB-INF').deleteDir()
+
+        gwtWidgetSetTemp.renameTo(widgetSetsDirectory)
     }
 
     @OutputDirectory
