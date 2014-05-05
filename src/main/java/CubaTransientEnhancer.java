@@ -55,9 +55,18 @@ public class CubaTransientEnhancer {
             }
 
             CubaTransientEnhancer enhancer = new CubaTransientEnhancer();
+            iteration:
             for (BCClass cl : classes) {
+                Class[] interfaces = cl.getDeclaredInterfaceTypes();
+                for (Class anInterface : interfaces) {
+                    if (anInterface.getName().equals(CubaEnhancer.ENHANCED_TYPE)) {
+                        log.trace(String.format("Class %s is already enchanced", cl.getType()));
+                        continue iteration;
+                    }
+                }
                 log.info("enhancing: " + cl.getName());
                 enhancer.enhanceSetters(cl);
+                cl.declareInterface(CubaEnhancer.ENHANCED_TYPE);
                 if (!StringUtils.isEmpty(outputDir)) {
                     File file = getOutputFile(cl, outputDir);
                     cl.write(file);
