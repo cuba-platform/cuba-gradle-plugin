@@ -5,6 +5,7 @@
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 
 import java.nio.file.Files
@@ -91,6 +92,12 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
 
         project.task([type: CubaStartTomcat], 'start') {
             tomcatRootDir = project.tomcatDir
+        }
+
+        project.task([type: Exec], 'tomcat') {
+            workingDir "${project.tomcatDir}/bin"
+            commandLine "./catalina.sh"
+            args 'jpda', 'run'
         }
 
         project.task([type: CubaStopTomcat], 'stop') {
