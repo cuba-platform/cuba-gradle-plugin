@@ -4,21 +4,18 @@
  */
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.SkipWhenEmpty
 import org.gradle.api.tasks.TaskAction
 
 /**
  * @author krivopustov
  * @version $Id$
  */
-
 class CubaDbScriptsAssembling extends DefaultTask {
-
-    def moduleAlias
+    String moduleAlias
 
     CubaDbScriptsAssembling() {
         setDescription('Gathers database scripts from module and its dependencies')
@@ -26,34 +23,38 @@ class CubaDbScriptsAssembling extends DefaultTask {
     }
 
     @OutputDirectory
-    def File getOutputDirectory() {
-        return project.file("${project.buildDir}/db")
+    File getOutputDirectory() {
+        return new File("${project.buildDir}/db")
     }
 
     @InputFiles
-    def FileCollection getSourceFiles() {
+    FileCollection getSourceFiles() {
         return project.fileTree(new File(project.projectDir, 'db'), {
-            exclude '**/.*'
+            exclude '*.*'
         })
     }
 
     @TaskAction
-    def assemble() {
-        if (project.configurations.getAsMap().dbscripts) {
+    void assemble() {
+        Configuration dbscripts = project.configurations.findByName('dbscripts')
+        if (dbscripts) {
             project.logger.info '>>> project has dbscripts'
-            File dir = new File("${project.buildDir}/db")
+            def dir = new File("${project.buildDir}/db")
             if (dir.exists()) {
                 project.logger.info ">>> delete $dir.absolutePath"
                 project.delete(dir)
             }
-            project.configurations.dbscripts.files.each { dep ->
+            dir.mkdir()
+
+            dbscripts.files.each { dep ->
                 project.logger.info ">>> copy db from: $dep.absolutePath"
                 project.copy {
                     from project.zipTree(dep.absolutePath)
                     into dir
                 }
             }
-            File srcDbDir = new File(project.projectDir, 'db')
+
+            def srcDbDir = new File(project.projectDir, 'db')
             project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath"
             if (srcDbDir.exists() && dir.exists()) {
                 def moduleDirName = moduleAlias
