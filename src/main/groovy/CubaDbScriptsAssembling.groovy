@@ -59,14 +59,19 @@ class CubaDbScriptsAssembling extends DefaultTask {
             if (srcDbDir.exists() && dir.exists()) {
                 def moduleDirName = moduleAlias
                 if (!moduleDirName) {
-                    def lastName = Arrays.asList(dir.list()).sort().last()
-                    def num = lastName.substring(0, 2).toInteger()
-                    moduleDirName = "${Math.max(50, num + 10)}-${project.rootProject.name}"
+                    def moduleNames = Arrays.asList(dir.list()).sort()
+                    if (!moduleNames.empty) {
+                        def lastName = moduleNames.last()
+                        def num = lastName.substring(0, 2).toInteger()
+                        moduleDirName = "${Math.max(50, num + 10)}-${project.rootProject.name}"
+                    }
                 }
-                project.copy {
-                    project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
-                    from srcDbDir
-                    into "${project.buildDir}/db/${moduleDirName}"
+                if (moduleDirName) {
+                    project.copy {
+                        project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
+                        from srcDbDir
+                        into "${project.buildDir}/db/${moduleDirName}"
+                    }
                 }
             }
         }
