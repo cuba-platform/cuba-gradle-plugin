@@ -67,10 +67,12 @@ class CubaWebScssThemeCreation extends DefaultTask {
         ResolvedArtifact vaadin6Lib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
             it.name.equals('vaadin')
         }
-        if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
-            project.logger.info(">>> use explicit vaadin-theme-compiler dependency for SCSS building")
-            // disable auto required resources from base
-            requiresResourcesFrom.remove('base')
+        // todo remove usage of vaadin-theme-compiler
+        def vaadinThemeCompilerLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
+            it.name.startsWith('vaadin-theme-compiler')
+        }
+        if (!vaadinThemeCompilerLib) {
+            project.logger.info(">>> use explicit vaadin-sass-compiler dependency for SCSS building")
 
             def scssConf = project.configurations.findByName('scss')
             if (!scssConf)
@@ -79,6 +81,10 @@ class CubaWebScssThemeCreation extends DefaultTask {
             project.dependencies {
                 scss(CubaPlugin.getArtifactDefinition())
             }
+        }
+        if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
+            // disable auto required resources from base
+            requiresResourcesFrom.remove('base')
         }
     }
 
@@ -271,6 +277,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
 
             def scssClassPath = project.sourceSets.main.compileClasspath
+            // todo remove usage of vaadin-theme-compiler
             def vaadinCompilerLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
                 it.name.startsWith('vaadin-theme-compiler')
             }
