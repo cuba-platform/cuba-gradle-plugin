@@ -94,10 +94,18 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             tomcatRootDir = project.tomcatDir
         }
 
-        project.task([type: Exec], 'tomcat') {
-            workingDir "${project.tomcatDir}/bin"
-            commandLine "./catalina.sh"
-            args 'jpda', 'run'
+        if (System.getProperty('os.name').contains('Windows')) {
+            project.task([type: Exec], 'tomcat') {
+                workingDir "${project.tomcatDir}/bin"
+                commandLine 'cmd'
+                args '/C', 'catalina.bat', 'jpda', 'run'
+            }
+        } else {
+            project.task([type: Exec], 'tomcat') {
+                workingDir "${project.tomcatDir}/bin"
+                commandLine './catalina.sh'
+                args 'jpda', 'run'
+            }
         }
 
         project.task([type: CubaStopTomcat], 'stop') {
