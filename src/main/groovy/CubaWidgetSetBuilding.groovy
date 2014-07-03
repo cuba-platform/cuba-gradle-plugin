@@ -236,7 +236,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
                         }
                 )
 
-                println(">> Widget set building Module: ${dependencyProject.name}")
+                project.logger.debug(">> Widget set building Module: ${dependencyProject.name}")
             }
         }
 
