@@ -196,7 +196,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         Configuration compileConfiguration = project.configurations.findByName('compile')
         if (compileConfiguration) {
-            // try to add sources to all artifacts in widgetSetBuilding
             for (Dependency dependencyItem in compileConfiguration.dependencies.collect()) {
                 if (dependencyItem instanceof ProjectDependency) {
                     Project dependencyProject = dependencyItem.dependencyProject
