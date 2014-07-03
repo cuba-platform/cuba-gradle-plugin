@@ -191,28 +191,52 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return excludes.find { it.contains(name) } != null
     }
 
+    protected void collectAllCompileProjectDeps(Project project, Set<Project> explored) {
+        Configuration compileConfiguration = project.configurations.findByName('compile')
+        if (compileConfiguration) {
+            for (Dependency dependencyItem in compileConfiguration.allDependencies) {
+                if (dependencyItem instanceof ProjectDependency) {
+                    Project dependencyProject = dependencyItem.dependencyProject
+
+                    if (!explored.contains(dependencyProject)) {
+                        Configuration dependencyCompile = dependencyProject.configurations.findByName('compile')
+                        if (dependencyCompile) {
+                            def artifacts = dependencyCompile.resolvedConfiguration.getResolvedArtifacts()
+                            def vaadinArtifact = artifacts.find { ResolvedArtifact artifact ->
+                                artifact.name == 'vaadin-shared'
+                            }
+                            if (vaadinArtifact) {
+                                explored.add(dependencyProject)
+                                collectAllCompileProjectDeps(dependencyProject, explored)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     protected List collectClassPathEntries() {
         def compilerClassPath = []
 
         Configuration compileConfiguration = project.configurations.findByName('compile')
         if (compileConfiguration) {
-            for (Dependency dependencyItem in compileConfiguration.dependencies.collect()) {
-                if (dependencyItem instanceof ProjectDependency) {
-                    Project dependencyProject = dependencyItem.dependencyProject
+            def compileProjects = new LinkedHashSet<Project>()
+            collectAllCompileProjectDeps(project, compileProjects)
 
-                    SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
+            for (dependencyProject in compileProjects) {
+                SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
-                    compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
-                    compilerClassPath.add(dependencyMainSourceSet.output.classesDir)
-                    compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
-                    compilerClassPath.addAll(
-                            dependencyMainSourceSet.compileClasspath.findAll {
-                                !excludedArtifact(it.name) && !compilerClassPath.contains(it)
-                            }
-                    )
+                compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
+                compilerClassPath.add(dependencyMainSourceSet.output.classesDir)
+                compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
+                compilerClassPath.addAll(
+                        dependencyMainSourceSet.compileClasspath.findAll {
+                            !excludedArtifact(it.name) && !compilerClassPath.contains(it)
+                        }
+                )
 
-                    project.logger.debug("Widget set building Module: ${dependencyProject.name}")
-                }
+                println(">> Widget set building Module: ${dependencyProject.name}")
             }
         }
 
