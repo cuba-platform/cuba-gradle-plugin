@@ -7,17 +7,12 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.Dependency
-import org.gradle.api.artifacts.ModuleDependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.SkipWhenEmpty
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 
 /**
  * @author artamonov
@@ -52,15 +47,18 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
     @TaskAction
     def buildWidgetSet() {
-        if (!widgetSetsDir)
-            throw new IllegalStateException('Please specify \'String widgetSetsDir\' for build widgetset')
-
-        if (!widgetSetClass)
+        if (!widgetSetClass) {
             throw new IllegalStateException('Please specify \'String widgetSetClass\' for build widgetset')
+        }
+
+        if (!widgetSetsDir) {
+            widgetSetsDir = "$project.buildDir/web/VAADIN/widgetsets"
+        }
 
         File widgetSetsDirectory = new File(this.widgetSetsDir)
-        if (widgetSetsDirectory.exists())
+        if (widgetSetsDirectory.exists()) {
             widgetSetsDirectory.deleteDir()
+        }
 
         // strip gwt-unitCache
         File gwtTemp = project.file("build/gwt")
@@ -90,6 +88,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
     @OutputDirectory
     def File getOutputDirectory() {
+        if (!widgetSetsDir) {
+            return new File("$project.buildDir/web/VAADIN/widgetsets")
+        }
+
         return new File(this.widgetSetsDir)
     }
 
@@ -104,19 +106,18 @@ class CubaWidgetSetBuilding extends DefaultTask {
         sources.addAll(project.sourceSets.main.output.classesDir)
         sources.addAll(project.sourceSets.main.output.resourcesDir)
 
-        Configuration widgetSetBuildingConfiguration = project.configurations.findByName('widgetSetBuilding')
-        if (widgetSetBuildingConfiguration) {
-            for (def dependencyItem in widgetSetBuildingConfiguration.dependencies) {
+        Configuration compileConfiguration = project.configurations.findByName('compile')
+        if (compileConfiguration) {
+            for (def dependencyItem in compileConfiguration.dependencies) {
                 if (dependencyItem instanceof ProjectDependency) {
                     Project dependencyProject = dependencyItem.dependencyProject
 
-                    Configuration compileConf = dependencyProject.configurations.getByName('compile')
-                    def artifacts = compileConf.resolvedConfiguration.getResolvedArtifacts()
-                    def vaadinClientArtifact = artifacts.find { ResolvedArtifact artifact ->
+                    def artifacts = compileConfiguration.resolvedConfiguration.getResolvedArtifacts()
+                    def vaadinArtifact = artifacts.find { ResolvedArtifact artifact ->
                         artifact.name == 'vaadin-client'
                     }
 
-                    if (vaadinClientArtifact) {
+                    if (vaadinArtifact) {
                         project.logger.info("\tFound source project ${dependencyProject.name} for widgetset building")
 
                         sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
@@ -138,7 +139,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return new SimpleFileCollection(files)
     }
 
-    def jvmArgs(String... jvmArgs) {
+    void jvmArgs(String... jvmArgs) {
         compilerJvmArgs.addAll(Arrays.asList(jvmArgs))
     }
 
@@ -156,8 +157,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
         args.add('-war')
         args.add(warPath)
 
-        if (strict)
+        if (strict) {
             args.add('-strict')
+        }
 
         for (def entry : defaultCompilerArgs.entrySet()) {
             args.add(entry.getKey())
@@ -174,10 +176,11 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     protected def getCompilerArg(argName) {
-        if (compilerArgs && compilerArgs.containsKey(argName))
+        if (compilerArgs && compilerArgs.containsKey(argName)) {
             return compilerArgs.get(argName)
-        else
+        } else {
             return defaultCompilerArgs.get(argName)
+        }
     }
 
     def excludeJars(String... artifacts) {
@@ -191,26 +194,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
     protected List collectClassPathEntries() {
         def compilerClassPath = []
 
-        Configuration widgetSetBuildingConfiguration = project.configurations.findByName('widgetSetBuilding')
-
-        if (widgetSetBuildingConfiguration) {
+        Configuration compileConfiguration = project.configurations.findByName('compile')
+        if (compileConfiguration) {
             // try to add sources to all artifacts in widgetSetBuilding
-            for (Dependency dependencyItem in widgetSetBuildingConfiguration.dependencies.collect()) {
-                // add sources dependency to widgetSetBuilding configuration
-                if (!(dependencyItem instanceof ProjectDependency)) {
-                    project.dependencies {
-                        widgetSetBuilding(
-                                group: dependencyItem.group,
-                                name: dependencyItem.name,
-                                version: dependencyItem.version,
-                                classifier: 'sources'
-                        )
-                    }
-                }
-            }
-
-            def widgetSetBuildingResolvedArtifacts = widgetSetBuildingConfiguration.resolvedConfiguration.getResolvedArtifacts()
-            for (def dependencyItem in widgetSetBuildingConfiguration.dependencies) {
+            for (Dependency dependencyItem in compileConfiguration.dependencies.collect()) {
                 if (dependencyItem instanceof ProjectDependency) {
                     Project dependencyProject = dependencyItem.dependencyProject
 
@@ -226,20 +213,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
                     )
 
                     project.logger.debug("Widget set building Module: ${dependencyProject.name}")
-
-                } else if (dependencyItem instanceof ModuleDependency) {
-                    // find resolved artifacts and add it to compiler classpath
-                    dependencyItem.getArtifacts().each { def dependencyArtifact ->
-                        def resolvedDependencyArtifact = widgetSetBuildingResolvedArtifacts.find {
-                            a -> a.name == dependencyArtifact.name && dependencyArtifact.classifier == a.classifier
-                        }
-
-                        if (resolvedDependencyArtifact) {
-                            compilerClassPath.add(resolvedDependencyArtifact.file)
-
-                            project.logger.debug("Widget set building Artifact: ${resolvedDependencyArtifact.file}")
-                        }
-                    }
                 }
             }
         }

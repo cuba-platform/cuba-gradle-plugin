@@ -11,6 +11,7 @@ import org.gradle.api.tasks.bundling.Zip
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.text.SimpleDateFormat
 
 /**
  * @author krivopustov
@@ -30,9 +31,9 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         project.group = project.artifactGroup
         project.version = project.artifactVersion + (project.isSnapshot ? '-SNAPSHOT' : '')
 
-        if (!project.hasProperty('tomcatDir'))
+        if (!project.hasProperty('tomcatDir')) {
             project.ext.tomcatDir = project.rootDir.absolutePath + '/../tomcat'
-
+        }
 
         project.repositories {
             project.rootProject.buildscript.repositories.each {
@@ -69,10 +70,11 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             }
         }
 
-        if (project == project.rootProject)
+        if (project == project.rootProject) {
             applyToRootProject(project)
-        else
+        } else {
             applyToModuleProject(project)
+        }
     }
 
     private void applyToRootProject(Project project) {
@@ -229,6 +231,14 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             project.targetCompatibility = '1.6'
         }
 
+        // add web resources version for correct caching
+        if (project.name.endsWith('-web') || project.name.endsWith('-web6')) {
+            def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
+            project.logger.info(">>> set web resources timestamp for project")
+
+            project.ext.set('webResourcesTs', resourceBuildTimeStamp)
+        }
+
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
@@ -239,7 +249,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             project.idea.module.iml.withXml { provider ->
                 Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
 
-                Node enhNode = rootNode.children().find {
+                Node enhNode = (Node) rootNode.children().find {
                     it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
                         it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
                 }
@@ -292,7 +302,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         }
     }
 
-    private void acceptLicense(Project project) {
+    private static void acceptLicense(Project project) {
         if (!project.rootProject.hasProperty('licenseAgreementAccepted')) {
             boolean saved = false
             Properties props = new Properties()
@@ -323,7 +333,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         }
     }
 
-    protected isEnhanced(File file, File buildDir) {
+    protected static isEnhanced(File file, File buildDir) {
         Path path = file.toPath()
         Path classesPath = Paths.get(buildDir.toString(), 'classes/main')
         if (!path.startsWith(classesPath))

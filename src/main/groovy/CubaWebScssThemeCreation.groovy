@@ -48,7 +48,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     def buildTimeStamp = ''
     def compress = true
-    def sprites = false
+    def sprites = true
     def cleanup = true
 
     def dirFilter = new FileFilter() {
@@ -67,20 +67,14 @@ class CubaWebScssThemeCreation extends DefaultTask {
         ResolvedArtifact vaadin6Lib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
             it.name.equals('vaadin')
         }
-        // todo remove usage of vaadin-theme-compiler
-        def vaadinThemeCompilerLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-            it.name.startsWith('vaadin-theme-compiler')
+
+        def scssConf = project.configurations.findByName('scss')
+        if (!scssConf) {
+            project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
         }
-        if (!vaadinThemeCompilerLib) {
-            project.logger.info(">>> use explicit vaadin-sass-compiler dependency for SCSS building")
 
-            def scssConf = project.configurations.findByName('scss')
-            if (!scssConf)
-                project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
-
-            project.dependencies {
-                scss(CubaPlugin.getArtifactDefinition())
-            }
+        project.dependencies {
+            scss(CubaPlugin.getArtifactDefinition())
         }
         if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
             // disable auto required resources from base
@@ -229,7 +223,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             copyIncludeResources(includeThemeDir, themeDestDir)
         }
 
-        // copy include resources
+        // copy base resources
         requiresResourcesFrom.each { String themeName ->
             project.logger.info(">>> copy resources from '${themeName}'")
 
@@ -276,21 +270,12 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def scssFilePath = project.file("${themeBuildDir}/styles.scss").absolutePath
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
 
-            def scssClassPath = project.sourceSets.main.compileClasspath
-            // todo remove usage of vaadin-theme-compiler
-            def vaadinCompilerLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-                it.name.startsWith('vaadin-theme-compiler')
+            Configuration scssConfiguration = project.configurations.getByName('scss')
+            def scssArtifacts = new ArrayList<File>()
+            scssConfiguration.resolvedConfiguration.resolvedArtifacts.each {
+                scssArtifacts.add(it.file)
             }
-            if (!vaadinCompilerLib) {
-                project.logger.info(">>> vaadin-theme-compiler not found in compile classpath, try to use scss configuration")
-
-                Configuration scssConfiguration = project.configurations.getByName('scss')
-                def scssArtifacts = new ArrayList<File>()
-                scssConfiguration.resolvedConfiguration.resolvedArtifacts.each {
-                    scssArtifacts.add(it.file)
-                }
-                scssClassPath = new SimpleFileCollection(scssArtifacts)
-            }
+            def scssClassPath = new SimpleFileCollection(scssArtifacts)
 
             project.javaexec {
                 main = 'com.vaadin.sass.SassCompiler'
@@ -404,8 +389,13 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 }
             }
 
+            if (StringUtils.isEmpty(buildTimeStamp) && project.ext.has('webResourcesTs')) {
+                // detect version automatically
+                buildTimeStamp = project.ext.get('webResourcesTs')
+            }
+
             // update build timestamp for urls
-            if (buildTimeStamp != null && !buildTimeStamp.isEmpty()) {
+            if (StringUtils.isNotEmpty(buildTimeStamp)) {
                 project.logger.info(">>> add build timestamp to '${themeDir.name}'")
                 // read
                 def cssFile = new File(cssFilePath)

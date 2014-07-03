@@ -4,6 +4,7 @@
  */
 
 import groovy.io.FileType
+import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
@@ -112,8 +113,21 @@ class CubaDeployment extends DefaultTask {
             doAfter.call()
         }
 
+        def webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
+        if (project.ext.has('webResourcesTs')) {
+            project.logger.info(">>> update web resources timestamp")
+
+            // detect version automatically
+            def buildTimeStamp = project.ext.get('webResourcesTs')
+
+            def webXmlText = webXml.text
+            if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
+                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp)
+            }
+            webXml.write(webXmlText)
+        }
+
         project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
-        File webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
