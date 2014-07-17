@@ -211,17 +211,20 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         }
 
         if (project.name.endsWith('-core')) {
-            project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
+            File dbDir = new File(project.projectDir, "db");
+            if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
+                project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
 
-            project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
-                from "${project.buildDir}/db"
-                exclude '**/*.bat'
-                exclude '**/*.sh'
-                classifier = 'db'
-            }
+                project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
+                    from "${project.buildDir}/db"
+                    exclude '**/*.bat'
+                    exclude '**/*.sh'
+                    classifier = 'db'
+                }
 
-            project.artifacts {
-                archives project.dbScriptsArchive
+                project.artifacts {
+                    archives project.dbScriptsArchive
+                }
             }
         }
 
