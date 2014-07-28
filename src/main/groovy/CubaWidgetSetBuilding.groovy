@@ -106,26 +106,12 @@ class CubaWidgetSetBuilding extends DefaultTask {
         sources.addAll(project.sourceSets.main.output.classesDir)
         sources.addAll(project.sourceSets.main.output.resourcesDir)
 
-        Configuration compileConfiguration = project.configurations.findByName('compile')
-        if (compileConfiguration) {
-            for (def dependencyItem in compileConfiguration.dependencies) {
-                if (dependencyItem instanceof ProjectDependency) {
-                    Project dependencyProject = dependencyItem.dependencyProject
+        for (Project dependencyProject : collectProjectsWithDependency('vaadin-client')) {
+            project.logger.info("\tFound source project ${dependencyProject.name} for widgetset building")
 
-                    def artifacts = compileConfiguration.resolvedConfiguration.getResolvedArtifacts()
-                    def vaadinArtifact = artifacts.find { ResolvedArtifact artifact ->
-                        artifact.name == 'vaadin-client'
-                    }
-
-                    if (vaadinArtifact) {
-                        project.logger.info("\tFound source project ${dependencyProject.name} for widgetset building")
-
-                        sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
-                        sources.addAll(dependencyProject.sourceSets.main.output.classesDir)
-                        sources.addAll(dependencyProject.sourceSets.main.output.resourcesDir)
-                    }
-                }
-            }
+            sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
+            sources.addAll(dependencyProject.sourceSets.main.output.classesDir)
+            sources.addAll(dependencyProject.sourceSets.main.output.resourcesDir)
         }
 
         sources.each { File sourceDir ->
@@ -191,10 +177,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return excludes.find { it.contains(name) } != null
     }
 
-    protected void collectAllCompileProjectDeps(Project project, Set<Project> explored) {
+    protected void collectProjectsWithDependency(Project project, String dependencyName, Set<Project> explored) {
         Configuration compileConfiguration = project.configurations.findByName('compile')
         if (compileConfiguration) {
-            for (Dependency dependencyItem in compileConfiguration.allDependencies) {
+            for (def dependencyItem in compileConfiguration.allDependencies) {
                 if (dependencyItem instanceof ProjectDependency) {
                     Project dependencyProject = dependencyItem.dependencyProject
 
@@ -203,11 +189,11 @@ class CubaWidgetSetBuilding extends DefaultTask {
                         if (dependencyCompile) {
                             def artifacts = dependencyCompile.resolvedConfiguration.getResolvedArtifacts()
                             def vaadinArtifact = artifacts.find { ResolvedArtifact artifact ->
-                                artifact.name == 'vaadin-shared'
+                                artifact.name == dependencyName
                             }
                             if (vaadinArtifact) {
                                 explored.add(dependencyProject)
-                                collectAllCompileProjectDeps(dependencyProject, explored)
+                                collectProjectsWithDependency(dependencyProject, dependencyName, explored)
                             }
                         }
                     }
@@ -216,15 +202,19 @@ class CubaWidgetSetBuilding extends DefaultTask {
         }
     }
 
+    protected Set<Project> collectProjectsWithDependency(String dependencyName) {
+        def result = new LinkedHashSet()
+        collectProjectsWithDependency(project, dependencyName, result)
+
+        return result
+    }
+
     protected List collectClassPathEntries() {
         def compilerClassPath = []
 
         Configuration compileConfiguration = project.configurations.findByName('compile')
         if (compileConfiguration) {
-            def compileProjects = new LinkedHashSet<Project>()
-            collectAllCompileProjectDeps(project, compileProjects)
-
-            for (dependencyProject in compileProjects) {
+            for (dependencyProject in collectProjectsWithDependency('vaadin-shared')) {
                 SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
                 compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
