@@ -99,16 +99,19 @@ grant create session,
                     "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
                     "IS_INIT integer default 0)")
 
-            getInitScripts().each { File file ->
-                project.logger.warn("Executing SQL script: ${file.absolutePath}")
-                executeSqlScript(file)
-                String name = getScriptName(file)
-                markScript(name, true)
-            }
-
-            getUpdateScripts().each { File file ->
-                String name = getScriptName(file)
-                markScript(name, true)
+            try {
+                getInitScripts().each { File file ->
+                    project.logger.warn("Executing SQL script: ${file.absolutePath}")
+                    executeSqlScript(file)
+                    String name = getScriptName(file)
+                    markScript(name, true)
+                }
+            } finally {
+                // mark all update scripts as executed even in case of createDb failure
+                getUpdateScripts().each { File file ->
+                    String name = getScriptName(file)
+                    markScript(name, true)
+                }
             }
         } finally {
             closeSql()
