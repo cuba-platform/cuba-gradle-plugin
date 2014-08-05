@@ -212,9 +212,10 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
 
         if (project.name.endsWith('-core')) {
             File dbDir = new File(project.projectDir, "db");
-            if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
-                project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
+            project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
+            project.assemble.dependsOn(project.assembleDbScripts)
 
+            if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
                 project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
                     from "${project.buildDir}/db"
                     exclude '**/*.bat'
