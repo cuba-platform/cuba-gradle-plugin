@@ -3,10 +3,10 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
+
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
@@ -24,7 +24,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
     String widgetSetClass
     Map compilerArgs
     boolean printCompilerClassPath = false
+
     boolean strict = true
+    boolean draft = false
+    boolean disableCastChecking = false
 
     private def excludes = []
 
@@ -145,6 +148,14 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         if (strict) {
             args.add('-strict')
+        }
+
+        if (draft) {
+            args.add('-draftCompile')
+        }
+
+        if (disableCastChecking) {
+            args.add('-XdisableCastChecking')
         }
 
         for (def entry : defaultCompilerArgs.entrySet()) {
