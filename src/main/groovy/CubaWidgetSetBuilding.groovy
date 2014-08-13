@@ -158,9 +158,15 @@ class CubaWidgetSetBuilding extends DefaultTask {
             args.add('-XdisableCastChecking')
         }
 
-        for (def entry : defaultCompilerArgs.entrySet()) {
-            args.add(entry.getKey())
-            args.add(getCompilerArg(entry.getKey()))
+        def gwtCompilerArgs = [:]
+        gwtCompilerArgs.putAll(defaultCompilerArgs)
+        if (compilerArgs) {
+            gwtCompilerArgs.putAll(compilerArgs)
+        }
+
+        for (def entry : gwtCompilerArgs.entrySet()) {
+            args.add(entry.key)
+            args.add(entry.value)
         }
 
         args.add(widgetSetClass)
@@ -170,14 +176,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
         println(args)
 
         return args
-    }
-
-    protected def getCompilerArg(argName) {
-        if (compilerArgs && compilerArgs.containsKey(argName)) {
-            return compilerArgs.get(argName)
-        } else {
-            return defaultCompilerArgs.get(argName)
-        }
     }
 
     def excludeJars(String... artifacts) {
