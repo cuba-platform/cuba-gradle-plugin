@@ -4,12 +4,12 @@
  */
 
 
+import groovy.sql.Sql
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
 import org.apache.commons.lang.text.StrMatcher
 import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.DefaultTask
-import org.apache.commons.io.FileUtils
-import groovy.sql.Sql
 
 /**
  * @author krivopustov
@@ -101,7 +101,7 @@ public abstract class CubaDbTask extends DefaultTask {
     }
 
     protected boolean isEmpty(String sql) {
-        String[] lines = sql.split("\\r?\\n")
+        String[] lines = sql.split("[\r\n]+")
         for (String line : lines) {
             line = line.trim()
             if (!line.startsWith(SQL_COMMENT_PREFIX) && !StringUtils.isBlank(line)) {
@@ -113,6 +113,7 @@ public abstract class CubaDbTask extends DefaultTask {
 
     protected void executeSqlScript(File file) {
         String script = FileUtils.readFileToString(file, "UTF-8")
+        script = script.replaceAll("[\r\n]+", System.getProperty("line.separator"))
         StrTokenizer tokenizer = new StrTokenizer(
                 script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
         Sql sql = getSql()
