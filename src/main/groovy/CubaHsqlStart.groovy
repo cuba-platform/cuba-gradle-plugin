@@ -49,9 +49,7 @@ class CubaHsqlStart extends CubaHsqlTask {
             }
         }
         ant.waitfor(maxwait: 10, maxwaitunit: 'second', checkevery: 1, checkeveryunit: 'second') {
-            not {
-                socket(server: 'localhost', port: "$dbPort")
-            }
+            socket(server: 'localhost', port: "$dbPort")
         }
     }
 }
