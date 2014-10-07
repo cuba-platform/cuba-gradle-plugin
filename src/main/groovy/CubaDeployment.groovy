@@ -24,7 +24,7 @@ class CubaDeployment extends DefaultTask {
     def jarNames
     def appName
     def Closure doAfter
-    def tomcatRootDir = project.tomcatDir
+    def tomcatRootDir = new File(project.tomcatDir).canonicalPath
     def webcontentExclude = []
     def dbScriptsExcludes = []
 
