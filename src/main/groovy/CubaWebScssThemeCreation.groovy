@@ -4,7 +4,6 @@
  */
 
 import com.yahoo.platform.yui.compressor.CssCompressor
-import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
@@ -34,15 +33,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     // theme names to build
     def themes = []
 
-    // copy resources from specified themes
-    def requiresResourcesFrom = ['base']
-
-    // exclude selectors from result css
-    def excludedSelectors = []
-
-    // exlude subdirectories from themes
-    def excludedPaths = []
-
     def scssDir = 'themes'
     def destDir = "${project.buildDir}/web/VAADIN/themes"
 
@@ -64,10 +54,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     def adjustVaadinVersion() {
-        ResolvedArtifact vaadin6Lib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-            it.name.equals('vaadin')
-        }
-
         def scssConf = project.configurations.findByName('scss')
         if (!scssConf) {
             project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
@@ -75,10 +61,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         project.dependencies {
             scss(CubaPlugin.getArtifactDefinition())
-        }
-        if (vaadin6Lib && vaadin6Lib.moduleVersion.getId().version.startsWith("6")) {
-            // disable auto required resources from base
-            requiresResourcesFrom.remove('base')
         }
     }
 
@@ -223,17 +205,16 @@ class CubaWebScssThemeCreation extends DefaultTask {
             copyIncludeResources(includeThemeDir, themeDestDir)
         }
 
-        // copy base resources
-        requiresResourcesFrom.each { String themeName ->
-            project.logger.info(">>> copy resources from '${themeName}'")
+        File[] themeDirs = themesTmp.listFiles()
+        if (themeDirs) {
+            for (File themeSourceDir : themeDirs) {
+                if (themeSourceDir.isDirectory()) {
+                    project.logger.info(">>> copy resources from '${themeSourceDir.name}'")
 
-            def themeSourceDir = new File(themesTmp, themeName)
-            def themeDestDir = new File(destinationDirectory, themeName)
-
-            if (!themeSourceDir.exists())
-                throw new FileNotFoundException("Could not found include dir ${themeSourceDir.absolutePath}")
-
-            copyIncludeResources(themeSourceDir, themeDestDir)
+                    def themeDestDir = new File(destinationDirectory, themeSourceDir.name)
+                    copyIncludeResources(themeSourceDir, themeDestDir)
+                }
+            }
         }
 
         themes.each { def themeDir ->
@@ -335,38 +316,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     cssFile.delete()
                     compressedFile.renameTo(cssFile)
                 }
-
-                // remove specified selectors
-                if (excludedSelectors && !excludedSelectors.isEmpty()) {
-                    project.logger.info(">>> strip theme '${themeDir.name}'")
-                    if (project.logger.isInfoEnabled()) {
-                        def selectorsInfo = StringUtils.join(excludedSelectors, '\n\t')
-                        project.logger.info(">>> remove selectors:\n\t${selectorsInfo}")
-                    }
-
-                    cssFile = new File(cssFilePath)
-                    def strippedFile = new File(cssFilePath + '.stripped')
-
-                    cssReader = new FileReader(cssFile)
-                    out = new BufferedWriter(new FileWriter(strippedFile))
-
-                    String line
-                    while ((line = cssReader.readLine()) != null) {
-                        if (excludedSelectors.find({ String it -> line.contains(it) }) == null) {
-                            out.println(line)
-                        } else if (project.logger.isDebugEnabled()) {
-                            project.logger.debug(">>> remove css statement '${line}'")
-                        }
-                    }
-
-                    out.close()
-                    cssReader.close()
-
-                    if (strippedFile.exists()) {
-                        cssFile.delete()
-                        strippedFile.renameTo(cssFile)
-                    }
-                }
             }
 
             if (cleanup) {
@@ -378,15 +327,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
                         f.deleteDir()
                     }
                 })
-
-                // remove specified subdirectories
-                for (String path : excludedPaths) {
-                    def dir = new File(destinationDirectory, path)
-                    if (dir.exists()) {
-                        project.logger.info(">>> remove excluded path ${path}")
-                        FileUtils.deleteDirectory(dir)
-                    }
-                }
             }
 
             if (StringUtils.isEmpty(buildTimeStamp) && project.ext.has('webResourcesTs')) {
@@ -415,7 +355,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
             project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
         }
 
-        themesTmp.deleteDir()
+        if (cleanup) {
+            themesTmp.deleteDir()
+        }
     }
 
     def copyIncludeResources(File themeSourceDir, File themeDestDir) {
@@ -452,6 +394,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         private static final Pattern CSS_URL_PATTERN =
             Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
 
+        @SuppressWarnings("GrMethodMayBeStatic")
         public Set<String> getUrls(String cssContent) {
             // replace comments
             cssContent = cssContent.replaceAll('/\\*.*\\*/', '')
