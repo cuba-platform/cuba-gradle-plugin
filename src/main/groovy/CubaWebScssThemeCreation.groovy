@@ -137,15 +137,15 @@ class CubaWebScssThemeCreation extends DefaultTask {
         else
             destinationDirectory = destDir as File
 
-        File stylesDirecrory
+        File stylesDirectory
         if (scssDir instanceof String)
-            stylesDirecrory = project.file(scssDir)
+            stylesDirectory = project.file(scssDir)
         else
-            stylesDirecrory = scssDir as File
+            stylesDirectory = scssDir as File
 
         if (themes.empty) {
-            project.logger.info(">>> scan directory '${stylesDirecrory}' for themes")
-            for (File themeDir : project.file(stylesDirecrory).listFiles(dirFilter))
+            project.logger.info(">>> scan directory '${stylesDirectory}' for themes")
+            for (File themeDir : project.file(stylesDirectory).listFiles(dirFilter))
                 themes.add(themeDir)
         }
 
@@ -219,7 +219,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         themes.each { def themeDir ->
             if (themeDir instanceof String)
-                themeDir = new File(stylesDirecrory, themeDir)
+                themeDir = new File(stylesDirectory, themeDir)
 
             def themeBuildDir = new File(themesTmp, themeDir.name)
             def themeDestDir = new File(destinationDirectory, themeDir.name)
