@@ -13,6 +13,8 @@ class CubaDbCreation extends CubaDbTask {
 
     def dropDbSql
     def createDbSql
+    def masterUrl
+    def timeStampType
     def oracleSystemUser = 'system'
     def oracleSystemPassword = 'manager'
 
@@ -24,20 +26,24 @@ class CubaDbCreation extends CubaDbTask {
     def createDb() {
         init()
 
-        def masterUrl
-
         if (dbms == 'postgres') {
             masterUrl = "jdbc:postgresql://$host/postgres"
             if (!dropDbSql)
                 dropDbSql = "drop database if exists $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
+            if (!timeStampType)
+                timeStampType = 'timestamp'
+
         } else if (dbms == 'mssql') {
             masterUrl = "jdbc:jtds:sqlserver://$host/master"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
+            if (!timeStampType)
+                timeStampType = 'datetime'
+
         } else if (dbms == 'oracle') {
             masterUrl = "jdbc:oracle:thin:@//$host/$dbName"
             if (!dropDbSql)
@@ -52,12 +58,21 @@ grant create session,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
     to $dbUser;"""
+            if (!timeStampType)
+                timeStampType = 'timestamp'
+
         } else if (dbms == 'hsql') {
             masterUrl = "jdbc:hsqldb:hsql://$host/$dbName"
             if (!dropDbSql)
                 dropDbSql = "drop schema public cascade;"
-        } else
-            throw new UnsupportedOperationException("DBMS $dbms not supported")
+            if (!timeStampType)
+                timeStampType = 'timestamp'
+
+        } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
+            throw new UnsupportedOperationException("DBMS $dbms not supported. " +
+                    "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
+                    "or specify one of supported DBMS in 'dbms' property")
+        }
 
         def user = dbms == 'oracle' ? (oracleSystemUser ? oracleSystemUser : 'system') : dbUser
         project.logger.warn("Using database URL: $masterUrl, user: $user")
@@ -95,8 +110,8 @@ grant create session,
         project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
         try {
             getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
-                    "SCRIPT_NAME varchar${dbms == 'oracle' ? '2' : ''}(300) not null primary key, " +
-                    "CREATE_TS " + (dbms == 'mssql' ? "datetime" : "timestamp") + " default current_timestamp, " +
+                    "SCRIPT_NAME varchar(300) not null primary key, " +
+                    "CREATE_TS $timeStampType default current_timestamp, " +
                     "IS_INIT integer default 0)")
 
             try {
@@ -119,31 +134,7 @@ grant create session,
     }
 
     private List<File> getInitScripts() {
-        List<File> files = []
-        if (dbDir.exists()) {
-            String[] moduleDirs = dbDir.list()
-            Arrays.sort(moduleDirs)
-            project.logger.info(">>> [getInitScripts] modules: $moduleDirs")
-            for (String moduleDirName: moduleDirs) {
-                File moduleDir = new File(dbDir, moduleDirName)
-                File initDir = new File(moduleDir, "init")
-                File scriptDir = new File(initDir, dbms)
-                if (scriptDir.exists()) {
-                    File[] scriptFiles = scriptDir.listFiles(new FilenameFilter() {
-                        public boolean accept(File dir, String name) {
-                            return name.endsWith("create-db.sql")
-                        }
-                    })
-                    Arrays.sort(scriptFiles)
-                    project.logger.info(">>> [getInitScripts] files: $scriptFiles")
-                    files.addAll(Arrays.asList(scriptFiles))
-                } else {
-                    project.logger.info(">>> [getInitScripts] $scriptDir doesn't exist")
-                }
-            }
-        } else {
-            project.logger.info(">>> [getInitScripts] $dbDir doesn't exist")
-        }
-        return files
+        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, [])
+        return scriptFinder.getInitScripts()
     }
 }

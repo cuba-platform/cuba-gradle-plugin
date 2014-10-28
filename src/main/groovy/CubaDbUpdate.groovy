@@ -50,32 +50,8 @@ class CubaDbUpdate extends CubaDbTask {
 
     @Override
     protected List<File> getUpdateScripts() {
-        List<File> databaseScripts = new ArrayList<>()
-
-        if (dbDir.exists()) {
-            String[] moduleDirs = dbDir.list()
-            Arrays.sort(moduleDirs)
-            for (String moduleDirName : moduleDirs) {
-                File moduleDir = new File(dbDir, moduleDirName)
-                File initDir = new File(moduleDir, 'update')
-                File scriptDir = new File(initDir, dbms)
-                if (scriptDir.exists()) {
-                    List files = new ArrayList(FileUtils.listFiles(scriptDir, null, true))
-                    URI scriptDirUri = scriptDir.toURI()
-
-                    List updateScripts = files
-                            .findAll { File f -> f.name.endsWith('.sql') }
-                            .sort { File f1, File f2 ->
-                        URI f1Uri = scriptDirUri.relativize(f1.toURI())
-                        URI f2Uri = scriptDirUri.relativize(f2.toURI())
-                        f1Uri.getPath().compareTo(f2Uri.getPath())
-                    }
-
-                    databaseScripts.addAll(updateScripts)
-                }
-            }
-        }
-        return databaseScripts
+        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+        return scriptFinder.getUpdateScripts()
     }
 
     protected List<String> getExecutedScripts() {
