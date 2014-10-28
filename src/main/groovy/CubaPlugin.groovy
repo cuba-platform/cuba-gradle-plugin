@@ -7,6 +7,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.compile.JavaCompile
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -201,6 +202,10 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                 resources { srcDir 'test' }
                 output.dir("$project.buildDir/enhanced-classes/test")
             }
+        }
+
+        project.tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:-options"
         }
 
         project.assemble.doFirst { acceptLicense(project) }
