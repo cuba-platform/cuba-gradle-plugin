@@ -103,8 +103,13 @@ class CubaWebStartCreation extends DefaultTask {
 
         def resourcesNode = jnlpNode.resources[0]
 
+        def mainJarName = "${project.applicationName}-${project.version}.jar"
         libDir.listFiles().each {
-            resourcesNode.appendNode('jar', [href: "lib/${it.getName()}", download: 'eager'])
+            def attrs = [href: "lib/${it.getName()}", download: 'eager']
+            if (it.getName() == mainJarName) {
+                attrs << [main: 'true']
+            }
+            resourcesNode.appendNode('jar', attrs)
         }
 
         File jnlpFile = new File(distDir, jnlpName)
