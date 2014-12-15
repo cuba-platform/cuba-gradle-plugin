@@ -46,10 +46,10 @@ class CubaDbScriptsAssembling extends DefaultTask {
             }
             dir.mkdir()
 
-            dbscripts.files.each { dep ->
-                project.logger.info ">>> copy db from: $dep.absolutePath"
+            dbscripts.resolvedConfiguration.resolvedArtifacts.each { artifact ->
+                project.logger.info ">>> copy db from: $artifact.file.absolutePath"
                 project.copy {
-                    from project.zipTree(dep.absolutePath)
+                    from project.zipTree(artifact.file.absolutePath)
                     into dir
                 }
             }
