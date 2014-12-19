@@ -174,6 +174,34 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                 }
             }
         }
+
+        if (project.hasProperty('eclipse')) {
+            project.logger.info ">>> configuring Eclipse project"
+            project.eclipse.project.file.withXml { provider ->
+                def projectDescription = provider.asNode()
+
+                def filteredResources = projectDescription.children().find { it.name() == 'filteredResources'}
+                if (filteredResources != null) {
+                    filteredResources.children().clear()
+                } else {
+                    filteredResources = projectDescription.appendNode('filteredResources')
+                }
+                filteredResources.append(nestedProjectsFilter())
+            }
+        }
+    }
+
+    private static Node nestedProjectsFilter() {
+        def filter = new Node(null, 'filter')
+        filter.appendNode('id', new Date().getTime())   // Eclipse does the same
+        filter.appendNode('name', )
+        filter.appendNode('type', 26)                   // EXCLUDE_ALL = 2 | FOLDERS= 8 | INHERITABLE = 16
+        def node = filter.appendNode('matcher')
+
+        node.appendNode('id', 'org.eclipse.ui.ide.multiFilter')
+        node.appendNode('arguments', '1.0-projectRelativePath-matches-true-false-modules')
+
+        return filter
     }
 
     private void applyToModuleProject(Project project) {
