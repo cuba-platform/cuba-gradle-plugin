@@ -188,6 +188,18 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                 }
                 filteredResources.append(nestedProjectsFilter())
             }
+            project.eclipse.classpath.file.withXml{ provider ->
+                def classpath = provider.asNode();
+                for (String projectName : project.childProjects.keySet()) {
+                    Node entry = classpath.appendNode('classpathentry')
+                    entry.@kind = 'src'
+                    entry.@path = '/' + projectName;
+                    entry.@exported = 'true'
+
+                    classpath.children().remove(entry);
+                    classpath.children().add(0, entry)
+                }
+            }
         }
     }
 
