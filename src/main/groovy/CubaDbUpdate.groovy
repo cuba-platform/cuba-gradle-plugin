@@ -2,15 +2,20 @@
  * Copyright (c) 2008-2013 Haulmont. All rights reserved.
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
-
-import org.apache.commons.io.FileUtils
 import org.gradle.api.tasks.TaskAction
+
+import java.sql.SQLException
 
 /**
  * @author krivopustov
  * @version $Id$
  */
 class CubaDbUpdate extends CubaDbTask {
+
+    def requiredTables = ['reports': 'report_report',
+                          'workflow': 'wf_proc',
+                          'ccpayments': 'cc_credit_card',
+                          'bpmn': 'bpmn_group']
 
     CubaDbUpdate() {
         setGroup('Database')
@@ -21,7 +26,11 @@ class CubaDbUpdate extends CubaDbTask {
         init()
 
         try {
-            List<File> files = getUpdateScripts()
+            runRequiredInitScripts()
+
+            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+            List<File> files = scriptFinder.getUpdateScripts()
+
             List<String> scripts = getExecutedScripts()
             def toExecute = files.findAll { File file ->
                 String name = getScriptName(file)
@@ -42,17 +51,33 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
+    protected void runRequiredInitScripts() {
+        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+        scriptFinder.getModuleDirs().each { String dirName ->
+            def moduleName = dirName.substring(3)
+            def reqTable = requiredTables[moduleName]
+            if (reqTable) {
+                try {
+                    getSql().rows("select * from $reqTable where 0=1".toString())
+                } catch (SQLException e) {
+                    if (e.message?.toLowerCase()?.contains(reqTable)) {
+                        project.logger.warn("Required table for $moduleName does not exist, running init scripts")
+                        // probably the required table does not exist
+                        initDatabase(dirName)
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+        }
+    }
+
     protected void executeScript(File file) {
         project.logger.warn("Executing script " + file.getPath())
         if (file.name.endsWith('.sql'))
             executeSqlScript(file)
     }
 
-    @Override
-    protected List<File> getUpdateScripts() {
-        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
-        return scriptFinder.getUpdateScripts()
-    }
 
     protected List<String> getExecutedScripts() {
         return getSql().rows('select SCRIPT_NAME from SYS_DB_CHANGELOG').collect { row -> row.script_name }

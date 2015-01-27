@@ -72,9 +72,25 @@ public abstract class CubaDbTask extends DefaultTask {
 
     }
 
-    protected List<File> getUpdateScripts() {
-        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql', 'groovy'])
-        return scriptFinder.getUpdateScripts()
+    protected void initDatabase(String oneModuleDir = null) {
+        try {
+            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+            def initScripts = scriptFinder.getInitScripts(oneModuleDir)
+            initScripts.each { File file ->
+                project.logger.warn("Executing SQL script: ${file.absolutePath}")
+                executeSqlScript(file)
+                String name = getScriptName(file)
+                markScript(name, true)
+            }
+        } finally {
+            // mark all update scripts as executed even in case of createDb failure
+            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql', 'groovy'])
+            def updateScripts = scriptFinder.getUpdateScripts(oneModuleDir)
+            updateScripts.each { File file ->
+                String name = getScriptName(file)
+                markScript(name, true)
+            }
+        }
     }
 
     protected String getScriptName(File file) {
@@ -142,14 +158,25 @@ public abstract class CubaDbTask extends DefaultTask {
             this.extensions = extensions
         }
 
+        List<String> getModuleDirs() {
+            if (dbDir.exists()) {
+                String[] moduleDirs = dbDir.list()
+                Arrays.sort(moduleDirs)
+                return Arrays.asList(moduleDirs)
+            }
+            return []
+        }
+
         // Copy of com.haulmont.cuba.core.sys.DbUpdaterEngine#getUpdateScripts
-        List<File> getUpdateScripts() {
+        List<File> getUpdateScripts(String oneModuleDir = null) {
             List<File> databaseScripts = new ArrayList<>();
 
             if (dbDir.exists()) {
                 String[] moduleDirs = dbDir.list()
                 Arrays.sort(moduleDirs)
                 for (String moduleDirName : moduleDirs) {
+                    if (oneModuleDir && moduleDirName != oneModuleDir)
+                        continue
                     File moduleDir = new File(dbDir, moduleDirName)
                     File initDir = new File(moduleDir, 'update')
                     File scriptDir = new File(initDir, dbmsType)
@@ -202,13 +229,15 @@ public abstract class CubaDbTask extends DefaultTask {
             return databaseScripts;
         }
 
-        List<File> getInitScripts() {
+        List<File> getInitScripts(String oneModuleDir = null) {
             List<File> files = []
             if (dbDir.exists()) {
                 String[] moduleDirs = dbDir.list()
                 Arrays.sort(moduleDirs)
                 logger?.info(">>> [getInitScripts] modules: $moduleDirs")
                 for (String moduleDirName: moduleDirs) {
+                    if (oneModuleDir && moduleDirName != oneModuleDir)
+                        continue
                     File moduleDir = new File(dbDir, moduleDirName)
                     File initDir = new File(moduleDir, "init")
                     File scriptDir = new File(initDir, dbmsType)

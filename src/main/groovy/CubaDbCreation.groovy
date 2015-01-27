@@ -114,27 +114,9 @@ grant create session,
                     "CREATE_TS $timeStampType default current_timestamp, " +
                     "IS_INIT integer default 0)")
 
-            try {
-                getInitScripts().each { File file ->
-                    project.logger.warn("Executing SQL script: ${file.absolutePath}")
-                    executeSqlScript(file)
-                    String name = getScriptName(file)
-                    markScript(name, true)
-                }
-            } finally {
-                // mark all update scripts as executed even in case of createDb failure
-                getUpdateScripts().each { File file ->
-                    String name = getScriptName(file)
-                    markScript(name, true)
-                }
-            }
+            initDatabase()
         } finally {
             closeSql()
         }
-    }
-
-    private List<File> getInitScripts() {
-        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, [])
-        return scriptFinder.getInitScripts()
     }
 }
