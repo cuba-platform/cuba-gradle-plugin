@@ -2,9 +2,13 @@
  * Copyright (c) 2008-2013 Haulmont. All rights reserved.
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
+
+import groovy.sql.Sql
 import org.gradle.api.tasks.TaskAction
 
 import java.sql.SQLException
+import java.util.logging.Level
+import java.util.logging.Logger
 
 /**
  * @author krivopustov
@@ -58,7 +62,14 @@ class CubaDbUpdate extends CubaDbTask {
             def reqTable = requiredTables[moduleName]
             if (reqTable) {
                 try {
-                    getSql().rows("select * from $reqTable where 0=1".toString())
+                    def sqlLogger = Logger.getLogger(Sql.class.getName())
+                    def saveLevel = sqlLogger.level
+                    try {
+                        sqlLogger.level = Level.SEVERE // suppress confusing error output
+                        getSql().rows("select * from $reqTable where 0=1".toString())
+                    } finally {
+                        sqlLogger.level = saveLevel
+                    }
                 } catch (SQLException e) {
                     if (e.message?.toLowerCase()?.contains(reqTable)) {
                         project.logger.warn("Required table for $moduleName does not exist, running init scripts")
