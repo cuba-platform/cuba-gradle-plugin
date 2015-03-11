@@ -84,6 +84,7 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
             code = method.getCode(false);
 
             final String fieldName = StringUtils.uncapitalize(name.replaceFirst("set", ""));
+            Class setterParamType = method.getParamTypes()[0];
 
             if (propertyChangingExists) {
                 FieldMetaData fieldMeta = meta.getDeclaredField(fieldName);
@@ -94,6 +95,8 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
                     continue;
                 }
 
+                checkFieldType(fieldName, setterParamType);
+
                 // propertyChanging(<fieldName>, pcInheritedFieldCount + <fieldIndex>, <value>)
                 code.aload().setThis();
                 code.constant().setValue(fieldName);
@@ -103,10 +106,12 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
                 code.aload().setLocal(1);
                 code.invokevirtual().setMethod("propertyChanging", void.class,
                         new Class[]{String.class, int.class, Object.class});
+            } else {
+                checkFieldType(fieldName, setterParamType);
             }
 
             code.aload().setThis();
-            code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0],
+            code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), setterParamType,
                     new Class[]{});
             code.astore().setLocal(2);
 
@@ -142,6 +147,19 @@ public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
 
             code.calculateMaxStack();
             code.calculateMaxLocals();
+        }
+    }
+
+    protected void checkFieldType(String fieldName, Class setterParamType) {
+        if (Boolean.TYPE.equals(setterParamType)
+                || Integer.TYPE.equals(setterParamType)
+                || Long.TYPE.equals(setterParamType)
+                || Double.TYPE.equals(setterParamType)
+                || Float.TYPE.equals(setterParamType)) {
+            throw new IllegalStateException(
+                    String.format("Unable to enhance field %s.%s with primitive type %s. Use type %s.",
+                            _managedType.getClassName(), fieldName,
+                            setterParamType.getSimpleName(), StringUtils.capitalize(setterParamType.getSimpleName())));
         }
     }
 
