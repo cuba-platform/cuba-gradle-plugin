@@ -27,7 +27,8 @@ class CubaDbCreation extends CubaDbTask {
         init()
 
         if (dbms == 'postgres') {
-            masterUrl = "jdbc:postgresql://$host/postgres"
+            if (!masterUrl)
+                masterUrl = "jdbc:postgresql://$host/postgres"
             if (!dropDbSql)
                 dropDbSql = "drop database if exists $dbName;"
             if (!createDbSql)
@@ -36,7 +37,8 @@ class CubaDbCreation extends CubaDbTask {
                 timeStampType = 'timestamp'
 
         } else if (dbms == 'mssql') {
-            masterUrl = "jdbc:jtds:sqlserver://$host/master"
+            if (!masterUrl)
+                masterUrl = "jdbc:jtds:sqlserver://$host/master"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
@@ -45,7 +47,8 @@ class CubaDbCreation extends CubaDbTask {
                 timeStampType = 'datetime'
 
         } else if (dbms == 'oracle') {
-            masterUrl = "jdbc:oracle:thin:@//$host/$dbName"
+            if (!masterUrl)
+                masterUrl = "jdbc:oracle:thin:@//$host/$dbName"
             if (!dropDbSql)
                 dropDbSql = "drop user $dbUser cascade;"
             if (!createDbSql)
@@ -62,7 +65,8 @@ grant create session,
                 timeStampType = 'timestamp'
 
         } else if (dbms == 'hsql') {
-            masterUrl = "jdbc:hsqldb:hsql://$host/$dbName"
+            if (!masterUrl)
+                masterUrl = "jdbc:hsqldb:hsql://$host/$dbName"
             if (!dropDbSql)
                 dropDbSql = "drop schema public cascade;"
             if (!timeStampType)
