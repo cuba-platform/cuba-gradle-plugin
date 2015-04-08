@@ -101,9 +101,9 @@ public class CubaTransientEnhancer {
                 return;
             }
 
-            String fieldName = StringUtils.uncapitalize(name.replace("set",""));
+            String fieldName = StringUtils.uncapitalize(name.replaceFirst("set",""));
             code.aload().setThis();
-            table.addLocalVariable(StringUtils.lowerCase(name.replace("set","")+"_local"),method.getParamTypes()[0]).setStartPc(5);
+            table.addLocalVariable(StringUtils.lowerCase(name.replaceFirst("set","")+"_local"),method.getParamTypes()[0]).setStartPc(5);
             code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName) , method.getParamTypes()[0], new Class[]{});
             code.astore().setLocal(2);
 
