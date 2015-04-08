@@ -97,7 +97,7 @@ public class CubaTransientEnhancer {
                 continue;
             code = method.getCode(false);
             LocalVariableTable table =  code.getLocalVariableTable(false);
-            if (table.getLocalVariable(StringUtils.lowerCase(name.replace("set","")+"_local"))!=null){
+            if (table.getLocalVariable(StringUtils.lowerCase(name.replaceFirst("set","")+"_local"))!=null){
                 return;
             }
 
