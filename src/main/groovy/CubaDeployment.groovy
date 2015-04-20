@@ -40,30 +40,61 @@ class CubaDeployment extends DefaultTask {
         project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc {
-                exclude {f -> f.file.absolutePath.startsWith(project.file("${tomcatRootDir}/lib/").absolutePath)}
+                exclude {f ->
+                    if (new File("${tomcatRootDir}/lib".toString(), f.file.name).exists()) {
+                        return true
+                    }
+
+                    f.file.absolutePath.startsWith(project.file("${tomcatRootDir}/lib/").absolutePath)
+                }
             }
             into "${tomcatRootDir}/lib"
         }
         project.logger.info(">>> copying shared libs from configurations.runtime")
 
+        File sharedLibDir = new File("${tomcatRootDir}/shared/lib")
+        List<String> copiedToSharedLib = []
         project.copy {
             from project.configurations.runtime
             into "${tomcatRootDir}/shared/lib"
             include { details ->
-                def name = details.file.name
-                return !(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && (jarNames.find { name.startsWith(it) } == null)
+                String name = details.file.name
+
+                if (new File(sharedLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
+                    return false
+                }
+
+                if (!(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && (jarNames.find { name.startsWith(it) } == null)) {
+                    copiedToSharedLib.add(name)
+
+                    return true
+                }
+
+                return false
             }
         }
 
+        File appLibDir = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/lib")
+        List<String> copiedToAppLib = []
         project.logger.info(">>> copying app libs from configurations.runtime")
         project.copy {
             from project.configurations.runtime
             from project.libsDir
             into "${tomcatRootDir}/webapps/$appName/WEB-INF/lib"  //
             include { details ->
-                def name = details.file.name
-                return !(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) &&
-                        (jarNames.find { name.startsWith(it) } != null)
+                String name = details.file.name
+                if (new File(appLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
+                    return false
+                }
+
+                if (!(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) &&
+                        (jarNames.find { name.startsWith(it) } != null)) {
+                    copiedToAppLib.add(name)
+
+                    return true
+                }
+
+                return false
             }
         }
 
@@ -104,8 +135,10 @@ class CubaDeployment extends DefaultTask {
             DependencyResolver resolver = new DependencyResolver(
                     libraryRoot: new File("${tomcatRootDir}"),
                     logger: { String message -> project.logger.info(message) })
-            resolver.resolveDependences("${tomcatRootDir}/shared/lib")
-            resolver.resolveDependences("${tomcatRootDir}/webapps/${appName}/WEB-INF/lib")
+            if (!copiedToSharedLib.isEmpty()) {
+                resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)
+            }
+            resolver.resolveDependencies(appLibDir, copiedToAppLib)
         }
 
         if (doAfter) {
@@ -122,13 +155,13 @@ class CubaDeployment extends DefaultTask {
 
             def webXmlText = webXml.text
             if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
-                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp)
+                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp.toString())
             }
             webXml.write(webXmlText)
         }
 
         project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
-        webXml.setLastModified(new Date().getTime())
+        webXml.setLastModified(System.currentTimeMillis())
     }
 
     def appJars(Object... names) {
@@ -140,35 +173,88 @@ class CubaDeployment extends DefaultTask {
         String version
     }
 
+    public static LibraryDefinition getLibraryDefinition(String libraryName) {
+        Matcher m = LIBRARY_PATTERN.matcher(libraryName)
+        if (m.matches()) {
+            def currentLibName = m.group(1)
+            def currentLibVersion = m.group(2)
+
+            if (currentLibName != null && currentLibVersion != null) {
+                LibraryDefinition ld = new LibraryDefinition()
+                ld.name = currentLibName
+                ld.version = currentLibVersion
+                return ld
+            }
+        }
+        return null
+    }
+
+    public static String compareVersions(String aLibraryVersion, String bLibraryVersion) {
+        def labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
+        def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
+
+        def maxLengthOfBothArrays
+        if (labelAVersionArray.size() >= labelBVersionArray.size()) {
+            maxLengthOfBothArrays = labelAVersionArray.size()
+        } else {
+            maxLengthOfBothArrays = labelBVersionArray.size()
+
+            def temp = aLibraryVersion
+            aLibraryVersion = bLibraryVersion
+            bLibraryVersion = temp
+
+            def tempArr = labelAVersionArray
+            labelAVersionArray = labelBVersionArray
+            labelBVersionArray = tempArr
+        }
+
+        for (def i = 0; i < maxLengthOfBothArrays; i++) {
+            if (i < labelBVersionArray.size()) {
+                def matcherA = DIGITAL_PATTERN.matcher(labelAVersionArray[i])
+                def matcherB = DIGITAL_PATTERN.matcher(labelBVersionArray[i])
+
+                if (matcherA.matches() && !matcherB.matches()) return bLibraryVersion //labelA = number, labelB = string
+                if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion  //labelA = string, labelB = number
+
+                // both labels are numbers or strings
+                if (labelAVersionArray[i] > labelBVersionArray[i])
+                    return bLibraryVersion
+                if (labelAVersionArray[i] < labelBVersionArray[i])
+                    return aLibraryVersion
+                if (i == maxLengthOfBothArrays - 1) //equals
+                    return aLibraryVersion
+            } else {
+                if (labelAVersionArray[i].equals("SNAPSHOT"))
+                    return aLibraryVersion
+                return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
+            }
+        }
+
+        return aLibraryVersion
+    }
+
     public static class DependencyResolver {
 
         Closure logger
         File libraryRoot
 
-        LibraryDefinition getLibraryDefinition(String libraryName) {
-            def currentLibName
-            def currentLibVersion
-
-            Matcher m = LIBRARY_PATTERN.matcher(libraryName)
-            if (m.matches()) {
-                currentLibName = m.group(1)
-                currentLibVersion = m.group(2)
-            }
-            if ((currentLibName != null) && (currentLibVersion != null)) {
-                LibraryDefinition libraryDefinition = new LibraryDefinition()
-                libraryDefinition.name = currentLibName
-                libraryDefinition.version = currentLibVersion
-                return libraryDefinition
-            }
-            return null
-        }
-
-        void resolveDependences(String path) {
+        void resolveDependencies(File libDir, List<String> copied) {
             def libraryNames = []
-            def dir = new File(path)
-            dir.eachFileRecurse(FileType.FILES) { file ->
+            def copiedLibNames = copied.collect { getLibraryDefinition(it).name }
+
+            libDir.eachFile(FileType.FILES) { file ->
                 libraryNames << file.name
             }
+            libraryNames = copiedLibNames.collectAll { String copiedLibName ->
+                libraryNames.findAll { it.startsWith(copiedLibName) }
+            }.flatten().toSet().toList()
+
+            if (logger) {
+                libraryNames.each {
+                    logger(">> check library " + it)
+                }
+            }
+
             // filenames to remove
             def removeSet = new HashSet<String>()
             // key - nameOfLib , value = list of matched versions
@@ -191,6 +277,7 @@ class CubaDeployment extends DefaultTask {
                 }
             }
 
+            def path = libDir.absolutePath
             def relativePath = libraryRoot != null ? path.substring(libraryRoot.absolutePath.length()) : path
             for (key in versionsMap.keySet()) {
                 def versionsList = versionsMap.get(key)
@@ -210,51 +297,9 @@ class CubaDeployment extends DefaultTask {
             }
 
             removeSet.each { String fileName ->
-                new File(path + "/" + fileName).delete()
+                new File(path, fileName).delete()
                 if (logger)
                     logger(">>> remove library ${relativePath }/${fileName}")
-            }
-        }
-
-        def compareVersions(String aLibraryVersion, String bLibraryVersion) {
-            def labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
-            def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
-
-            def maxLengthOfBothArrays
-            if (labelAVersionArray.size() >= labelBVersionArray.size()) {
-                maxLengthOfBothArrays = labelAVersionArray.size()
-            } else {
-                maxLengthOfBothArrays = labelBVersionArray.size()
-
-                def temp = aLibraryVersion
-                aLibraryVersion = bLibraryVersion
-                bLibraryVersion = temp
-
-                def tempArr = labelAVersionArray
-                labelAVersionArray = labelBVersionArray
-                labelBVersionArray = tempArr
-            }
-
-            for (def i = 0; i < maxLengthOfBothArrays; i++) {
-                if (i < labelBVersionArray.size()) {
-                    def matcherA = DIGITAL_PATTERN.matcher(labelAVersionArray[i])
-                    def matcherB = DIGITAL_PATTERN.matcher(labelBVersionArray[i])
-
-                    if (matcherA.matches() && !matcherB.matches()) return bLibraryVersion //labelA = number, labelB = string
-                    if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion  //labelA = string, labelB = number
-
-                    // both labels are numbers or strings
-                    if (labelAVersionArray[i] > labelBVersionArray[i])
-                        return bLibraryVersion
-                    if (labelAVersionArray[i] < labelBVersionArray[i])
-                        return aLibraryVersion
-                    if (i == maxLengthOfBothArrays - 1) //equals
-                        return aLibraryVersion
-                } else {
-                    if (labelAVersionArray[i].equals("SNAPSHOT"))
-                        return aLibraryVersion
-                    return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
-                }
             }
         }
     }
