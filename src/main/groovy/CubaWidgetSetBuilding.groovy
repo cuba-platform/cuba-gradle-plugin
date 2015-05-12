@@ -229,11 +229,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
                 compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
                 compilerClassPath.add(dependencyMainSourceSet.output.classesDir)
                 compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
-                compilerClassPath.addAll(
-                        dependencyMainSourceSet.compileClasspath.findAll {
-                            !excludedArtifact(it.name) && !compilerClassPath.contains(it)
-                        }
-                )
 
                 project.logger.debug(">> Widget set building Module: ${dependencyProject.name}")
             }
