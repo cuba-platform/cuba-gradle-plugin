@@ -4,6 +4,7 @@
  */
 
 import com.yahoo.platform.yui.compressor.CssCompressor
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
@@ -40,6 +41,13 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def compress = true
     def sprites = true
     def cleanup = true
+
+    def excludes = ['reindeer', 'chameleon', 'runo', 'liferay']
+    def excludePaths = ['valo/fonts/lato',
+                        'valo/fonts/lora',
+                        'valo/fonts/roboto',
+                        'valo/fonts/source-sans-pro',
+                        'META-INF']
 
     def dirFilter = new FileFilter() {
         @Override
@@ -215,6 +223,20 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     copyIncludeResources(themeSourceDir, themeDestDir)
                 }
             }
+        }
+
+        excludes.each { def themeName ->
+            def themeDestDir = new File(destinationDirectory, themeName)
+            project.logger.info(">>> excluded theme '$themeName'")
+
+            FileUtils.deleteQuietly(themeDestDir)
+        }
+
+        excludePaths.each { def path ->
+            def pathFile = new File(destinationDirectory, path)
+            project.logger.info(">>> excluded path '$path'")
+
+            FileUtils.deleteQuietly(pathFile)
         }
 
         themes.each { def themeDir ->
