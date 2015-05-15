@@ -2,7 +2,6 @@
  * Copyright (c) 2008-2013 Haulmont. All rights reserved.
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
-
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Exec
@@ -281,17 +280,46 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         }
 
         // add web resources version for correct caching
-        if (project.name.endsWith('-web') || project.name.endsWith('-web6')) {
+        if (project.name.endsWith('-web')) {
+            project.configurations {
+                themes
+            }
+
             def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
-            project.logger.info(">>> set web resources timestamp for project")
+            project.logger.info(">>> set web resources timestamp for project " + project.name)
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
+
+            project.task('bindVaadinThemes') << {
+                def vaadinLib = project.configurations.compile.resolvedConfiguration.resolvedArtifacts.find {
+                    it.name.equals('vaadin-server')
+                }
+                // add default vaadin-themes dependency
+                if (vaadinLib) {
+                    def dependency = vaadinLib.moduleVersion.id
+                    project.logger.info(">>> add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
+
+                    project.dependencies {
+                        themes(group: dependency.group, name: 'vaadin-themes', version: dependency.version)
+                    }
+                }
+            }
+
+            if (project.tasks.findByName('idea')) {
+                project.tasks.idea.dependsOn(project.tasks.bindVaadinThemes)
+            }
         }
 
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
-            project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided, project.configurations.jdbc], minus: []]]
+            project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided,
+                                                             project.configurations.jdbc], minus: []]]
+
+            if (project.configurations.findByName('themes')) {
+                project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.themes], minus: []]]
+            }
+
             project.idea.module.inheritOutputDirs = true
 
             // Enhanced classes library entry must go before source folder

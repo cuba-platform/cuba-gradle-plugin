@@ -11,7 +11,6 @@ import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.MessageLog
 import org.carrot2.labs.smartsprites.message.PrintStreamMessageSink
 import org.gradle.api.DefaultTask
-import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
@@ -59,9 +58,13 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
+
+        if (project.tasks.findByName('bindVaadinThemes')) {
+            dependsOn(project.tasks.bindVaadinThemes)
+        }
     }
 
-    def adjustVaadinVersion() {
+    def addCompilerDependency() {
         def scssConf = project.configurations.findByName('scss')
         if (!scssConf) {
             project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
@@ -69,26 +72,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         project.dependencies {
             scss(CubaPlugin.getArtifactDefinition())
-        }
-    }
-
-    // used static function due to 'themes' field clashes with 'themes' configuration in dependency closure
-    static addVaadinThemesDependency(Project project) {
-        def themesConf = project.configurations.findByName('themes')
-        if (!themesConf)
-            project.configurations.create('themes')
-        // find vaadin version
-        def vaadinLib = project.configurations.getByName('compile').resolvedConfiguration.resolvedArtifacts.find {
-            it.name.equals('vaadin-server')
-        }
-        // add default vaadin-themes dependency
-        if (vaadinLib) {
-            def dependency = vaadinLib.moduleVersion.id
-            project.logger.info(">>> add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
-
-            project.dependencies {
-                themes(group: dependency.group, name: 'vaadin-themes', version: dependency.version)
-            }
         }
     }
 
@@ -131,8 +114,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @TaskAction
     def buildThemes() {
-        adjustVaadinVersion()
-        addVaadinThemesDependency(project)
+        addCompilerDependency()
 
         File themesTmp = project.file("${project.buildDir}/themes-tmp")
         if (themesTmp.exists())
