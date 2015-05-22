@@ -14,14 +14,11 @@ abstract class CubaHsqlTask extends DefaultTask {
 
     def String driverClasspath
     def String dbName
-    def File dbDataDir
     def int dbPort
 
     protected void init() {
         if (!dbName)
             dbName = 'cubadb'
-        if (!dbDataDir)
-            dbDataDir = new File("$project.rootProject.projectDir/data")
         if (!dbPort)
             dbPort = 9001
 

@@ -15,6 +15,15 @@ import java.util.List
  */
 class CubaHsqlStart extends CubaHsqlTask {
 
+    def File dbDataDir
+
+    @Override
+    protected void init() {
+        super.init()
+        if (!dbDataDir)
+            dbDataDir = new File("$project.rootProject.buildDir/hsqldb")
+    }
+
     @TaskAction
     def startDb() {
         init();
