@@ -19,7 +19,7 @@ class CubaDeployment extends DefaultTask {
 
     private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
     private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
-    private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]{1}"     // split version string by '.' and '-' chars
+    private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"     // split version string by '.' and '-' chars
 
     def jarNames
     def appName
@@ -189,9 +189,14 @@ class CubaDeployment extends DefaultTask {
         return null
     }
 
-    public static String compareVersions(String aLibraryVersion, String bLibraryVersion) {
-        def labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
-        def labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
+    /**
+     * @param aLibraryVersion
+     * @param bLibraryVersion
+     * @return lowest version from aLibraryVersion and bLibraryVersion
+     */
+    public static String getLowestVersion(String aLibraryVersion, String bLibraryVersion) {
+        String[] labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
+        String[] labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
 
         def maxLengthOfBothArrays
         if (labelAVersionArray.size() >= labelBVersionArray.size()) {
@@ -210,22 +215,46 @@ class CubaDeployment extends DefaultTask {
 
         for (def i = 0; i < maxLengthOfBothArrays; i++) {
             if (i < labelBVersionArray.size()) {
-                def matcherA = DIGITAL_PATTERN.matcher(labelAVersionArray[i])
-                def matcherB = DIGITAL_PATTERN.matcher(labelBVersionArray[i])
+                String aVersionPart = labelAVersionArray[i]
+                String bVersionPart = labelBVersionArray[i]
+
+                if (aVersionPart == "SNAPSHOT") {
+                    return bLibraryVersion
+                } else if (bVersionPart == "SNAPSHOT") {
+                    return aLibraryVersion
+                }
+
+                def matcherA = DIGITAL_PATTERN.matcher(aVersionPart)
+                def matcherB = DIGITAL_PATTERN.matcher(bVersionPart)
 
                 if (matcherA.matches() && !matcherB.matches()) return bLibraryVersion //labelA = number, labelB = string
-                if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion  //labelA = string, labelB = number
+                if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion
+                //labelA = string, labelB = number
 
-                // both labels are numbers or strings
-                if (labelAVersionArray[i] > labelBVersionArray[i])
-                    return bLibraryVersion
-                if (labelAVersionArray[i] < labelBVersionArray[i])
+                if (matcherA.matches()) {
+                    // convert parts to integer
+                    int libAVersionNumber = Integer.parseInt(aVersionPart)
+                    int libBVersionNumber = Integer.parseInt(bVersionPart)
+
+                    if (libAVersionNumber > libBVersionNumber) {
+                        return bLibraryVersion
+                    }
+
+                    if (libAVersionNumber < libBVersionNumber) {
+                        return aLibraryVersion
+                    }
+                } else {
+                    // both labels are numbers or strings
+                    if (aVersionPart > bVersionPart)
+                        return bLibraryVersion
+                    if (aVersionPart < bVersionPart)
+                        return aLibraryVersion
+                }
+
+                if (i == maxLengthOfBothArrays - 1) { //equals
                     return aLibraryVersion
-                if (i == maxLengthOfBothArrays - 1) //equals
-                    return aLibraryVersion
+                }
             } else {
-                if (labelAVersionArray[i].equals("SNAPSHOT"))
-                    return aLibraryVersion
                 return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
             }
         }
@@ -283,7 +312,7 @@ class CubaDeployment extends DefaultTask {
                 def versionsList = versionsMap.get(key)
                 for (int i = 0; i < versionsList.size(); i++) {
                     for (int j = i + 1; j < versionsList.size(); j++) {
-                        def versionToDelete = compareVersions(versionsList.get(i), versionsList.get(j))
+                        def versionToDelete = getLowestVersion(versionsList.get(i), versionsList.get(j))
                         if (versionToDelete != null) {
                             versionToDelete = key + "-" + versionToDelete + ".jar"
                             removeSet.add(versionToDelete)

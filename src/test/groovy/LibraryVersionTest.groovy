@@ -3,6 +3,9 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
+import static CubaDeployment.getLibraryDefinition
+import static CubaDeployment.getLowestVersion
+
 /**
  * @author hasanov
  * @version $Id$
@@ -26,10 +29,9 @@ class LibraryVersionTest extends GroovyTestCase {
                 "some-lab.jar": [null, null]
         ]
 
-        def resolver = new CubaDeployment.DependencyResolver()
         for (pair in testData) {
             def libraryName = pair.key
-            def libraryDefinition = resolver.getLibraryDefinition(libraryName)
+            def libraryDefinition = getLibraryDefinition(libraryName)
             if (libraryDefinition != null) {
                 assertEquals(pair.getValue().get(0), libraryDefinition.name)
                 assertEquals(pair.getValue().get(1), libraryDefinition.version)
@@ -37,6 +39,21 @@ class LibraryVersionTest extends GroovyTestCase {
                 assertNull(pair.getValue().get(0))
                 assertNull(pair.getValue().get(1))
             }
+        }
+    }
+
+    void testLibraryVersionsCompare() {
+        def testData = [
+                ["1.0.12", "1.1", "1.0.12"],
+                ["7.3.9.cuba.9", "7.3.9.cuba.20", "7.3.9.cuba.9"],
+                ["7.4.0", "7.4-SNAPSHOT", "7.4.0"],
+                ["7.5", "7.4-SNAPSHOT", "7.4-SNAPSHOT"],
+                ["7.5.0", "7.4-SNAPSHOT", "7.4-SNAPSHOT"]
+        ]
+
+        for (def cv : testData) {
+            assertEquals(cv[2], getLowestVersion(cv[0], cv[1]))
+            assertEquals(cv[2], getLowestVersion(cv[1], cv[0]))
         }
     }
 }
