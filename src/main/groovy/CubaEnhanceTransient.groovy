@@ -67,6 +67,8 @@ class CubaEnhanceTransient extends DefaultTask {
     }
 
     private List getClassNames(String metadataXml) {
+        if (!metadataXml)
+            throw new IllegalArgumentException('metadataXml property is not specified')
         File f = new File(metadataXml)
         if (f.exists()) {
             def metadata = new XmlParser().parse(f)

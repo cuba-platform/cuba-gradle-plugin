@@ -49,6 +49,8 @@ class CubaEnhancing extends DefaultTask {
     }
 
     private List getClassNames(String persistenceXml) {
+        if (!persistenceXml)
+            throw new IllegalArgumentException('persistenceXml property is not specified')
         File f = new File(persistenceXml)
         if (f.exists()) {
             def persistence = new XmlParser().parse(f)
