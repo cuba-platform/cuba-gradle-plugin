@@ -4,6 +4,7 @@
  */
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
@@ -313,12 +314,16 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info ">>> configuring IDEA module $project.name"
-            project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.provided,
-                                                             project.configurations.jdbc], minus: []]]
+
+            List<Configuration> providedConfs = new ArrayList<>()
+            providedConfs.add(project.configurations.provided)
+            providedConfs.add(project.configurations.jdbc)
 
             if (project.configurations.findByName('themes')) {
-                project.idea.module.scopes += [PROVIDED: [plus: [project.configurations.themes], minus: []]]
+                providedConfs.add(project.configurations.themes)
             }
+
+            project.idea.module.scopes += [PROVIDED: [plus: providedConfs, minus: []]]
 
             project.idea.module.inheritOutputDirs = true
 
