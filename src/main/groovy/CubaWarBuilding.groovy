@@ -53,7 +53,7 @@ class CubaWarBuilding extends DefaultTask {
             ]
         } else if (project.name.endsWith('-web')) {
             properties += [
-                    'cuba.connectionUrl': "http://localhost:8080/${appName}-core",
+                    'cuba.connectionUrlList': "http://localhost:8080/${appName}-core",
                     'cuba.useLocalServiceInvocation': 'false'
             ]
         }
