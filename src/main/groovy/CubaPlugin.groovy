@@ -85,7 +85,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         }
 
         project.dependencies {
-            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '7.0.53', ext: 'zip')
+            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '7.0.62', ext: 'zip')
             tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '3.12', ext: 'zip')
         }
 
