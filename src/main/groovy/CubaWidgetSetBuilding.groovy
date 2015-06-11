@@ -37,7 +37,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
             '-logLevel': 'INFO'
     ]
 
-    private def compilerJvmArgs = new HashSet([
+    def compilerJvmArgs = new LinkedHashSet([
             '-Xmx512m', '-Xss8m', '-XX:MaxPermSize=256m', '-Djava.awt.headless=true'
     ])
 
