@@ -30,6 +30,9 @@ class CubaStartTomcat extends DefaultTask {
         if (StringUtils.isBlank(tomcatStartScript)) {
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
                 env(key: 'NOPAUSE', value: true)
+                if (project.hasProperty('studioJavaHome')) {
+                    env(key: 'JAVA_HOME', value: project.studioJavaHome)
+                }
                 arg(line: '/c start callAndExit.bat debug.bat')
             }
             ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
@@ -39,6 +42,9 @@ class CubaStartTomcat extends DefaultTask {
             println "Execute tomcat start with ${tomcatStartScript}"
 
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: tomcatStartScript, spawn: true) {
+                if (project.hasProperty('studioJavaHome')) {
+                    env(key: 'JAVA_HOME', value: project.studioJavaHome)
+                }
                 arg(line: tomcatRootDir)
             }
             ant.exec(osfamily: 'unix', dir: "${binDir}", executable: tomcatStartScript) {
