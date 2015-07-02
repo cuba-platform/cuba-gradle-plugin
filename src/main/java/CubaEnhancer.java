@@ -3,218 +3,114 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
-import org.apache.commons.lang.ObjectUtils;
+import javassist.*;
+import javassist.bytecode.AnnotationsAttribute;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.openjpa.conf.OpenJPAConfiguration;
-import org.apache.openjpa.enhance.PCEnhancer;
-import org.apache.openjpa.lib.util.Localizer;
-import org.apache.openjpa.meta.ClassMetaData;
-import org.apache.openjpa.meta.FieldMetaData;
-import org.apache.openjpa.util.GeneralException;
-import org.apache.openjpa.util.OpenJPAException;
-import serp.bytecode.*;
+
+import java.io.IOException;
 
 /**
  * Enhances entity classes.
  */
-public class CubaEnhancer implements PCEnhancer.AuxiliaryEnhancer {
+public class CubaEnhancer {
 
     public static final String ENHANCED_TYPE = "com.haulmont.cuba.core.sys.CubaEnhanced";
 
     private static final String METAPROPERTY_ANNOTATION = "com.haulmont.chile.core.annotations.MetaProperty";
-    private static final String TRANSIENT_ANNOTATION = "javax.persistence.Transient";
 
-    protected org.apache.commons.logging.Log log;
+    private Log log = LogFactory.getLog(CubaEnhancer.class);
 
-    protected static final Localizer _loc = Localizer.forPackage(PCEnhancer.class);
+    private ClassPool pool;
+    private String outputDir;
 
-    private BCClass _pc;
-    private BCClass _managedType;
-
-    public CubaEnhancer() {
-        log = LogFactory.getLog(OpenJPAConfiguration.LOG_ENHANCE);
+    public CubaEnhancer(ClassPool pool, String outputDir) throws NotFoundException, CannotCompileException {
+        this.pool = pool;
+        this.outputDir = outputDir;
     }
 
-    @Override
-    public void run(BCClass bc, ClassMetaData meta) {
-        _pc = bc;
-        _managedType = bc;
-
-        log.trace(String.format("CUBA specific enhancing for %s", _pc.getClassName()));
-
+    public void run(String className) {
         try {
-            if (_pc.isInterface())
-                return;
+            CtClass cc = pool.get(className);
 
-            Class[] interfaces = _managedType.getDeclaredInterfaceTypes();
-            for (Class anInterface : interfaces) {
-                if (anInterface.getName().equals(ENHANCED_TYPE)) {
-                    log.trace(String.format("Class %s already enchanced", _managedType.getType()));
+            for (CtClass intf : cc.getInterfaces()) {
+                if (intf.getName().equals(ENHANCED_TYPE)) {
+                    log.info("Class " + className + " has already been enhanced");
                     return;
                 }
             }
 
-            enhanceSetters(meta);
+            enhanceSetters(cc);
 
-            _pc.declareInterface(ENHANCED_TYPE);
-
-        } catch (OpenJPAException ke) {
-            throw ke;
-        } catch (Exception e) {
-            throw new GeneralException(_loc.get("enhance-error", _managedType.getType().getName(), e.getMessage()), e);
+            cc.addInterface(pool.get("com.haulmont.cuba.core.sys.CubaEnhanced"));
+            cc.writeFile(outputDir);
+        } catch (NotFoundException | IOException | CannotCompileException | ClassNotFoundException e) {
+            throw new RuntimeException("Error enhancing class " + className + ": " + e, e);
         }
     }
 
-    private void enhanceSetters(ClassMetaData meta) throws NoSuchMethodException {
-        BCMethod[] methods = _managedType.getDeclaredMethods();
-        Code code;
-
-        BCMethod[] propertyChangingMethods = _managedType.getMethods("propertyChanging",
-                new Class[]{String.class, int.class, Object.class});
-        boolean propertyChangingExists = propertyChangingMethods.length > 0;
-        if (!propertyChangingExists)
-            log.debug("Method propertyChanging() doesn't exist in " + _pc.getClassName());
-
-        for (final BCMethod method : methods) {
-            final String name = method.getName();
-            if (method.isAbstract() || !name.startsWith("set") || method.getReturnType() != void.class)
+    private void enhanceSetters(CtClass ctClass) throws NotFoundException, CannotCompileException, ClassNotFoundException {
+        for (CtMethod ctMethod : ctClass.getDeclaredMethods()) {
+            final String name = ctMethod.getName();
+            if (Modifier.isAbstract(ctMethod.getModifiers())
+                    || !name.startsWith("set")
+                    || ctMethod.getReturnType() != CtClass.voidType
+                    || ctMethod.getParameterTypes().length != 1)
                 continue;
 
-            code = method.getCode(false);
+            String fieldName = StringUtils.uncapitalize(name.substring(3));
 
-            final String fieldName = StringUtils.uncapitalize(name.replaceFirst("set", ""));
-            Class setterParamType = method.getParamTypes()[0];
-
-            if (propertyChangingExists) {
-                FieldMetaData fieldMeta = meta.getDeclaredField(fieldName);
-                int fieldIndex = fieldMeta != null ? fieldMeta.getDeclaredIndex() : -1;
-                if (fieldIndex == -1) {
-                    // enhance transient property
-                    enhanceTransientSetter(code, method, fieldName);
-                    continue;
+            // check if the setter is for a persistent or transient property
+            CtMethod persistenceMethod = null;
+            for (CtMethod method : ctClass.getDeclaredMethods()) {
+                if (method.getName().equals("_persistence_set_" + fieldName)) {
+                    persistenceMethod = method;
+                    break;
                 }
-
-                checkFieldType(fieldName, setterParamType);
-
-                // propertyChanging(<fieldName>, pcInheritedFieldCount + <fieldIndex>, <value>)
-                code.aload().setThis();
-                code.constant().setValue(fieldName);
-                code.getstatic().setField("pcInheritedFieldCount", int.class);
-                code.constant().setValue(fieldIndex);
-                code.iadd();
-                code.aload().setLocal(1);
-                code.invokevirtual().setMethod("propertyChanging", void.class,
-                        new Class[]{String.class, int.class, Object.class});
-            } else {
-                checkFieldType(fieldName, setterParamType);
             }
-
-            code.aload().setThis();
-            code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), setterParamType,
-                    new Class[]{});
-            code.astore().setLocal(2);
-
-            code.afterLast();
-            Instruction vreturn = code.previous();
-
-            code.afterLast();
-            code.previous();
-            /*
-             find instruction pcSet + fieldName and invoke propertyChanged
-             */
-            code.beforeFirst();
-            while (code.hasNext()) {
-                Instruction inst = code.next();
-                if (MethodInstruction.class.isAssignableFrom(inst.getClass())) {
-                    if (((MethodInstruction) inst).getMethodName().equals("pcSet" + fieldName)) {
-                        code.after(inst);
-                        code.aload().setLocal(2);
-                        code.aload().setLocal(1);
-                        code.invokestatic().setMethod(ObjectUtils.class, "equals", boolean.class,
-                                new Class[]{Object.class, Object.class});
-                        IfInstruction ifne = code.ifne();
-                        code.aload().setThis();
-                        code.constant().setValue(fieldName);
-                        code.aload().setLocal(2);
-                        code.aload().setLocal(1);
-                        code.invokevirtual().setMethod("propertyChanged", void.class,
-                                new Class[]{String.class, Object.class, Object.class});
-                        ifne.setTarget(vreturn);
+            if (persistenceMethod == null) {
+                // can be a transient property
+                CtField ctField = null;
+                CtField[] declaredFields = ctClass.getDeclaredFields();
+                for (CtField field : declaredFields) {
+                    if (field.getName().equals(fieldName)) {
+                        ctField = field;
+                        break;
                     }
                 }
+                if (ctField == null)
+                    continue; // no field
+                // check if the field is annotated with @MetaProperty
+                // cannot use ctField.getAnnotation() because of problem with classpath in child projects
+                AnnotationsAttribute annotationsAttribute =
+                        (AnnotationsAttribute) ctField.getFieldInfo().getAttribute(AnnotationsAttribute.visibleTag);
+                if (annotationsAttribute == null || annotationsAttribute.getAnnotation(METAPROPERTY_ANNOTATION) == null)
+                    continue;
             }
 
-            code.calculateMaxStack();
-            code.calculateMaxLocals();
+            CtClass setterParamType = ctMethod.getParameterTypes()[0];
+
+            if (setterParamType.isPrimitive()) {
+                throw new IllegalStateException(
+                        String.format("Unable to enhance field %s.%s with primitive type %s. Use type %s.",
+                                ctClass.getName(), fieldName,
+                                setterParamType.getSimpleName(), StringUtils.capitalize(setterParamType.getSimpleName())));
+            }
+
+            ctMethod.addLocalVariable("__prev", setterParamType);
+            ctMethod.addLocalVariable("__curr", setterParamType);
+
+            ctMethod.insertBefore(
+                    "__prev = this.get" + StringUtils.capitalize(fieldName) + "();"
+            );
+
+            ctMethod.insertAfter(
+                    "__curr = this.get" + StringUtils.capitalize(fieldName) + "();" +
+                    "if (!java.util.Objects.equals(__prev, __curr)) {" +
+                    "  this.propertyChanged(\"" + fieldName + "\", __prev, __curr);" +
+                    "}"
+            );
         }
-    }
-
-    protected void checkFieldType(String fieldName, Class setterParamType) {
-        if (Boolean.TYPE.equals(setterParamType)
-                || Integer.TYPE.equals(setterParamType)
-                || Long.TYPE.equals(setterParamType)
-                || Double.TYPE.equals(setterParamType)
-                || Float.TYPE.equals(setterParamType)) {
-            throw new IllegalStateException(
-                    String.format("Unable to enhance field %s.%s with primitive type %s. Use type %s.",
-                            _managedType.getClassName(), fieldName,
-                            setterParamType.getSimpleName(), StringUtils.capitalize(setterParamType.getSimpleName())));
-        }
-    }
-
-    protected void enhanceTransientSetter(Code code, BCMethod method, String fieldName) {
-        BCField declaredField = _managedType.getDeclaredField(fieldName);
-        if (declaredField == null) {
-            return;
-        }
-
-        Annotations fieldAnnotations = declaredField.getDeclaredRuntimeAnnotations(false);
-        if (fieldAnnotations == null
-                || fieldAnnotations.getAnnotation(TRANSIENT_ANNOTATION) == null) {
-            return;
-        }
-
-        Annotations methodAnnotations = method.getDeclaredRuntimeAnnotations(false);
-        if (fieldAnnotations.getAnnotation(METAPROPERTY_ANNOTATION) == null
-            && (methodAnnotations == null || methodAnnotations.getAnnotation(METAPROPERTY_ANNOTATION) == null)) {
-            return;
-        }
-
-        String name = method.getName();
-
-        LocalVariableTable table = code.getLocalVariableTable(false);
-        if (table.getLocalVariable(StringUtils.lowerCase(name.replace("set", "") + "_local")) != null) {
-            return;
-        }
-
-        code.aload().setThis();
-        table.addLocalVariable(StringUtils.lowerCase(name.replace("set", "") + "_local"), method.getParamTypes()[0]).setStartPc(5);
-        code.invokevirtual().setMethod("get" + StringUtils.capitalize(fieldName), method.getParamTypes()[0], new Class[]{});
-        code.astore().setLocal(2);
-
-        code.afterLast();
-        Instruction vreturn = code.previous();
-        code.before(vreturn);
-
-        code.aload().setLocal(2);
-        code.aload().setLocal(1);
-        code.invokestatic().setMethod(ObjectUtils.class, "equals", boolean.class, new Class[]{Object.class, Object.class});
-        IfInstruction ifne = code.ifne();
-        code.aload().setThis();
-        code.constant().setValue(fieldName);
-        code.aload().setLocal(2);
-        code.aload().setLocal(1);
-        code.invokevirtual().setMethod("propertyChanged", void.class, new Class[]{String.class, Object.class, Object.class});
-
-        ifne.setTarget(vreturn);
-
-        code.calculateMaxStack();
-        code.calculateMaxLocals();
-    }
-
-    @Override
-    public boolean skipEnhance(BCMethod m) {
-        return false;
     }
 }

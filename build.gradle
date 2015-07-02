@@ -40,7 +40,8 @@ configurations {
 }
 
 dependencies {
-    compile(group: 'org.apache.openjpa', name: 'openjpa', version: '2.3.0')
+    compile 'org.eclipse.persistence:eclipselink:2.6.0'
+    compile('org.javassist:javassist:3.19.0-GA')
     compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
     compile(group: 'commons-io', name: 'commons-io', version: '1.4')
     compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')
