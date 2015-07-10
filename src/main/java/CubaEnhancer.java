@@ -17,6 +17,7 @@ import java.io.IOException;
 public class CubaEnhancer {
 
     public static final String ENHANCED_TYPE = "com.haulmont.cuba.core.sys.CubaEnhanced";
+    public static final String ENHANCED_DISABLED_TYPE = "com.haulmont.cuba.core.sys.CubaEnhancingDisabled";
 
     private static final String METAPROPERTY_ANNOTATION = "com.haulmont.chile.core.annotations.MetaProperty";
 
@@ -35,8 +36,8 @@ public class CubaEnhancer {
             CtClass cc = pool.get(className);
 
             for (CtClass intf : cc.getInterfaces()) {
-                if (intf.getName().equals(ENHANCED_TYPE)) {
-                    log.info("Class " + className + " has already been enhanced");
+                if (intf.getName().equals(ENHANCED_TYPE) || intf.getName().equals(CubaEnhancer.ENHANCED_DISABLED_TYPE)) {
+                    log.info("Class " + className + " has already been enhanced or should not be enhanced at all");
                     return;
                 }
             }
