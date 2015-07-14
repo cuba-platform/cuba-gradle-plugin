@@ -37,11 +37,12 @@ public class CubaEnhancer {
 
             for (CtClass intf : cc.getInterfaces()) {
                 if (intf.getName().equals(ENHANCED_TYPE) || intf.getName().equals(CubaEnhancer.ENHANCED_DISABLED_TYPE)) {
-                    log.info("Class " + className + " has already been enhanced or should not be enhanced at all");
+                    log.info("CubaEnhancer: " + className + " has already been enhanced or should not be enhanced at all");
                     return;
                 }
             }
 
+            log.info("CubaEnhancer: enhancing " + className);
             enhanceSetters(cc);
 
             cc.addInterface(pool.get("com.haulmont.cuba.core.sys.CubaEnhanced"));
@@ -100,16 +101,14 @@ public class CubaEnhancer {
             }
 
             ctMethod.addLocalVariable("__prev", setterParamType);
-            ctMethod.addLocalVariable("__curr", setterParamType);
 
             ctMethod.insertBefore(
-                    "__prev = this.get" + StringUtils.capitalize(fieldName) + "();"
+                    "__prev = this." + fieldName + ";"
             );
 
             ctMethod.insertAfter(
-                    "__curr = this.get" + StringUtils.capitalize(fieldName) + "();" +
-                    "if (!java.util.Objects.equals(__prev, __curr)) {" +
-                    "  this.propertyChanged(\"" + fieldName + "\", __prev, __curr);" +
+                    "if (!java.util.Objects.equals(__prev, this." + fieldName + ")) {" +
+                    "  this.propertyChanged(\"" + fieldName + "\", __prev, this." + fieldName + ");" +
                     "}"
             );
         }
