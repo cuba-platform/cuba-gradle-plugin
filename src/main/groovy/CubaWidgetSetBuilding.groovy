@@ -3,7 +3,6 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
-
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
@@ -29,17 +28,19 @@ class CubaWidgetSetBuilding extends DefaultTask {
     boolean draft = false
     boolean disableCastChecking = false
 
+    int workers = Runtime.getRuntime().availableProcessors()
+    int optimize = 9
+
+    String style = 'OBF'
+    String logLevel = 'INFO'
+
+    String xmx = '-Xmx512m'
+    String xss = '-Xss8m'
+    String xxMPS = '-XX:MaxPermSize=256m'
+
     private def excludes = []
 
-    private def defaultCompilerArgs = [
-            '-style': 'OBF',
-            '-localWorkers': Runtime.getRuntime().availableProcessors(),
-            '-logLevel': 'INFO'
-    ]
-
-    def compilerJvmArgs = new LinkedHashSet([
-            '-Xmx512m', '-Xss8m', '-XX:MaxPermSize=256m', '-Djava.awt.headless=true'
-    ])
+    def compilerJvmArgs = new LinkedHashSet(['-Djava.awt.headless=true'])
 
     CubaWidgetSetBuilding() {
         setDescription('Builds GWT widgetset')
@@ -133,6 +134,10 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     protected List collectCompilerJvmArgs() {
+        compilerJvmArgs.add(xmx)
+        compilerJvmArgs.add(xss)
+        compilerJvmArgs.add(xxMPS)
+
         println('JVM Args:')
         print('\t')
         println(compilerJvmArgs)
@@ -159,7 +164,11 @@ class CubaWidgetSetBuilding extends DefaultTask {
         }
 
         def gwtCompilerArgs = [:]
-        gwtCompilerArgs.putAll(defaultCompilerArgs)
+        gwtCompilerArgs.put('-style', style)
+        gwtCompilerArgs.put('-logLevel', logLevel)
+        gwtCompilerArgs.put('-localWorkers', workers)
+        gwtCompilerArgs.put('-optimize', optimize)
+
         if (compilerArgs) {
             gwtCompilerArgs.putAll(compilerArgs)
         }
