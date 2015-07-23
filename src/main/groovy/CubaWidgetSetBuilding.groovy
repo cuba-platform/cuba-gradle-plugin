@@ -56,7 +56,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         }
 
         if (!widgetSetsDir) {
-            widgetSetsDir = "$project.buildDir/web/VAADIN/widgetsets"
+            widgetSetsDir = defaultBuildDir
         }
 
         File widgetSetsDirectory = new File(this.widgetSetsDir)
@@ -93,10 +93,14 @@ class CubaWidgetSetBuilding extends DefaultTask {
     @OutputDirectory
     def File getOutputDirectory() {
         if (!widgetSetsDir) {
-            return new File("$project.buildDir/web/VAADIN/widgetsets")
+            return new File(defaultBuildDir)
         }
 
         return new File(this.widgetSetsDir)
+    }
+
+    protected String getDefaultBuildDir() {
+        "$project.buildDir/web/VAADIN/widgetsets"
     }
 
     @InputFiles @SkipWhenEmpty
