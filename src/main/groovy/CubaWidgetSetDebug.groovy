@@ -148,11 +148,16 @@ class CubaWidgetSetDebug extends DefaultTask {
             }
         }
 
+        // support overriding of default parameters
+        def gwtCompilerArgs = [:]
+        gwtCompilerArgs.put('-XmethodNameDisplayMode', 'FULL')
         if (compilerArgs) {
-            for (def entry : compilerArgs.entrySet()) {
-                args.add(entry.key)
-                args.add(entry.value)
-            }
+            gwtCompilerArgs.putAll(compilerArgs)
+        }
+
+        for (def entry : gwtCompilerArgs.entrySet()) {
+            args.add(entry.key)
+            args.add(entry.value)
         }
 
         args.add(widgetSetClass)
