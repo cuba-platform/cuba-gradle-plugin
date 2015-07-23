@@ -26,7 +26,7 @@ class CubaWidgetSetDebug extends DefaultTask {
 
     String logLevel = 'INFO'
 
-    String xmx = '-Xmx512m'
+    String xmx = '-Xmx768m'
     String xss = '-Xss8m'
     String xxMPS = '-XX:MaxPermSize=256m'
 
