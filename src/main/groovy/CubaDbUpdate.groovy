@@ -19,7 +19,7 @@ class CubaDbUpdate extends CubaDbTask {
     def requiredTables = ['reports': 'report_report',
                           'workflow': 'wf_proc',
                           'ccpayments': 'cc_credit_card',
-                          'bpmn': 'bpmn_group']
+                          'bpm': 'bpm_proc_definition']
 
     CubaDbUpdate() {
         setGroup('Database')
