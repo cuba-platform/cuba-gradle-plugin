@@ -71,7 +71,7 @@ class CubaDbUpdate extends CubaDbTask {
                         sqlLogger.level = saveLevel
                     }
                 } catch (SQLException e) {
-                    String mark = dbms == 'oracle' ? 'table or view does not exist' : reqTable
+                    String mark = dbms == 'oracle' ? 'ora-00942' : reqTable
                     if (e.message?.toLowerCase()?.contains(mark)) {
                         project.logger.warn("Required table for $moduleName does not exist, running init scripts")
                         // probably the required table does not exist
