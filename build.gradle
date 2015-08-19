@@ -32,8 +32,8 @@ repositories {
     }
 }
 
-sourceCompatibility = '1.7'
-targetCompatibility = '1.7'
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
 
 configurations {
     deployerJars
@@ -41,9 +41,9 @@ configurations {
 
 dependencies {
     compile 'org.eclipse.persistence:eclipselink:2.6.0'
-    compile('org.javassist:javassist:3.19.0-GA')
+    compile('org.javassist:javassist:3.20.0-GA')
     compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
-    compile(group: 'commons-io', name: 'commons-io', version: '1.4')
+    compile('commons-io:commons-io:2.4')
     compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(group: 'com.carrotsearch', name: 'smartsprites', version: '0.2.8')

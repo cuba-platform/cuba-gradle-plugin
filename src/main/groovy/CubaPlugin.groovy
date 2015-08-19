@@ -125,8 +125,8 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             project.idea.project.ipr {
                 withXml { provider ->
                     def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                    node.@languageLevel = 'JDK_1_7'
-                    node.@'project-jdk-name' = '1.7'
+                    node.@languageLevel = 'JDK_1_8'
+                    node.@'project-jdk-name' = '1.8'
 
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
                     node.@default = 'cuba'
@@ -217,8 +217,8 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
     }
 
     private void applyToModuleProject(Project project) {
-        project.sourceCompatibility = '1.7'
-        project.targetCompatibility = '1.7'
+        project.sourceCompatibility = '1.8'
+        project.targetCompatibility = '1.8'
 
         project.configurations {
             provided
