@@ -3,12 +3,12 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
+
 import groovy.io.FileType
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 /**
@@ -18,6 +18,7 @@ import java.util.regex.Pattern
 class CubaDeployment extends DefaultTask {
 
     private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
+    private static final Pattern LIBRARY_SNAPSHOT_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(?:SNAPSHOT)\\.jar$')
     private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
     private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"     // split version string by '.' and '-' chars
 
@@ -174,18 +175,25 @@ class CubaDeployment extends DefaultTask {
     }
 
     public static LibraryDefinition getLibraryDefinition(String libraryName) {
-        Matcher m = LIBRARY_PATTERN.matcher(libraryName)
+        def m = LIBRARY_PATTERN.matcher(libraryName)
         if (m.matches()) {
             def currentLibName = m.group(1)
             def currentLibVersion = m.group(2)
 
             if (currentLibName != null && currentLibVersion != null) {
-                LibraryDefinition ld = new LibraryDefinition()
-                ld.name = currentLibName
-                ld.version = currentLibVersion
-                return ld
+                return new LibraryDefinition(name: currentLibName, version: currentLibVersion)
             }
         }
+
+        def sm = LIBRARY_SNAPSHOT_PATTERN.matcher(libraryName)
+        if (sm.matches()) {
+            def currentLibName = sm.group(1)
+
+            if (currentLibName != null) {
+                return new LibraryDefinition(name: currentLibName, version: 'SNAPSHOT')
+            }
+        }
+
         return null
     }
 
