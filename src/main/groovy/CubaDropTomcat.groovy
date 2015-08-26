@@ -31,7 +31,7 @@ class CubaDropTomcat extends DefaultTask {
             if (new File(binDir).exists()) {
                 ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
                     env(key: 'NOPAUSE', value: true)
-                    arg(line: '/c start callAndExit.bat shutdown.bat')
+                    arg(line: '/c start call_and_exit.bat shutdown.bat')
                 }
                 ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
                     arg(line: 'shutdown.sh')

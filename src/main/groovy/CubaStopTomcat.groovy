@@ -28,7 +28,7 @@ class CubaStopTomcat extends DefaultTask {
             if (project.hasProperty('studioJavaHome')) {
                 env(key: 'JAVA_HOME', value: project.studioJavaHome)
             }
-            arg(line: '/c start callAndExit.bat shutdown.bat')
+            arg(line: '/c start call_and_exit.bat shutdown.bat')
         }
         ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
             arg(line: 'shutdown.sh')

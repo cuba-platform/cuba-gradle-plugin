@@ -33,7 +33,7 @@ class CubaStartTomcat extends DefaultTask {
                 if (project.hasProperty('studioJavaHome')) {
                     env(key: 'JAVA_HOME', value: project.studioJavaHome)
                 }
-                arg(line: '/c start callAndExit.bat debug.bat')
+                arg(line: '/c start call_and_exit.bat debug.bat')
             }
             ant.exec(osfamily: 'unix', dir: "${binDir}", executable: '/bin/sh') {
                 arg(line: 'debug.sh')
