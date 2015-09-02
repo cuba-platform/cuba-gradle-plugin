@@ -172,6 +172,15 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
                     changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
                 }
+
+                def projectViewNode = provider.asNode().component.find { it.@name == 'ProjectView' }
+                if (!projectViewNode) {
+                    projectViewNode = provider.asNode().appendNode('component', [name: 'ProjectView'])
+
+                    def projectViewPanesNode = projectViewNode.appendNode('panes')
+                    def projectPaneNode = projectViewPanesNode.appendNode('pane', [id: 'ProjectPane'])
+                    projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
+                }
             }
         }
 
