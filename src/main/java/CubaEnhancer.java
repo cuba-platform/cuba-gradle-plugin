@@ -103,12 +103,12 @@ public class CubaEnhancer {
             ctMethod.addLocalVariable("__prev", setterParamType);
 
             ctMethod.insertBefore(
-                    "__prev = this." + fieldName + ";"
+                    "__prev = this.get" + StringUtils.capitalize(fieldName) + "();"
             );
 
             ctMethod.insertAfter(
-                    "if (!java.util.Objects.equals(__prev, this." + fieldName + ")) {" +
-                    "  this.propertyChanged(\"" + fieldName + "\", __prev, this." + fieldName + ");" +
+                    "if (!java.util.Objects.equals(__prev, $1)) {" +
+                    "  this.propertyChanged(\"" + fieldName + "\", __prev, $1);" +
                     "}"
             );
         }
