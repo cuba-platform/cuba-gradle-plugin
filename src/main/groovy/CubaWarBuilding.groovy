@@ -15,6 +15,7 @@ import org.gradle.api.tasks.TaskAction
 class CubaWarBuilding extends DefaultTask {
 
     def appName
+    def connectionUrlList
     def Closure doAfter
     def webcontentExclude = []
     def appProperties
@@ -52,8 +53,9 @@ class CubaWarBuilding extends DefaultTask {
                     'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}"
             ]
         } else if (project.name.endsWith('-web')) {
+            def connectionUrlListProperty = connectionUrlList ?: "http://localhost:8080/${appName}-core"
             properties += [
-                    'cuba.connectionUrlList': "http://localhost:8080/${appName}-core",
+                    'cuba.connectionUrlList': connectionUrlListProperty,
                     'cuba.useLocalServiceInvocation': 'false'
             ]
         }
