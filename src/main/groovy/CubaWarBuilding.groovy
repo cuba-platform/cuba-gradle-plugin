@@ -21,6 +21,7 @@ class CubaWarBuilding extends DefaultTask {
     def appProperties
     def appHome
     def boolean projectAll
+    def boolean includeDbScripts = truecc
 
     def tmpWarDir
 
@@ -49,9 +50,14 @@ class CubaWarBuilding extends DefaultTask {
         if (project.name.endsWith('-core')) {
             properties += [
                     'cuba.dataSourceJndiName': 'jdbc/CubaDS',
-                    'cuba.dbDir': "$appHome/\${cuba.webContextName}/db",
                     'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}"
             ]
+
+            if (includeDbScripts) {
+                properties += ['cuba.dbDir': "web-inf:db",]
+            } else {
+                properties += ['cuba.dbDir': "$appHome/\${cuba.webContextName}/db",]
+            }
         } else if (project.name.endsWith('-web')) {
             def connectionUrlListProperty = connectionUrlList ?: "http://localhost:8080/${appName}-core"
             properties += [
@@ -72,6 +78,13 @@ class CubaWarBuilding extends DefaultTask {
             include { details ->
                 def name = details.file.name
                 return !(name.endsWith('-sources.jar'))
+            }
+        }
+
+        if (includeDbScripts) {
+            project.copy {
+                from "${project.buildDir}/db"
+                into "${tmpWarDir}/WEB-INF/db"
             }
         }
 
