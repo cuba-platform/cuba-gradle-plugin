@@ -21,7 +21,7 @@ class CubaWarBuilding extends DefaultTask {
     def appProperties
     def appHome
     def boolean projectAll
-    def boolean includeDbScripts = truecc
+    def boolean includeDbScripts = true
 
     def tmpWarDir
 
