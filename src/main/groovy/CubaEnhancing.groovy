@@ -3,7 +3,6 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
-
 import groovy.io.FileType
 import groovy.xml.QName
 import groovy.xml.XmlUtil
@@ -173,78 +172,87 @@ class CubaEnhancing extends DefaultTask {
     @TaskAction
     def enhanceClasses() {
         def outputDir = new File("$project.buildDir/enhanced-classes/main")
-        List allClasses
+        List allClasses = []
 
         if (!StringUtils.isEmpty(persistenceConfig)) {
-            File fullPersistenceXml = createFullPersistenceXml()
+            project.logger.info(">> Enhance")
 
-            project.javaexec {
-                main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
-                classpath(
-                        project.sourceSets.main.compileClasspath,
-                        project.sourceSets.main.output.classesDir,
-                        project.configurations.enhance
-                )
-                args "-loglevel"
-                args "FINER"
-                args "-persistenceinfo"
-                args "$project.buildDir/tmp/persistence"
-                args "$project.buildDir/classes/main"
-                args "$project.buildDir/enhanced-classes/main"
-                debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+            File fullPersistenceXml = createFullPersistenceXml()
+            if (new File("$project.buildDir/classes/main").exists()) {
+                project.logger.info(">> Enhance 2")
+
+                project.javaexec {
+                    main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
+                    classpath(
+                            project.sourceSets.main.compileClasspath,
+                            project.sourceSets.main.output.classesDir,
+                            project.configurations.enhance
+                    )
+                    args "-loglevel"
+                    args "FINER"
+                    args "-persistenceinfo"
+                    args "$project.buildDir/tmp/persistence"
+                    args "$project.buildDir/classes/main"
+                    args "$project.buildDir/enhanced-classes/main"
+                    debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+                }
             }
             // delete files that are not in persistence.xml and metadata.xml
             def persistence = new XmlParser().parse(fullPersistenceXml)
             def pu = persistence.'persistence-unit'[0]
-            allClasses = pu.'class'.collect { it.value()[0] }
+            allClasses.addAll(pu.'class'.collect { it.value()[0] })
 
             allClasses.addAll(getTransientEntities())
 
             // AbstractInstance is not registered but shouldn't be deleted
             allClasses.add('com.haulmont.chile.core.model.impl.AbstractInstance')
 
-
-            outputDir.eachFileRecurse(FileType.FILES) { File file ->
-                Path path = outputDir.toPath().relativize(file.toPath())
-                String name = path.findAll().join('.')
-                name = name.substring(0, name.lastIndexOf('.'))
-                if (!allClasses.contains(name)) {
-                    file.delete()
+            if (outputDir.exists()) {
+                outputDir.eachFileRecurse(FileType.FILES) { File file ->
+                    Path path = outputDir.toPath().relativize(file.toPath())
+                    String name = path.findAll().join('.')
+                    name = name.substring(0, name.lastIndexOf('.'))
+                    if (!allClasses.contains(name)) {
+                        file.delete()
+                    }
+                }
+                // delete empty dirs
+                def emptyDirs = []
+                outputDir.eachDirRecurse { File dir ->
+                    if (dir.listFiles({ File file -> !file.isDirectory() } as FileFilter).toList().isEmpty()) {
+                        emptyDirs.add(dir)
+                    }
+                }
+                emptyDirs.reverse().each { File dir ->
+                    if (dir.listFiles().toList().isEmpty())
+                        dir.delete()
                 }
             }
-            // delete empty dirs
-            def emptyDirs = []
-            outputDir.eachDirRecurse { File dir ->
-                if (dir.listFiles({ File file -> !file.isDirectory()} as FileFilter).toList().isEmpty()) {
-                    emptyDirs.add(dir)
-                }
-            }
-            emptyDirs.reverse().each { File dir ->
-                if (dir.listFiles().toList().isEmpty())
-                    dir.delete()
-            }
-
         } else {
-            allClasses = getTransientEntities()
+            allClasses.addAll(getTransientEntities())
 
-            allClasses.each { String className ->
-                Path srcFile = Paths.get("$project.buildDir/classes/main/${className.replace('.', '/')}.class")
-                Path dstFile = Paths.get("$project.buildDir/enhanced-classes/main/${className.replace('.', '/')}.class")
-                Files.copy(srcFile, dstFile, StandardCopyOption.REPLACE_EXISTING);
+            if (outputDir.exists()) {
+                allClasses.each { String className ->
+                    Path srcFile = Paths.get("$project.buildDir/classes/main/${className.replace('.', '/')}.class")
+                    Path dstFile = Paths.get("$project.buildDir/enhanced-classes/main/${className.replace('.', '/')}.class")
+                    Files.copy(srcFile, dstFile, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         }
 
-        // CUBA-specific enhancing
-        ClassPool pool = ClassPool.getDefault()
-        project.sourceSets.main.compileClasspath.each { File file ->
-            pool.insertClassPath(file.toString())
-        }
-        pool.insertClassPath(project.sourceSets.main.output.classesDir.toString())
-        pool.insertClassPath(outputDir.toString())
+        if (outputDir.exists()) {
+            // CUBA-specific enhancing
+            ClassPool pool = ClassPool.getDefault()
+            project.sourceSets.main.compileClasspath.each { File file ->
+                pool.insertClassPath(file.toString())
+            }
+            pool.insertClassPath(project.sourceSets.main.output.classesDir.toString())
+            pool.insertClassPath(outputDir.toString())
 
-        def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
-        allClasses.each { String name ->
-            cubaEnhancer.run(name)
+            def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
+            allClasses.each { String name ->
+                cubaEnhancer.run(name)
+            }
         }
     }
 }
