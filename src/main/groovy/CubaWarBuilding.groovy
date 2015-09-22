@@ -234,7 +234,7 @@ class CubaWarBuilding extends DefaultTask {
                 'cuba.tempDir': "$appHome/\${cuba.webContextName}/temp",
                 'cuba.dataDir': "$appHome/\${cuba.webContextName}/work"
         ]
-        if (isCoreApp()) {
+        if (singleWar || isCoreApp()) {
             properties += [
                     'cuba.dataSourceJndiName'  : 'jdbc/CubaDS',
                     'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}"
@@ -245,7 +245,9 @@ class CubaWarBuilding extends DefaultTask {
             } else {
                 properties += ['cuba.dbDir': "$appHome/\${cuba.webContextName}/db",]
             }
-        } else if (isWebApp()) {
+        }
+
+        if (singleWar || isWebApp()) {
             def connectionUrlListProperty = connectionUrlList ?: "http://localhost:8080/${appName}-core"
             properties += [
                     'cuba.connectionUrlList'        : connectionUrlListProperty,
