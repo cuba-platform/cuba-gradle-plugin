@@ -211,13 +211,17 @@ class CubaWarBuilding extends DefaultTask {
             File dependenciesFile = new File("${tmpWarDir}/WEB-INF/${isWebApp() ? 'web' : 'core'}.dependencies")
             dependenciesFile.withWriter('UTF-8') { writer ->
                 project.configurations.runtime.each { File lib ->
-                    if (jarNames.find { lib.name.startsWith(it) } != null) {
+                    if (!lib.name.endsWith('-sources.jar')
+                            && !lib.name.endsWith('-tests.jar')
+                            && jarNames.find { lib.name.startsWith(it) } != null) {
                         writer << lib.name << '\n'
                     }
                 }
 
                 new File("$project.libsDir").listFiles().each { File lib ->
-                    if (jarNames.find { lib.name.startsWith(it) } != null) {
+                    if (!lib.name.endsWith('-sources.jar')
+                            && !lib.name.endsWith('-tests.jar')
+                            && jarNames.find { lib.name.startsWith(it) } != null) {
                         writer << lib.name << '\n'
                     }
                 }
