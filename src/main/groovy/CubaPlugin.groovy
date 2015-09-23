@@ -26,6 +26,13 @@ class CubaPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.logger.info(">>> applying to project $project.name")
 
+        project.repositories {
+            project.rootProject.buildscript.repositories.each {
+                project.logger.info(">>> using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
+                project.repositories.add(it)
+            }
+        }
+
         if (project == project.rootProject) {
             project.extensions.create("cuba", CubaPluginExtension, project)
             applyToRootProject(project)
@@ -44,13 +51,6 @@ class CubaPlugin implements Plugin<Project> {
     private void doAfterEvaluateForAnyProject(Project project) {
         project.group = project.cuba.artifact.group
         project.version = project.cuba.artifact.version + (project.cuba.artifact.isSnapshot ? '-SNAPSHOT' : '')
-
-        project.repositories {
-            project.rootProject.buildscript.repositories.each {
-                project.logger.info(">>> using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
-                project.repositories.add(it)
-            }
-        }
 
         if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
             project.configurations {
