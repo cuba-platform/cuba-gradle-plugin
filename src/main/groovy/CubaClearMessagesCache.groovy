@@ -22,7 +22,7 @@ class CubaClearMessagesCache extends DefaultTask {
 
     @TaskAction
     protected void copyTriggerFile() {
-        def fileName = "${project.tomcatDir}/temp/$appName/triggers/cuba_Messages.clearCache"
+        def fileName = "${project.cuba.tomcat.dir}/temp/$appName/triggers/cuba_Messages.clearCache"
         File file = new File(fileName)
         if (!file.exists()) {
             project.logger.info ">>> creating $fileName"

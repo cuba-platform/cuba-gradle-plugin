@@ -20,21 +20,30 @@ import java.text.SimpleDateFormat
  */
 class CubaPlugin implements Plugin<Project> {
 
-    def CUBA_COPYRIGHT = '''Copyright (c) 2008-$today.year Haulmont. All rights reserved.
-Use is subject to license terms, see http://www.cuba-platform.com/license for details.'''
-
     public static final String VERSION_RESOURCE = "cuba-plugin.version"
 
     @Override
     void apply(Project project) {
         project.logger.info(">>> applying to project $project.name")
 
-        project.group = project.artifactGroup
-        project.version = project.artifactVersion + (project.isSnapshot ? '-SNAPSHOT' : '')
-
-        if (!project.hasProperty('tomcatDir')) {
-            project.ext.tomcatDir = project.rootDir.absolutePath + '/../tomcat'
+        if (project == project.rootProject) {
+            project.extensions.create("cuba", CubaPluginExtension, project)
+            applyToRootProject(project)
+        } else {
+            applyToModuleProject(project)
         }
+
+        project.afterEvaluate {
+            doAfterEvaluateForAnyProject(project)
+            if (project == project.rootProject) {
+                doAfterEvaluateForRootProject(project)
+            }
+        }
+    }
+
+    private void doAfterEvaluateForAnyProject(Project project) {
+        project.group = project.cuba.artifact.group
+        project.version = project.cuba.artifact.version + (project.cuba.artifact.isSnapshot ? '-SNAPSHOT' : '')
 
         project.repositories {
             project.rootProject.buildscript.repositories.each {
@@ -51,12 +60,10 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                 deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
             }
 
-            def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl :
-                "http://repository.haulmont.com:8587/nexus/content/repositories/${project.isSnapshot ? 'snapshots' : 'releases'}"
-            def uploadUser = project.hasProperty('uploadUser') ? project.uploadUser :
-                System.getenv('HAULMONT_REPOSITORY_USER')
-            def uploadPassword = project.hasProperty('uploadPassword') ? project.uploadPassword :
-                System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+            def uploadUrl = project.cuba.uploadRepository.url ? project.cuba.uploadRepository.url
+                    : "http://repository.haulmont.com:8587/nexus/content/repositories/${project.cuba.artifact.isSnapshot ? 'snapshots' : 'releases'}"
+            def uploadUser = project.cuba.uploadRepository.user
+            def uploadPassword = project.cuba.uploadRepository.password
 
             project.logger.info(">>> upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
 
@@ -69,12 +76,6 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     }
                 }
             }
-        }
-
-        if (project == project.rootProject) {
-            applyToRootProject(project)
-        } else {
-            applyToModuleProject(project)
         }
     }
 
@@ -89,36 +90,37 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
             tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '4.0.1', ext: 'zip')
         }
 
-        project.task([type: CubaSetupTomcat], 'setupTomcat') {
-            tomcatRootDir = project.tomcatDir
-        }
+        project.task([type: CubaSetupTomcat], 'setupTomcat')
+        project.task([type: CubaStartTomcat], 'start')
+        project.task([type: Exec], 'tomcat')
+        project.task([type: CubaStopTomcat], 'stop')
+        project.task([type: CubaDropTomcat], 'dropTomcat')
+    }
 
-        project.task([type: CubaStartTomcat], 'start') {
-            tomcatRootDir = project.tomcatDir
-        }
+    private void doAfterEvaluateForRootProject(Project project) {
+        def setupTomcat = project.getTasksByName('setupTomcat', false)[0]
+        setupTomcat.tomcatRootDir = project.cuba.tomcat.dir
 
+        def start = project.getTasksByName('start', false)[0]
+        start.tomcatRootDir = project.cuba.tomcat.dir
+
+        def tomcat = project.getTasksByName('tomcat', false)[0]
         if (System.getProperty('os.name').contains('Windows')) {
-            project.task([type: Exec], 'tomcat') {
-                workingDir "${project.tomcatDir}/bin"
-                commandLine 'cmd'
-                args '/C', 'catalina.bat', 'jpda', 'run'
-            }
+            tomcat.workingDir "${project.cuba.tomcat.dir}/bin"
+            tomcat.commandLine 'cmd'
+            tomcat.args '/C', 'catalina.bat', 'jpda', 'run'
         } else {
-            project.task([type: Exec], 'tomcat') {
-                workingDir "${project.tomcatDir}/bin"
-                commandLine './catalina.sh'
-                args 'jpda', 'run'
-            }
+            tomcat.workingDir "${project.cuba.tomcat.dir}/bin"
+            tomcat.commandLine './catalina.sh'
+            tomcat.args 'jpda', 'run'
         }
 
-        project.task([type: CubaStopTomcat], 'stop') {
-            tomcatRootDir = project.tomcatDir
-        }
+        def stop = project.getTasksByName('stop', false)[0]
+        stop.tomcatRootDir = project.cuba.tomcat.dir
 
-        project.task([type: CubaDropTomcat], 'dropTomcat') {
-            tomcatRootDir = project.tomcatDir
-            listeningPort = '8787'
-        }
+        def dropTomcat = project.getTasksByName('dropTomcat', false)[0]
+        dropTomcat.tomcatRootDir = project.cuba.tomcat.dir
+        dropTomcat.listeningPort = '8787'
 
         if (project.hasProperty('idea')) {
             project.logger.info ">>> configuring IDEA project"
@@ -131,18 +133,15 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
                     node.@default = 'cuba'
                     node = node.appendNode('copyright')
-                    if (!project.hasProperty('copyright'))
-                        node.appendNode('option', [name: 'notice', value: CUBA_COPYRIGHT])
-                    else
-                        node.appendNode('option', [name: 'notice', value: project.copyright])
+                    node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
 
                     node.appendNode('option', [name: 'keyword', value: 'Copyright'])
                     node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
                     node.appendNode('option', [name: 'myName', value: 'cuba'])
                     node.appendNode('option', [name: 'myLocal', value: 'true'])
 
-                    if (project.hasProperty('vcs'))
-                        provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.vcs //'svn'
+                    if (project.cuba.ide.vcs)
+                        provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.cuba.ide.vcs //'svn'
 
                     provider.node.component.find { it.@name == 'Encoding' }.@defaultCharsetForPropertiesFiles = 'UTF-8'
                 }

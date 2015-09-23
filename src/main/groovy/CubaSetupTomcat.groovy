@@ -19,7 +19,7 @@ import java.util.regex.Pattern
  */
 class CubaSetupTomcat extends DefaultTask {
 
-    def tomcatRootDir = project.tomcatDir
+    def tomcatRootDir = project.cuba.tomcat.dir
 
     CubaSetupTomcat() {
         setDescription('Sets up local Tomcat')
@@ -28,6 +28,10 @@ class CubaSetupTomcat extends DefaultTask {
 
     @TaskAction
     def setup() {
+        if (!tomcatRootDir) {
+            tomcatRootDir = project.cuba.tomcat.dir
+        }
+
         project.configurations.tomcat.files.each { dep ->
             project.copy {
                 from project.zipTree(dep.absolutePath)
@@ -52,10 +56,10 @@ class CubaSetupTomcat extends DefaultTask {
             }
         }
 
-        if (project.hasProperty('tomcatPort') || project.hasProperty('tomcatShutdownPort')) {
+        if (project.cuba.tomcat.port || project.cuba.tomcat.shutdownPort) {
             updateServerXml()
         }
-        if (project.hasProperty('tomcatDebugPort')) {
+        if (project.cuba.tomcat.debugPort) {
             Pattern pattern = Pattern.compile(/(JPDA_OPTS\s*?=\s*?\"*-Xrunjdwp:transport\s*?=\s*?dt_socket,\s*?address\s*?=\s*?)(\d+)/)
             updateDebugPort(Paths.get(tomcatRootDir, 'bin', 'setenv.bat'), pattern)
             updateDebugPort(Paths.get(tomcatRootDir, 'bin', 'setenv.sh'), pattern)
@@ -75,16 +79,16 @@ class CubaSetupTomcat extends DefaultTask {
         def serverNode = new XmlParser().parse(serverXml.toFile())
         boolean changed = false
 
-        if (project.hasProperty('tomcatShutdownPort')) {
+        if (project.cuba.tomcat.shutdownPort) {
             String currPortValue = serverNode.@port
-            String newPortValue = project.tomcatShutdownPort;
+            String newPortValue = project.cuba.tomcat.shutdownPort;
             if (!Objects.equals(currPortValue, newPortValue)) {
                 serverNode.@port = newPortValue
                 changed = true
             }
         }
 
-        if (project.hasProperty('tomcatPort')) {
+        if (project.cuba.tomcat.port) {
             def serviceNode = serverNode.find { node ->
                 node.name() == 'Service' && node.@name == 'Catalina'
             }
@@ -99,8 +103,8 @@ class CubaSetupTomcat extends DefaultTask {
                 logger.error('conf/server.xml has not been updated: cannot find Connector node')
                 return
             }
-            currPortValue = connectorNode.@port
-            newPortValue = project.tomcatPort
+            String currPortValue = connectorNode.@port
+            String newPortValue = project.cuba.tomcat.port
             if (!Objects.equals(currPortValue, newPortValue)) {
                 connectorNode.@port = newPortValue
                 changed = true;
@@ -117,7 +121,7 @@ class CubaSetupTomcat extends DefaultTask {
             String oldBatContent = setenvXml.toFile().text
             Matcher matcher = jpdaOpts.matcher(oldBatContent)
             if (matcher.find()) {
-                String newBatContent = matcher.replaceFirst('$1' + project.tomcatDebugPort)
+                String newBatContent = matcher.replaceFirst('$1' + project.cuba.tomcat.debugPort)
                 if (!Objects.equals(oldBatContent, newBatContent)) {
                     setenvXml.toFile().text = newBatContent
                 }

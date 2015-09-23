@@ -12,7 +12,7 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaStopTomcat extends DefaultTask {
 
-    def tomcatRootDir = project.tomcatDir
+    def tomcatRootDir = project.cuba.tomcat.dir
 
     CubaStopTomcat() {
         setDescription('Stops local Tomcat')
@@ -21,6 +21,10 @@ class CubaStopTomcat extends DefaultTask {
 
     @TaskAction
     def deploy() {
+        if (!tomcatRootDir) {
+            tomcatRootDir = project.cuba.tomcat.dir
+        }
+
         def binDir = "${tomcatRootDir}/bin"
         project.logger.info ">>> stopping $tomcatRootDir"
         ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {

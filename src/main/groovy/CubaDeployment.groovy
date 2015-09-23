@@ -25,7 +25,7 @@ class CubaDeployment extends DefaultTask {
     def jarNames
     def appName
     def Closure doAfter
-    def tomcatRootDir = new File(project.tomcatDir).canonicalPath
+    def tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
     def webcontentExclude = []
     def dbScriptsExcludes = []
 
@@ -38,6 +38,8 @@ class CubaDeployment extends DefaultTask {
 
     @TaskAction
     def deploy() {
+        if (!tomcatRootDir)
+            tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
         project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc {

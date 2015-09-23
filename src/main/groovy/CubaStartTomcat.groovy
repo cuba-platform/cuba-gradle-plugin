@@ -14,7 +14,7 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaStartTomcat extends DefaultTask {
 
-    def tomcatRootDir = project.tomcatDir
+    def tomcatRootDir = project.cuba.tomcat.dir
 
     CubaStartTomcat() {
         setDescription('Starts local Tomcat')
@@ -23,6 +23,10 @@ class CubaStartTomcat extends DefaultTask {
 
     @TaskAction
     def deploy() {
+        if (!tomcatRootDir) {
+            tomcatRootDir = project.cuba.tomcat.dir
+        }
+
         def binDir = "${tomcatRootDir}/bin"
         project.logger.info ">>> starting $tomcatRootDir"
 

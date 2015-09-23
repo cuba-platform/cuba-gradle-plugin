@@ -22,8 +22,8 @@ class CubaReleaseTimeStamp extends DefaultTask {
     String releaseTimeStampPath
     String releaseNumberPath
 
-    String artifactVersion = project.ext.artifactVersion
-    Boolean isSnapshot = project.ext.isSnapshot
+    String artifactVersion = project.cuba.artifact.version
+    Boolean isSnapshot = project.cuba.artifact.isSnapshot
     String buildVcsNumber = project.rootProject.hasProperty('buildVcsNumber') ?
         project.rootProject['buildVcsNumber'] : null
 

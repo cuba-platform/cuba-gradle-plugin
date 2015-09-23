@@ -12,7 +12,7 @@ import org.gradle.api.tasks.TaskAction
  */
 class CubaDropTomcat extends DefaultTask {
 
-    def tomcatRootDir = project.tomcatDir
+    def tomcatRootDir = project.cuba.tomcat.dir
     def listeningPort = '8787'
 
     CubaDropTomcat() {
@@ -22,6 +22,9 @@ class CubaDropTomcat extends DefaultTask {
 
     @TaskAction
     def deploy() {
+        if (!tomcatRootDir) {
+            tomcatRootDir = project.cuba.tomcat.dir
+        }
         File dir = new File(tomcatRootDir)
         if (dir.exists()) {
             project.logger.info ">>> deleting $dir"
