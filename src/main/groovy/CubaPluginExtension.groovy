@@ -90,7 +90,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         Project project
         String url
         String user
-        boolean password
+        String password
 
         UploadRepositoryConfiguration(Project project) {
             this.project = project
