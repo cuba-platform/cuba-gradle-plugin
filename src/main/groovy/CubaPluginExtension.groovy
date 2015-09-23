@@ -12,16 +12,22 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
 
     Project project
 
-    TomcatConfiguration tomcat = new TomcatConfiguration()
+    TomcatConfiguration tomcat
 
-    IdeConfiguration ide = new IdeConfiguration()
+    IdeConfiguration ide
 
-    ArtifactConfiguration artifact = new ArtifactConfiguration()
+    ArtifactConfiguration artifact
 
-    UploadRepositoryConfiguration uploadRepository = new UploadRepositoryConfiguration()
+    UploadRepositoryConfiguration uploadRepository
 
     CubaPluginExtension(Project project) {
         this.project = project
+
+        tomcat = new TomcatConfiguration(project)
+        ide = new IdeConfiguration(project)
+        artifact = new ArtifactConfiguration(project)
+        uploadRepository = new UploadRepositoryConfiguration(project)
+
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
         ide.copyright = CUBA_COPYRIGHT
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -48,26 +54,46 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
     }
 
     class TomcatConfiguration {
+        Project project
         String dir
         String port
         String debugPort
         String shutdownPort
+
+        TomcatConfiguration(Project project) {
+            this.project = project
+        }
     }
 
     class IdeConfiguration {
+        Project project
         String copyright
         String vcs
+
+        IdeConfiguration(Project project) {
+            this.project = project
+        }
     }
 
     class ArtifactConfiguration {
+        Project project
         String group
         String version
         boolean isSnapshot
+
+        ArtifactConfiguration(Project project) {
+            this.project = project
+        }
     }
 
     class UploadRepositoryConfiguration {
+        Project project
         String url
         String user
         boolean password
+
+        UploadRepositoryConfiguration(Project project) {
+            this.project = project
+        }
     }
 }

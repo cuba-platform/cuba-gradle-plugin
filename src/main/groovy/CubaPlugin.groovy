@@ -98,13 +98,13 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
-        def setupTomcat = project.getTasksByName('setupTomcat', false)[0]
+        CubaSetupTomcat setupTomcat = project.getTasksByName('setupTomcat', false).iterator().next()
         setupTomcat.tomcatRootDir = project.cuba.tomcat.dir
 
-        def start = project.getTasksByName('start', false)[0]
+        CubaStartTomcat start = project.getTasksByName('start', false).iterator().next()
         start.tomcatRootDir = project.cuba.tomcat.dir
 
-        def tomcat = project.getTasksByName('tomcat', false)[0]
+        Exec tomcat = project.getTasksByName('tomcat', false).iterator().next()
         if (System.getProperty('os.name').contains('Windows')) {
             tomcat.workingDir "${project.cuba.tomcat.dir}/bin"
             tomcat.commandLine 'cmd'
@@ -115,10 +115,10 @@ class CubaPlugin implements Plugin<Project> {
             tomcat.args 'jpda', 'run'
         }
 
-        def stop = project.getTasksByName('stop', false)[0]
+        CubaStopTomcat stop = project.getTasksByName('stop', false).iterator().next()
         stop.tomcatRootDir = project.cuba.tomcat.dir
 
-        def dropTomcat = project.getTasksByName('dropTomcat', false)[0]
+        CubaDropTomcat dropTomcat = project.getTasksByName('dropTomcat', false).iterator().next()
         dropTomcat.tomcatRootDir = project.cuba.tomcat.dir
         dropTomcat.listeningPort = '8787'
 
