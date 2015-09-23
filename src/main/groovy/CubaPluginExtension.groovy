@@ -69,6 +69,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         Project project
         String copyright
         String vcs
+        String classComment
 
         IdeConfiguration(Project project) {
             this.project = project
