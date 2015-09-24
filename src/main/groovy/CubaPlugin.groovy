@@ -4,6 +4,7 @@
  */
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
@@ -209,6 +210,54 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
         }
+
+        defineTasksExecutionOrder(project)
+    }
+
+    /**
+     * Method defines a tasks execution order, which is necessary for parallel task execution.
+     * For example if we run 'deploy' and 'start' tasks in parallel mode we want the 'start' task to
+     * be executed only after 'deploy' is completed
+     */
+    private void defineTasksExecutionOrder(Project project) {
+
+        def deploymentTasks = findAllTasksByType(project, CubaDeployment.class)
+        def dbCreationTasks = findAllTasksByType(project, CubaDbCreation.class)
+        def dbUpdateTasks = findAllTasksByType(project, CubaDbUpdate.class)
+        def startTomcatTasks = project.getTasks().findAll { it instanceof CubaStartTomcat }
+        def setupTomcatTasks = project.getTasks().findAll { it instanceof CubaSetupTomcat }
+        def dropTomcatTasks = project.getTasks().findAll { it instanceof CubaDropTomcat }
+        def deployNameTasks = project.getTasksByName("deploy", true)
+        def tomcatNameTasks = project.getTasksByName("tomcat", true)
+
+        startTomcatTasks.addAll(tomcatNameTasks)
+
+        startTomcatTasks.each {
+            it.mustRunAfter deploymentTasks
+            it.mustRunAfter dbCreationTasks
+            it.mustRunAfter dbUpdateTasks
+            it.mustRunAfter setupTomcatTasks
+            it.mustRunAfter deployNameTasks
+        }
+
+        deploymentTasks.each {
+            it.mustRunAfter setupTomcatTasks
+        }
+
+        setupTomcatTasks.each {
+            it.mustRunAfter dropTomcatTasks
+        }
+    }
+
+    /**
+     * Finds tasks by type in the given project and in its subprojects
+     */
+    private Collection<Task> findAllTasksByType(Project project, Class type) {
+        def result = []
+        project.getAllTasks(true).each {subProject, tasks ->
+            result.addAll(tasks.findAll {type.isAssignableFrom(it.class)})
+        }
+        return result
     }
 
     private static Node nestedProjectsFilter() {
