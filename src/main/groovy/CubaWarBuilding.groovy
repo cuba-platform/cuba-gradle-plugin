@@ -161,7 +161,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void writeDependencies(Project theProject, String applicationType, List<String> jarNames) {
+    private void writeDependencies(Project theProject, String applicationType, def jarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
@@ -255,7 +255,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void writeLocalAppProperties(Project theProject, properties) {
+    private void writeLocalAppProperties(Project theProject, def properties) {
         File appPropFile = new File("${warDir(theProject)}/WEB-INF/local.app.properties")
         project.logger.info(">>> writing $appPropFile")
         appPropFile.withWriter('UTF-8') { writer ->
