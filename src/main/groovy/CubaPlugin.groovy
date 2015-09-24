@@ -227,6 +227,7 @@ class CubaPlugin implements Plugin<Project> {
         def startTomcatTasks = project.getTasks().findAll { it instanceof CubaStartTomcat }
         def setupTomcatTasks = project.getTasks().findAll { it instanceof CubaSetupTomcat }
         def dropTomcatTasks = project.getTasks().findAll { it instanceof CubaDropTomcat }
+        def hsqlStartTasks = project.getTasks().findAll { it instanceof CubaHsqlStart }
         def deployNameTasks = project.getTasksByName("deploy", true)
         def tomcatNameTasks = project.getTasksByName("tomcat", true)
 
@@ -246,6 +247,14 @@ class CubaPlugin implements Plugin<Project> {
 
         setupTomcatTasks.each {
             it.mustRunAfter dropTomcatTasks
+        }
+
+        dbCreationTasks.each {
+            it.mustRunAfter hsqlStartTasks
+        }
+
+        dbUpdateTasks.each {
+            it.mustRunAfter hsqlStartTasks
         }
     }
 
