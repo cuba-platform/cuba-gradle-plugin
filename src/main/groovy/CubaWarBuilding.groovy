@@ -1,72 +1,267 @@
-/*
- * Copyright (c) 2008-2013 Haulmont. All rights reserved.
- * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
- */
-
-
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
+import org.gradle.api.Project
 import org.gradle.api.tasks.TaskAction
 
 /**
- * @author artamonov
+ *
+ * @author degtyarjov
  * @version $Id$
  */
 class CubaWarBuilding extends DefaultTask {
-    def appName
-    def connectionUrlList
-    def Closure doAfter
-    def webcontentExclude = []
-    def appProperties
+    Project coreProject;
+    Project webProject;
     def appHome
-    def boolean projectAll
-    def boolean includeDbScripts = true
-    def boolean singleWar = true
-    def jarNames
+    def appName
+    def singleWar = true
     def webXml
 
-    def tmpWarDir
+    def projectAll
+    def webcontentExclude = []
+    Closure doAfter
+    def appProperties
+    def coreJarNames;
+    def webJarNames;
 
-    CubaWarBuilding() {
-        setDescription('Builds WAR')
-        setGroup('Deployment')
+    def coreTmpWarDir
+    def webTmpWarDir
 
-        if (singleWar) {
-            tmpWarDir = "${project.rootProject.buildDir}/tmp/war"
-        } else {
-            tmpWarDir = "${project.buildDir}/tmp/war/"
-        }
+    def String distrDir = "${project.buildDir}/distributions/war"
+
+    void setCoreProject(Project coreProject) {
+        this.coreProject = coreProject
+        def assembleCore = coreProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assembleCore)
     }
 
-    def getOutputFile() {
-        new File("${project.buildDir}/distributions/${appName}.war")
+    void setWebProject(Project webProject) {
+        this.webProject = webProject
+        def assembleWeb = webProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assembleWeb)
+    }
+
+    String warDir(Project project) {
+        project == coreProject ? coreTmpWarDir : webTmpWarDir
     }
 
     @TaskAction
     def build() {
-        if (!appHome)
-            throw new IllegalStateException("CubaWarBuilding task requires appHome parameter")
+        init()
 
-        Map<String, GString> properties = collectProperties()
+        copyLibs(coreProject)
+        copyLibs(webProject)
 
-        copyLibs()
+        def coreProperties = collectProperties(coreProject)
+        def webProperties = collectProperties(webProject)
 
-        writeDependencies()
+        copyDbScripts(coreProject)
 
-        copyDbScripts()
-
-        copyWebContent()
-
-        writeLocalAppProperties(properties)
+        copyWebContent(coreProject)
+        copyWebContent(webProject)
+        copySpecificWebContent(webProject)
 
         processDoAfter()
 
-        touchWebXml()
+        touchWebXml(coreProject)
+        touchWebXml(webProject)
 
-        packWarFile()
+        if (singleWar) {
+            def summaryProperties = coreProperties + webProperties
+            writeLocalAppProperties(webProject, summaryProperties)
+            writeDependencies(coreProject, 'core', coreJarNames)
+            writeDependencies(webProject, 'web', webJarNames)
 
-        if (!singleWar || isWebApp()) {
-            project.delete(tmpWarDir)
+            packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
+            project.copy {
+                from webProject.file("${warDir(webProject)}/${appName}.war")
+                into distrDir
+            }
+
+            generateAppHome()
+        } else {
+            writeLocalAppProperties(coreProject, coreProperties)
+            writeLocalAppProperties(webProject, webProperties)
+
+            packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
+            packWarFile(coreProject, coreProject.file("${warDir(coreProject)}/${appName}-core.war"))
+            webProject.copy {
+                from webProject.file("${warDir(webProject)}/${appName}.war")
+                from coreProject.file("${warDir(coreProject)}/${appName}-core.war")
+                into distrDir
+            }
+
+            generateAppHome()
+        }
+
+        project.delete("${project.buildDir}/tmp")
+    }
+
+    private void init() {
+        project.delete(distrDir)
+
+        CubaDeployment deployCore = coreProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
+        CubaDeployment deployWeb = webProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
+
+        if (!coreJarNames) {
+            coreJarNames = deployCore.jarNames
+        }
+
+        if (!webJarNames) {
+            webJarNames = deployWeb.jarNames
+        }
+
+        if (singleWar) {
+            coreTmpWarDir = "${project.buildDir}/tmp/war"
+            webTmpWarDir = coreTmpWarDir
+        } else {
+            coreTmpWarDir = "${project.buildDir}/tmp/core/war"
+            webTmpWarDir = "${project.buildDir}/tmp/web/war"
+        }
+    }
+
+    private Map<String, Object> collectProperties(Project theProject) {
+        def properties = [
+                'cuba.logDir' : "$appHome/logs",
+                'cuba.confDir': "$appHome/\${cuba.webContextName}/conf",
+                'cuba.tempDir': "$appHome/\${cuba.webContextName}/temp",
+                'cuba.dataDir': "$appHome/\${cuba.webContextName}/work"
+        ]
+
+        if (theProject == coreProject) {
+            properties += [
+                    'cuba.dataSourceJndiName'  : "jdbc/CubaDS",
+                    'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}",
+                    'cuba.dbDir'               : "web-inf:db"
+            ]
+        }
+
+        if (theProject == webProject) {
+            properties += [
+                    'cuba.connectionUrlList'        : "http://localhost:8080/${appName}-core",
+                    'cuba.useLocalServiceInvocation': singleWar ? "true" : "false"
+            ]
+        }
+
+        if (appProperties) {
+            properties += appProperties
+        }
+        properties
+    }
+
+    private void copyLibs(Project theProject) {
+        theProject.logger.info(">>> copying libs from configurations.runtime")
+        theProject.copy {
+            from theProject.configurations.runtime
+            from theProject.libsDir
+            into "${warDir(theProject)}/WEB-INF/lib"
+            include { details ->
+                def name = details.file.name
+                return !(name.endsWith('-sources.jar'))
+            }
+        }
+    }
+
+    private void writeDependencies(Project theProject, String applicationType, List<String> jarNames) {
+        File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
+        dependenciesFile.withWriter('UTF-8') { writer ->
+            theProject.configurations.runtime.each { File lib ->
+                if (!lib.name.endsWith('-sources.jar')
+                        && !lib.name.endsWith('-tests.jar')
+                        && jarNames.find { lib.name.startsWith(it) } != null) {
+                    writer << lib.name << '\n'
+                }
+            }
+
+            new File("$theProject.libsDir").listFiles().each { File lib ->
+                if (!lib.name.endsWith('-sources.jar')
+                        && !lib.name.endsWith('-tests.jar')
+                        && jarNames.find { lib.name.startsWith(it) } != null) {
+                    writer << lib.name << '\n'
+                }
+            }
+        }
+    }
+
+    private void copyDbScripts(Project theProject) {
+        theProject.copy {
+            from "${theProject.buildDir}/db"
+            into "${warDir(theProject)}/WEB-INF/db"
+        }
+    }
+
+    private void copyWebContent(Project theProject) {
+        theProject.logger.info(">>> copying from web to ${warDir(theProject)}")
+        theProject.copy {
+            from 'web'
+            into warDir(theProject)
+            exclude '**/context.xml'
+        }
+
+        if (webXml) {
+            theProject.logger.info(">>> copying web.xml from ${webXml} to ${warDir(theProject)}/web.xml")
+            theProject.copy {
+                from webXml
+                into "${warDir(theProject)}/WEB-INF/"
+                rename { String fileName ->
+                    "web.xml"
+                }
+            }
+        }
+    }
+
+    private void copySpecificWebContent(Project theProject) {
+        if (!projectAll) {
+            if (theProject.configurations.getAsMap().webcontent) {
+                def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
+                theProject.configurations.webcontent.files.each { dep ->
+                    theProject.logger.info(">>> copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
+                    theProject.copy {
+                        from theProject.zipTree(dep.absolutePath)
+                        into warDir(theProject)
+                        excludes = excludePatterns
+                        includeEmptyDirs = false
+                    }
+                }
+                theProject.logger.info(">>> copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
+                theProject.copy {
+                    from "${theProject.buildDir}/web"
+                    into warDir(theProject)
+                    exclude '**/context.xml'
+                }
+            }
+            def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
+            if (webToolkit) {
+                theProject.logger.info(">>> copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
+                theProject.copy {
+                    from "${webToolkit.buildDir}/web"
+                    into warDir(theProject)
+                    exclude '**/gwt-unitCache/'
+                }
+            }
+        } else {
+            theProject.logger.info(">>> copying webcontent from theProject-all directories to ${warDir(theProject)}")
+            theProject.copy {
+                from new File(project.project(':cuba-web').projectDir, 'web')
+                from new File(project.project(':charts-web').projectDir, 'web')
+                from new File(project.project(':workflow-web').projectDir, 'web')
+                from new File(project.project(':reports-web').projectDir, 'web')
+                from new File(project.project(':refapp-web').buildDir, 'web')
+                from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
+                into warDir(theProject)
+                exclude '**/web.xml'
+                exclude '**/context.xml'
+                exclude '**/gwt-unitCache/'
+            }
+        }
+    }
+
+    private void writeLocalAppProperties(Project theProject, properties) {
+        File appPropFile = new File("${warDir(theProject)}/WEB-INF/local.app.properties")
+        project.logger.info(">>> writing $appPropFile")
+        appPropFile.withWriter('UTF-8') { writer ->
+            properties.each { key, value ->
+                writer << key << ' = ' << value << '\n'
+            }
         }
     }
 
@@ -77,14 +272,8 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void packWarFile() {
-        if (!singleWar || isWebApp()) {
-            ant.jar(destfile: getOutputFile(), basedir: tmpWarDir)
-        }
-    }
-
-    private void touchWebXml() {
-        def webXml = new File("${tmpWarDir}/WEB-INF/web.xml")
+    private void touchWebXml(Project theProject) {
+        def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
         if (project.ext.has('webResourcesTs')) {
             project.logger.info(">>> update web resources timestamp")
 
@@ -97,179 +286,26 @@ class CubaWarBuilding extends DefaultTask {
             }
             webXml.write(webXmlText)
         }
-        project.logger.info(">>> touch ${tmpWarDir}/WEB-INF/web.xml")
+        project.logger.info(">>> touch ${warDir(theProject)}/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
-    private void writeLocalAppProperties(properties) {
-        File appPropFile = new File("${tmpWarDir}/WEB-INF/local.app.properties")
-        project.logger.info(">>> writing $appPropFile")
-        appPropFile.withWriter('UTF-8') { writer ->
-            properties.each { key, value ->
-                writer << key << ' = ' << value << '\n'
-            }
-        }
+    private void packWarFile(Project project, File destFile) {
+        ant.jar(destfile: destFile, basedir: warDir(project))
     }
 
-    private void copyWebContent() {
-        if (isWebApp()) {
-            if (!projectAll) {
-                if (project.configurations.getAsMap().webcontent) {
-                    def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
-                    project.configurations.webcontent.files.each { dep ->
-                        project.logger.info(">>> copying webcontent from $dep.absolutePath to ${tmpWarDir}")
-                        project.copy {
-                            from project.zipTree(dep.absolutePath)
-                            into tmpWarDir
-                            excludes = excludePatterns
-                            includeEmptyDirs = false
-                        }
-                    }
-                    project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${tmpWarDir}")
-                    project.copy {
-                        from "${project.buildDir}/web"
-                        into tmpWarDir
-                        exclude '**/context.xml'
-                    }
-                }
-                def webToolkit = project.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
-                if (webToolkit) {
-                    project.logger.info(">>> copying webcontent from ${webToolkit.buildDir}/web to ${tmpWarDir}")
-                    project.copy {
-                        from "${webToolkit.buildDir}/web"
-                        into tmpWarDir
-                        exclude '**/gwt-unitCache/'
-                    }
-                }
-            } else {
-                project.logger.info(">>> copying webcontent from project-all directories to ${tmpWarDir}")
-                project.copy {
-                    from new File(project.project(':cuba-web').projectDir, 'web')
-                    from new File(project.project(':charts-web').projectDir, 'web')
-                    from new File(project.project(':workflow-web').projectDir, 'web')
-                    from new File(project.project(':reports-web').projectDir, 'web')
-                    from new File(project.project(':refapp-web').buildDir, 'web')
-                    from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
-                    into tmpWarDir
-                    exclude '**/web.xml'
-                    exclude '**/context.xml'
-                    exclude '**/gwt-unitCache/'
-                }
-            }
-        }
+    private Set<File> generateAppHome() {
+        String appHomeName = new File(appHome).name
 
-        if (webXml) {
-            project.logger.info(">>> copying from web to ${tmpWarDir}")
+        project.configurations.tomcatInit.files.each { dep ->
             project.copy {
-                from 'web'
-                into tmpWarDir
-                exclude '**/context.xml'
-            }
-
-            project.logger.info(">>> copying web.xml from ${webXml} to ${tmpWarDir}/web.xml")
-            project.copy {
-                from webXml
-                into "$tmpWarDir/WEB-INF/"
-                rename { String fileName ->
-                    "web.xml"
+                from project.zipTree(dep.absolutePath).files
+                into "$distrDir/$appHomeName"
+                include '**/log4j.xml'
+                filter { String line ->
+                    line.replace('${catalina.home}', appHome)
                 }
             }
-        } else {
-            project.logger.info(">>> copying from web to ${tmpWarDir}")
-            project.copy {
-                from 'web'
-                into tmpWarDir
-                exclude '**/context.xml'
-            }
         }
-    }
-
-    private void copyDbScripts() {
-        if (includeDbScripts) {
-            project.copy {
-                from "${project.buildDir}/db"
-                into "${tmpWarDir}/WEB-INF/db"
-            }
-        }
-    }
-
-    private void copyLibs() {
-        project.logger.info(">>> copying libs from configurations.runtime")
-        project.copy {
-            from project.configurations.runtime
-            from project.libsDir
-            into "${tmpWarDir}/WEB-INF/lib"
-            include { details ->
-                def name = details.file.name
-                return !(name.endsWith('-sources.jar'))
-            }
-        }
-    }
-
-    private void writeDependencies() {
-        if (singleWar && jarNames) {
-            File dependenciesFile = new File("${tmpWarDir}/WEB-INF/${isWebApp() ? 'web' : 'core'}.dependencies")
-            dependenciesFile.withWriter('UTF-8') { writer ->
-                project.configurations.runtime.each { File lib ->
-                    if (!lib.name.endsWith('-sources.jar')
-                            && !lib.name.endsWith('-tests.jar')
-                            && jarNames.find { lib.name.startsWith(it) } != null) {
-                        writer << lib.name << '\n'
-                    }
-                }
-
-                new File("$project.libsDir").listFiles().each { File lib ->
-                    if (!lib.name.endsWith('-sources.jar')
-                            && !lib.name.endsWith('-tests.jar')
-                            && jarNames.find { lib.name.startsWith(it) } != null) {
-                        writer << lib.name << '\n'
-                    }
-                }
-            }
-        } else if (singleWar && !jarNames) {
-            throw new RuntimeException("Please specify jarNames property for buildWar tasks to build single WAR file. Otherwise it would not work fine")
-        }
-    }
-
-    private Map<String, GString> collectProperties() {
-        def properties = [
-                'cuba.logDir' : "$appHome/logs",
-                'cuba.confDir': "$appHome/\${cuba.webContextName}/conf",
-                'cuba.tempDir': "$appHome/\${cuba.webContextName}/temp",
-                'cuba.dataDir': "$appHome/\${cuba.webContextName}/work"
-        ]
-        if (singleWar || isCoreApp()) {
-            properties += [
-                    'cuba.dataSourceJndiName'  : 'jdbc/CubaDS',
-                    'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}"
-            ]
-
-            if (includeDbScripts) {
-                properties += ['cuba.dbDir': "web-inf:db",]
-            } else {
-                properties += ['cuba.dbDir': "$appHome/\${cuba.webContextName}/db",]
-            }
-        }
-
-        if (singleWar || isWebApp()) {
-            def connectionUrlListProperty = connectionUrlList ?: "http://localhost:8080/${appName}-core"
-            properties += [
-                    'cuba.connectionUrlList'        : connectionUrlListProperty,
-                    'cuba.useLocalServiceInvocation': (singleWar ? 'true' : 'false')
-            ]
-        }
-
-        if (appProperties) {
-            properties += appProperties
-        }
-        properties
-    }
-
-    private boolean isCoreApp() {
-        project.name.endsWith('-core')
-    }
-
-    private boolean isWebApp() {
-        project.name.endsWith('-web')
     }
 }
