@@ -7,7 +7,6 @@ import groovy.io.FileType
 import groovy.xml.QName
 import groovy.xml.XmlUtil
 import javassist.ClassPool
-import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileTree
@@ -52,7 +51,7 @@ class CubaEnhancing extends DefaultTask {
 
     @InputFiles
     def List getInputFiles() {
-        List entities = getPersistentEntities(getPersistenceXml())
+        List entities = getPersistentEntities(getPersistenceXmlFile())
         entities.addAll(getTransientEntities())
 
         entities.collect { name ->
@@ -62,7 +61,7 @@ class CubaEnhancing extends DefaultTask {
 
     @OutputFiles
     def List getOutputFiles() {
-        List entities = getPersistentEntities(getPersistenceXml())
+        List entities = getPersistentEntities(getPersistenceXmlFile())
         entities.addAll(getTransientEntities())
 
         entities.collect { name ->
@@ -70,38 +69,56 @@ class CubaEnhancing extends DefaultTask {
         }
     }
 
-    private File getPersistenceXml() {
-        if (StringUtils.isEmpty(persistenceConfig))
-            return null
-
-        def fileName = Arrays.asList(persistenceConfig.split('\\s')).last()
-        File file = project.file("src/$fileName")
-        if (file.exists())
-            return file
-        else {
-            logger.error("Persistence XML file $file doesn't exist")
-            throw new IllegalArgumentException("File $file doesn't exist")
+    private File getPersistenceXmlFile() {
+        if (persistenceConfig) {
+            def fileName = Arrays.asList(persistenceConfig.split('\\s')).last()
+            File file = project.file("src/$fileName")
+            if (file.exists())
+                return file
+            else {
+                throw new IllegalArgumentException("File $file doesn't exist")
+            }
+        } else {
+            FileTree files = project.fileTree('src').matching {
+                include '*-persistence.xml'
+                include 'persistence.xml'
+            }
+            if (files.size() > 1) {
+                throw new IllegalArgumentException("There are more than one persistence XML file in the source tree - please specify 'persistenceConfig' property for the task")
+            } else {
+                return files[0]
+            }
         }
     }
 
     private File createFullPersistenceXml() {
-        def fileNames = persistenceConfig.tokenize()
+        def fileNames = persistenceConfig ? persistenceConfig.tokenize() : null
 
         def xmlFiles = []
 
         Configuration compileConf = project.configurations.findByName('compile')
         compileConf.resolvedConfiguration.resolvedArtifacts.each { artifact ->
             FileTree files = project.zipTree(artifact.file.absolutePath).matching {
-                for (name in fileNames) {
-                    include "**/$name"
+                if (fileNames) {
+                    for (name in fileNames) {
+                        include "$name"
+                    }
+                } else {
+                    include '*-persistence.xml'
+                    include 'persistence.xml'
                 }
             }
             files.each { xmlFiles.add(it) }
         }
 
         FileTree files = project.fileTree('src').matching {
-            for (name in fileNames) {
-                include "**/$name"
+            if (fileNames) {
+                for (name in fileNames) {
+                    include "$name"
+                }
+            } else {
+                include '*-persistence.xml'
+                include 'persistence.xml'
             }
         }
         files.each { xmlFiles.add(it) }
@@ -132,7 +149,7 @@ class CubaEnhancing extends DefaultTask {
         }
 
         def string = XmlUtil.serialize(doc)
-        logger.info(string)
+        logger.debug(string)
 
         File fullPersistenceXml = new File("$project.buildDir/tmp/persistence/META-INF/persistence.xml")
         fullPersistenceXml.parentFile.mkdirs()
@@ -150,12 +167,9 @@ class CubaEnhancing extends DefaultTask {
     }
 
     private List getTransientEntities() {
-        if (StringUtils.isEmpty(metadataXml))
-            return []
-
-        File f = new File(metadataXml)
-        if (f.exists()) {
-            def metadata = new XmlParser().parse(f)
+        File file = getMetadataXmlFile()
+        if (file) {
+            def metadata = new XmlParser().parse(file)
             def mm = metadata.'metadata-model'[0]
             List allClasses = mm.'class'.collect { it.value()[0] }
             if (metadataPackageRegExp) {
@@ -164,8 +178,27 @@ class CubaEnhancing extends DefaultTask {
             } else
                 return allClasses
         } else {
-            logger.error("File $metadataXml doesn't exist")
-            throw new IllegalArgumentException("File $metadataXml doesn't exist")
+            return []
+        }
+    }
+
+    private File getMetadataXmlFile() {
+        if (metadataXml) {
+            File f = new File(metadataXml)
+            if (!f.exists()) {
+                throw new IllegalArgumentException("File $metadataXml doesn't exist")
+            }
+            return f
+        } else {
+            FileTree files = project.fileTree('src').matching {
+                include '*-metadata.xml'
+                include 'metadata.xml'
+            }
+            if (files.size() > 1) {
+                throw new IllegalArgumentException("There are more than one metadata XML file in the source tree - please specify 'metadataXml' property for the task")
+            } else {
+                return files[0]
+            }
         }
     }
 
@@ -174,13 +207,11 @@ class CubaEnhancing extends DefaultTask {
         def outputDir = new File("$project.buildDir/enhanced-classes/main")
         List allClasses = []
 
-        if (!StringUtils.isEmpty(persistenceConfig)) {
-            project.logger.info(">> Enhance")
+        logger.info("Metadata XML file: ${getMetadataXmlFile()}")
 
+        if (getPersistenceXmlFile()) {
             File fullPersistenceXml = createFullPersistenceXml()
             if (new File("$project.buildDir/classes/main").exists()) {
-                project.logger.info(">> Enhance 2")
-
                 project.javaexec {
                     main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
                     classpath(
