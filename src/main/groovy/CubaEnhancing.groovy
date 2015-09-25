@@ -79,14 +79,16 @@ class CubaEnhancing extends DefaultTask {
                 throw new IllegalArgumentException("File $file doesn't exist")
             }
         } else {
-            FileTree files = project.fileTree('src').matching {
+            FileTree fileTree = project.fileTree('src').matching {
                 include '*-persistence.xml'
                 include 'persistence.xml'
             }
-            if (files.size() > 1) {
+            if (fileTree.isEmpty()) {
+                return null
+            } else if (fileTree.getFiles().size() > 1) {
                 throw new IllegalArgumentException("There are more than one persistence XML file in the source tree - please specify 'persistenceConfig' property for the task")
             } else {
-                return files[0]
+                return fileTree.getSingleFile()
             }
         }
     }
@@ -190,14 +192,16 @@ class CubaEnhancing extends DefaultTask {
             }
             return f
         } else {
-            FileTree files = project.fileTree('src').matching {
+            FileTree fileTree = project.fileTree('src').matching {
                 include '*-metadata.xml'
                 include 'metadata.xml'
             }
-            if (files.size() > 1) {
+            if (fileTree.isEmpty()) {
+                return null
+            } else if (fileTree.getFiles().size() > 1) {
                 throw new IllegalArgumentException("There are more than one metadata XML file in the source tree - please specify 'metadataXml' property for the task")
-            } else {
-                return files[0]
+            } else  {
+                return fileTree.getSingleFile()
             }
         }
     }
