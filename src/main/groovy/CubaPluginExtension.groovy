@@ -53,6 +53,13 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         project.configure(uploadRepository, closure)
     }
 
+    @Override
+    String toString() {
+        def SEP = "^^"
+        String res = "cuba.tomcat.dir: " + tomcat.dir + SEP;
+        return res
+    }
+
     class TomcatConfiguration {
         Project project
         String dir
