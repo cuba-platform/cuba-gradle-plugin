@@ -88,7 +88,7 @@ class CubaPlugin implements Plugin<Project> {
 
         project.dependencies {
             tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.0.26', ext: 'zip')
-            tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '4.0.2', ext: 'zip')
+            tomcatInit(group: 'com.haulmont.appservers', name: 'tomcat-init', version: '4.0.3', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat')
