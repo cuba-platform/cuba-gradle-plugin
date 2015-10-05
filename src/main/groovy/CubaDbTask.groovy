@@ -13,6 +13,7 @@ import org.apache.commons.lang.text.StrTokenizer
 import org.gradle.api.DefaultTask
 
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 /**
  * @author krivopustov
@@ -113,11 +114,12 @@ public abstract class CubaDbTask extends DefaultTask {
     protected void executeSqlScript(File file) {
         String script = FileUtils.readFileToString(file, "UTF-8")
         script = script.replaceAll("[\r\n]+", System.getProperty("line.separator"))
-        StrTokenizer tokenizer = new StrTokenizer(
-                script, StrMatcher.charSetMatcher(delimiter), StrMatcher.singleQuoteMatcher())
+
         Sql sql = getSql()
-        while (tokenizer.hasNext()) {
-            String sqlCommand = tokenizer.nextToken().trim()
+
+        def splitter = new ScriptSplitter(delimiter)
+        def commands = splitter.split(script)
+        for (String sqlCommand : commands) {
             if (!isEmpty(sqlCommand)) {
                 project.logger.info(">>> executing SQL: $sqlCommand")
                 sql.execute(sqlCommand)
@@ -283,6 +285,21 @@ public abstract class CubaDbTask extends DefaultTask {
                 logger?.info(">>> [getInitScripts] $dbDir doesn't exist")
             }
             return files
+        }
+    }
+
+    static class ScriptSplitter {
+
+        String delimiter
+
+        ScriptSplitter(String delimiter) {
+            this.delimiter = delimiter
+        }
+
+        def List<String> split(String script) {
+            def qd = Pattern.quote(delimiter)
+            String[] commands = script.split('(?<!' + qd + ')' + qd + '(?!' + qd + ')') // regex for ^: (?<!\^)\^(?!\^)
+            return Arrays.asList(commands).collect { it.replace(delimiter + delimiter, delimiter) }
         }
     }
 }
