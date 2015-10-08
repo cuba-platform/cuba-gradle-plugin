@@ -283,6 +283,7 @@ class CubaEnhancing extends DefaultTask {
             project.sourceSets.main.compileClasspath.each { File file ->
                 pool.insertClassPath(file.toString())
             }
+            pool.insertClassPath(project.sourceSets.main.output.classesDir.toString())
             pool.insertClassPath(outputDir.toString())
 
             def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
