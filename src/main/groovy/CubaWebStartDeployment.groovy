@@ -23,7 +23,7 @@ class CubaWebStartDeployment extends DefaultTask {
     def deploy() {
         File distDir = new File(project.buildDir, "distributions/${basePath}")
 
-        project.logger.info(">>> copying web start distribution from ${distDir} to ${project.cuba.tomcat.dir}/webapps/$basePath")
+        project.logger.info("[CubaWebStartDeployment] copying web start distribution from ${distDir} to ${project.cuba.tomcat.dir}/webapps/$basePath")
 
         project.copy {
             from distDir

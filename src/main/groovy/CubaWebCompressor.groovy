@@ -75,7 +75,7 @@ class CubaWebCompressor extends DefaultTask {
             isCompressed = true
         }
         catch (Exception e) {
-            project.logger.warn(">>> File ${from} is NOT compressed", e)
+            project.logger.warn("[CubaWebCompressor] File ${from} is NOT compressed", e)
         }
         finally {
             reader.close()
@@ -94,7 +94,7 @@ class CubaWebCompressor extends DefaultTask {
             isCompressed = true
         }
         catch (Exception e) {
-            project.logger.warn(">>> File ${from} is NOT compressed", e)
+            project.logger.warn("[CubaWebCompressor] File ${from} is NOT compressed", e)
         }
         finally {
             reader.close()

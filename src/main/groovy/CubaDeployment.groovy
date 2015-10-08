@@ -40,7 +40,7 @@ class CubaDeployment extends DefaultTask {
     def deploy() {
         if (!tomcatRootDir)
             tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
-        project.logger.info(">>> copying from configurations.jdbc to ${tomcatRootDir}/lib")
+        project.logger.info("[CubaDeployment] copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc {
                 exclude {f ->
@@ -53,7 +53,7 @@ class CubaDeployment extends DefaultTask {
             }
             into "${tomcatRootDir}/lib"
         }
-        project.logger.info(">>> copying shared libs from configurations.runtime")
+        project.logger.info("[CubaDeployment] copying shared libs from configurations.runtime")
 
         File sharedLibDir = new File("${tomcatRootDir}/shared/lib")
         List<String> copiedToSharedLib = []
@@ -79,7 +79,7 @@ class CubaDeployment extends DefaultTask {
 
         File appLibDir = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/lib")
         List<String> copiedToAppLib = []
-        project.logger.info(">>> copying app libs from configurations.runtime")
+        project.logger.info("[CubaDeployment] copying app libs from configurations.runtime")
         project.copy {
             from project.configurations.runtime
             from project.libsDir
@@ -102,7 +102,7 @@ class CubaDeployment extends DefaultTask {
         }
 
         if (project.configurations.getAsMap().dbscripts) {
-            project.logger.info(">>> copying dbscripts from ${project.buildDir}/db to ${tomcatRootDir}/webapps/$appName/WEB-INF/db")
+            project.logger.info("[CubaDeployment] copying dbscripts from ${project.buildDir}/db to ${tomcatRootDir}/webapps/$appName/WEB-INF/db")
             project.copy {
                 from "${project.buildDir}/db"
                 into "${tomcatRootDir}/webapps/$appName/WEB-INF/db"
@@ -113,7 +113,7 @@ class CubaDeployment extends DefaultTask {
         if (project.configurations.getAsMap().webcontent) {
             def excludePatterns = ['**/web.xml'] + webcontentExclude
             project.configurations.webcontent.files.each { dep ->
-                project.logger.info(">>> copying webcontent from $dep.absolutePath to ${tomcatRootDir}/webapps/$appName")
+                project.logger.info("[CubaDeployment] copying webcontent from $dep.absolutePath to ${tomcatRootDir}/webapps/$appName")
                 project.copy {
                     from project.zipTree(dep.absolutePath)
                     into "${tomcatRootDir}/webapps/$appName"
@@ -121,14 +121,14 @@ class CubaDeployment extends DefaultTask {
                     includeEmptyDirs = false
                 }
             }
-            project.logger.info(">>> copying webcontent from ${project.buildDir}/web to ${tomcatRootDir}/webapps/$appName")
+            project.logger.info("[CubaDeployment] copying webcontent from ${project.buildDir}/web to ${tomcatRootDir}/webapps/$appName")
             project.copy {
                 from "${project.buildDir}/web"
                 into "${tomcatRootDir}/webapps/$appName"
             }
         }
 
-        project.logger.info(">>> copying from web to ${tomcatRootDir}/webapps/$appName")
+        project.logger.info("[CubaDeployment] copying from web to ${tomcatRootDir}/webapps/$appName")
         project.copy {
             from 'web'
             into "${tomcatRootDir}/webapps/$appName"
@@ -145,13 +145,13 @@ class CubaDeployment extends DefaultTask {
         }
 
         if (doAfter) {
-            project.logger.info(">>> calling doAfter")
+            project.logger.info("[CubaDeployment] calling doAfter")
             doAfter.call()
         }
 
         def webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         if (project.ext.has('webResourcesTs')) {
-            project.logger.info(">>> update web resources timestamp")
+            project.logger.info("[CubaDeployment] update web resources timestamp")
 
             // detect version automatically
             def buildTimeStamp = project.ext.get('webResourcesTs')
@@ -163,7 +163,7 @@ class CubaDeployment extends DefaultTask {
             webXml.write(webXmlText)
         }
 
-        project.logger.info(">>> touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
+        project.logger.info("[CubaDeployment] touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(System.currentTimeMillis())
     }
 
@@ -329,7 +329,7 @@ class CubaDeployment extends DefaultTask {
                             def aNameLibrary = key + "-" + versionsList.get(i) + ".jar"
                             def bNameLibrary = key + "-" + versionsList.get(j) + ".jar"
                             if (logger)
-                                logger(">>> library ${relativePath}/${aNameLibrary} conflicts with ${bNameLibrary}")
+                                logger("[CubaDeployment] library ${relativePath}/${aNameLibrary} conflicts with ${bNameLibrary}")
                         }
                     }
                 }
@@ -338,7 +338,7 @@ class CubaDeployment extends DefaultTask {
             removeSet.each { String fileName ->
                 new File(path, fileName).delete()
                 if (logger)
-                    logger(">>> remove library ${relativePath }/${fileName}")
+                    logger("[CubaDeployment] remove library ${relativePath }/${fileName}")
             }
         }
     }

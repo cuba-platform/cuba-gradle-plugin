@@ -25,7 +25,7 @@ class CubaHsqlStop extends CubaHsqlTask {
             )
             Thread.sleep(1000)
         } catch (Exception e) {
-            logger.warn(">>> error stopping local HSQLDB server: $e")
+            logger.warn("[CubaHsqlStop] error stopping local HSQLDB server: $e")
         }
     }
 }

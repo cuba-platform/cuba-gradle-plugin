@@ -134,7 +134,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             stylesDirectory = scssDir as File
 
         if (themes.empty) {
-            project.logger.info(">>> scan directory '${stylesDirectory}' for themes")
+            project.logger.info("[CubaWebScssThemeCreation] scan directory '${stylesDirectory}' for themes")
             for (File themeDir : project.file(stylesDirectory).listFiles(dirFilter))
                 themes.add(themeDir)
         }
@@ -144,7 +144,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         if (themesConf) {
             def themesResolvedArtifacts = themesConf.resolvedConfiguration.getResolvedArtifacts()
             themesResolvedArtifacts.each { ResolvedArtifact artifact ->
-                project.logger.info(">>> unpack themes artifact ${artifact.name}")
+                project.logger.info("[CubaWebScssThemeCreation] unpack themes artifact ${artifact.name}")
 
                 File tmpDir = Files.createTempDirectory('themes_' + artifact.name).toFile()
                 try {
@@ -174,7 +174,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         // copy includes to build dir
         includes.each { File includeThemeDir ->
-            project.logger.info(">>> copy includes from '${includeThemeDir.name}'")
+            project.logger.info("[CubaWebScssThemeCreation] copy includes from '${includeThemeDir.name}'")
             if (!includeThemeDir.exists())
                 throw new FileNotFoundException("Could not found include dir ${includeThemeDir.absolutePath}")
 
@@ -186,7 +186,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         // copy include resources
         includes.each { File includeThemeDir ->
-            project.logger.info(">>> copy resources from '${includeThemeDir.name}'")
+            project.logger.info("[CubaWebScssThemeCreation] copy resources from '${includeThemeDir.name}'")
             if (!includeThemeDir.exists())
                 throw new FileNotFoundException("Could not found include dir ${includeThemeDir.absolutePath}")
 
@@ -199,7 +199,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         if (themeDirs) {
             for (File themeSourceDir : themeDirs) {
                 if (themeSourceDir.isDirectory()) {
-                    project.logger.info(">>> copy resources from '${themeSourceDir.name}'")
+                    project.logger.info("[CubaWebScssThemeCreation] copy resources from '${themeSourceDir.name}'")
 
                     def themeDestDir = new File(destinationDirectory, themeSourceDir.name)
                     copyIncludeResources(themeSourceDir, themeDestDir)
@@ -209,14 +209,14 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         excludes.each { def themeName ->
             def themeDestDir = new File(destinationDirectory, themeName)
-            project.logger.info(">>> excluded theme '$themeName'")
+            project.logger.info("[CubaWebScssThemeCreation] excluded theme '$themeName'")
 
             FileUtils.deleteQuietly(themeDestDir)
         }
 
         excludePaths.each { def path ->
             def pathFile = new File(destinationDirectory, path)
-            project.logger.info(">>> excluded path '$path'")
+            project.logger.info("[CubaWebScssThemeCreation] excluded path '$path'")
 
             FileUtils.deleteQuietly(pathFile)
         }
@@ -230,7 +230,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             if (!themeDestDir.exists())
                 themeDestDir.mkdir()
 
-            project.logger.info(">>> copy theme '${themeDir.name}' to build directory")
+            project.logger.info("[CubaWebScssThemeCreation] copy theme '${themeDir.name}' to build directory")
             // copy theme to build directory
             project.copy {
                 from themeDir
@@ -240,7 +240,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 }
             }
 
-            project.logger.info(">>> copy theme resources for '${themeDir.name}'")
+            project.logger.info("[CubaWebScssThemeCreation] copy theme resources for '${themeDir.name}'")
             // copy resources from themeBuildDir, override may be used
             project.copy {
                 from themeBuildDir
@@ -250,7 +250,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 }
             }
 
-            project.logger.info(">>> compile theme '${themeDir.name}'")
+            project.logger.info("[CubaWebScssThemeCreation] compile theme '${themeDir.name}'")
 
             def scssFilePath = project.file("${themeBuildDir}/styles.scss").absolutePath
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
@@ -270,7 +270,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
 
             if (sprites) {
-                project.logger.info(">>> compile sprites for theme '${themeDir.name}'")
+                project.logger.info("[CubaWebScssThemeCreation] compile sprites for theme '${themeDir.name}'")
 
                 def compiledSpritesDir = new File(themeDestDir, 'compiled')
                 if (!compiledSpritesDir.exists())
@@ -302,7 +302,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
 
             if (compress) {
-                project.logger.info(">>> compress theme '${themeDir.name}'")
+                project.logger.info("[CubaWebScssThemeCreation] compress theme '${themeDir.name}'")
 
                 def compressedFile = new File(cssFilePath + '.compressed')
                 def cssFile = new File(cssFilePath)
@@ -327,7 +327,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 recursiveVisitDir(themeDestDir, { File f ->
                     boolean isEmpty = f.list().length == 0
                     if (isEmpty) {
-                        project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDir.name}'")
+                        project.logger.info("[CubaWebScssThemeCreation] remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDir.name}'")
                         f.deleteDir()
                     }
                 })
@@ -340,7 +340,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             // update build timestamp for urls
             if (StringUtils.isNotEmpty(buildTimeStamp)) {
-                project.logger.info(">>> add build timestamp to '${themeDir.name}'")
+                project.logger.info("[CubaWebScssThemeCreation] add build timestamp to '${themeDir.name}'")
                 // read
                 def cssFile = new File(cssFilePath)
                 def versionedFile = new File(cssFilePath + ".versioned")
@@ -356,7 +356,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 versionedFile.renameTo(cssFile)
             }
 
-            project.logger.info(">>> successfully compiled theme '${themeDir.name}'")
+            project.logger.info("[CubaWebScssThemeCreation] successfully compiled theme '${themeDir.name}'")
         }
 
         if (cleanup) {
@@ -378,7 +378,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             recursiveVisitDir(themeDestDir, { File f ->
                 boolean isEmpty = f.list().length == 0
                 if (isEmpty) {
-                    project.logger.info(">>> remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDestDir.name}'")
+                    project.logger.info("[CubaWebScssThemeCreation] remove empty dir ${themeDestDir.toPath().relativize(f.toPath())} in '${themeDestDir.name}'")
                     f.deleteDir()
                 }
             })

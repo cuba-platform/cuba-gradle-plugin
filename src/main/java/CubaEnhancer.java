@@ -37,12 +37,12 @@ public class CubaEnhancer {
 
             for (CtClass intf : cc.getInterfaces()) {
                 if (intf.getName().equals(ENHANCED_TYPE) || intf.getName().equals(CubaEnhancer.ENHANCED_DISABLED_TYPE)) {
-                    log.info("CubaEnhancer: " + className + " has already been enhanced or should not be enhanced at all");
+                    log.info("[CubaEnhancer] " + className + " has already been enhanced or should not be enhanced at all");
                     return;
                 }
             }
 
-            log.info("CubaEnhancer: enhancing " + className);
+            log.info("[CubaEnhancer] enhancing " + className);
             enhanceSetters(cc);
 
             cc.addInterface(pool.get("com.haulmont.cuba.core.sys.CubaEnhanced"));

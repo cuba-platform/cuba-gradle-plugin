@@ -33,6 +33,6 @@ abstract class CubaHsqlTask extends DefaultTask {
                 GroovyObject.class.classLoader.addURL(url)
             }
         }
-        project.logger.info(">>> driverClasspath: $driverClasspath")
+        project.logger.info("[CubaHsqlTask] driverClasspath: $driverClasspath")
     }
 }

@@ -28,7 +28,7 @@ class CubaStartTomcat extends DefaultTask {
         }
 
         def binDir = "${tomcatRootDir}/bin"
-        project.logger.info ">>> starting $tomcatRootDir"
+        project.logger.info "[CubaStartTomcat] starting $tomcatRootDir"
 
         def tomcatStartScript = System.getenv("CUBA_TOMCAT_START_SCRIPT")
         if (StringUtils.isBlank(tomcatStartScript)) {

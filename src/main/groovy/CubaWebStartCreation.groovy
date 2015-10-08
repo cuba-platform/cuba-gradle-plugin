@@ -44,7 +44,7 @@ class CubaWebStartCreation extends DefaultTask {
         if (!signerCacheDir.exists())
             signerCacheDir.mkdir()
 
-        project.logger.info(">>> copying app libs from configurations.runtime to ${libDir}")
+        project.logger.info("[CubaWebStartCreation] copying app libs from configurations.runtime to ${libDir}")
 
         project.copy {
             from project.configurations.runtime
@@ -56,7 +56,7 @@ class CubaWebStartCreation extends DefaultTask {
             }
         }
 
-        project.logger.info(">>> signing jars in ${libDir}")
+        project.logger.info("[CubaWebStartCreation] signing jars in ${libDir}")
 
 		Date startStamp = new Date()
 
@@ -70,15 +70,15 @@ class CubaWebStartCreation extends DefaultTask {
                 }
             }
 
-            project.logger.info(">>> do not cache jars: ${applicationSignJars}")
+            project.logger.info("[CubaWebStartCreation] do not cache jars: ${applicationSignJars}")
         }
 
 		GParsPool.withPool(jarSignerThreadCount) {
 			libDir.listFiles().eachParallel { File jarFile ->
                 try {
-                    project.logger.info(">>> started sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
+                    project.logger.info("[CubaWebStartCreation] started sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
                     doSignFile(jarFile, signerCacheDir)
-                    project.logger.info(">>> finished sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
+                    project.logger.info("[CubaWebStartCreation] finished sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
                 } catch (Exception e) {
                     project.logger.error("failed to sign jar file $jarFile.name", e)
                 }
@@ -88,9 +88,9 @@ class CubaWebStartCreation extends DefaultTask {
 		Date endStamp = new Date()
 		long processTime = endStamp.getTime() - startStamp.getTime()
 
-		project.logger.info(">>> signing time: ${processTime}")
+		project.logger.info("[CubaWebStartCreation] signing time: ${processTime}")
 
-        project.logger.info(">>> creating JNLP file from ${jnlpTemplateName}")
+        project.logger.info("[CubaWebStartCreation] creating JNLP file from ${jnlpTemplateName}")
 
         File jnlpTemplate = new File(jnlpTemplateName)
         def jnlpNode = new XmlParser().parse(jnlpTemplate)
@@ -116,14 +116,14 @@ class CubaWebStartCreation extends DefaultTask {
         new XmlNodePrinter(new PrintWriter(new FileWriter(jnlpFile))).print(jnlpNode)
 
         if (indexFileName) {
-            project.logger.info(">>> copying index file from ${indexFileName} to ${distDir}")
+            project.logger.info("[CubaWebStartCreation] copying index file from ${indexFileName} to ${distDir}")
             project.copy {
                 from indexFileName
                 into distDir.getAbsolutePath()
             }
         }
 
-        project.logger.info(">>> creating empty web.xml file")
+        project.logger.info("[CubaWebStartCreation] creating empty web.xml file")
         File webInfDir = new File(distDir, 'WEB-INF')
         webInfDir.mkdirs();
         File webXmlFile = new File(webInfDir, 'web.xml')
@@ -141,10 +141,10 @@ class CubaWebStartCreation extends DefaultTask {
         if (useSignerCache && cachedJar.exists() &&
                 !libraryName.endsWith('-SNAPSHOT')
                 && !applicationSignJars.contains(libraryName)) {
-            project.logger.info(">>> use cached jar: ${jarFile}")
+            project.logger.info("[CubaWebStartCreation] use cached jar: ${jarFile}")
             FileUtils.copyFile(cachedJar, jarFile)
         } else {
-            project.logger.info(">>> sign: ${jarFile}")
+            project.logger.info("[CubaWebStartCreation] sign: ${jarFile}")
 
             def sharedAnt
             if (threadLocalAnt.get())
@@ -159,7 +159,7 @@ class CubaWebStartCreation extends DefaultTask {
 
             if (useSignerCache && !libraryName.endsWith('-SNAPSHOT')
                     && !applicationSignJars.contains(libraryName)) {
-                project.logger.info(">>> cache jar: ${jarFile}")
+                project.logger.info("[CubaWebStartCreation] cache jar: ${jarFile}")
                 FileUtils.copyFile(jarFile, cachedJar)
             }
         }

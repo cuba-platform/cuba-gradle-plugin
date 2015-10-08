@@ -25,7 +25,7 @@ class CubaClearMessagesCache extends DefaultTask {
         def fileName = "${project.cuba.tomcat.dir}/temp/$appName/triggers/cuba_Messages.clearCache"
         File file = new File(fileName)
         if (!file.exists()) {
-            project.logger.info ">>> creating $fileName"
+            project.logger.info "[CubaClearMessagesCache] creating $fileName"
             file.getParentFile().mkdirs()
             file.createNewFile()
         }

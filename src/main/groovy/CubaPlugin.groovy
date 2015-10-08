@@ -25,11 +25,11 @@ class CubaPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
-        project.logger.info(">>> applying to project $project.name")
+        project.logger.info("[CubaPlugin] applying to project $project.name")
 
         project.repositories {
             project.rootProject.buildscript.repositories.each {
-                project.logger.info(">>> using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
+                project.logger.info("[CubaPlugin] using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
                 project.repositories.add(it)
             }
         }
@@ -66,7 +66,7 @@ class CubaPlugin implements Plugin<Project> {
             def uploadUser = project.cuba.uploadRepository.user
             def uploadPassword = project.cuba.uploadRepository.password
 
-            project.logger.info(">>> upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
+            project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
 
             project.uploadArchives.configure {
                 repositories.mavenDeployer {
@@ -124,7 +124,7 @@ class CubaPlugin implements Plugin<Project> {
         dropTomcat.listeningPort = '8787'
 
         if (project.hasProperty('idea')) {
-            project.logger.info ">>> configuring IDEA project"
+            project.logger.info "[CubaPlugin] configuring IDEA project"
             project.idea.project.ipr {
                 withXml { provider ->
                     def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
@@ -151,7 +151,7 @@ class CubaPlugin implements Plugin<Project> {
                 def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
                 def listNode = runManagerNode.list.find { it }
                 if (listNode.@size == '0') {
-                    project.logger.info(">>> Creating remote configuration ")
+                    project.logger.info("[CubaPlugin] Creating remote configuration ")
                     def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
                     confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
                     confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
@@ -167,7 +167,7 @@ class CubaPlugin implements Plugin<Project> {
                 def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
                 def ignored = changeListManagerNode.ignored.find { it }
                 if (ignored == null) {
-                    project.logger.info(">>> Configure ignored files")
+                    project.logger.info("[CubaPlugin] Configure ignored files")
                     changeListManagerNode.appendNode('ignored', [mask: '*.ipr'])
                     changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
                     changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
@@ -185,7 +185,7 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project.hasProperty('eclipse')) {
-            project.logger.info ">>> configuring Eclipse project"
+            project.logger.info "[CubaPlugin] configuring Eclipse project"
             project.eclipse.project.file.withXml { provider ->
                 def projectDescription = provider.asNode()
 
@@ -374,7 +374,7 @@ class CubaPlugin implements Plugin<Project> {
             }
 
             def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
-            project.logger.info(">>> set web resources timestamp for project " + project.name)
+            project.logger.info("[CubaPlugin] set web resources timestamp for project " + project.name)
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
 
@@ -385,7 +385,7 @@ class CubaPlugin implements Plugin<Project> {
                 // add default vaadin-themes dependency
                 if (vaadinLib) {
                     def dependency = vaadinLib.moduleVersion.id
-                    project.logger.info(">>> add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
+                    project.logger.info("[CubaPlugin] add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
 
                     project.dependencies {
                         themes(group: dependency.group, name: 'vaadin-themes', version: dependency.version)
@@ -400,7 +400,7 @@ class CubaPlugin implements Plugin<Project> {
 
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.ideaModule.doFirst { acceptLicense(project) }
-            project.logger.info ">>> configuring IDEA module $project.name"
+            project.logger.info "[CubaPlugin] configuring IDEA module $project.name"
 
             List<Configuration> providedConfs = new ArrayList<>()
             providedConfs.add(project.configurations.provided)
@@ -444,7 +444,7 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project.hasProperty('eclipse')) {
-            project.logger.info ">>> configuring Eclipse module $project.name"
+            project.logger.info "[CubaPlugin] configuring Eclipse module $project.name"
 
             project.eclipse.classpath {
                 plusConfigurations += project.configurations.provided

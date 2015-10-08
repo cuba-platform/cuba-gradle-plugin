@@ -26,7 +26,7 @@ class CubaStopTomcat extends DefaultTask {
         }
 
         def binDir = "${tomcatRootDir}/bin"
-        project.logger.info ">>> stopping $tomcatRootDir"
+        project.logger.info "[CubaStopTomcat] stopping $tomcatRootDir"
         ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
             env(key: 'NOPAUSE', value: true)
             if (project.hasProperty('studioJavaHome')) {

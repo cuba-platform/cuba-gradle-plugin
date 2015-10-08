@@ -27,7 +27,7 @@ class CubaDropTomcat extends DefaultTask {
         }
         File dir = new File(tomcatRootDir)
         if (dir.exists()) {
-            project.logger.info ">>> deleting $dir"
+            project.logger.info "[CubaDropTomcat] deleting $dir"
             // stop
             def binDir = "${tomcatRootDir}/bin"
 

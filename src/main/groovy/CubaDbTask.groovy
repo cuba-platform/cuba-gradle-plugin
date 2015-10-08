@@ -69,7 +69,7 @@ public abstract class CubaDbTask extends DefaultTask {
                 GroovyObject.class.classLoader.addURL(url)
             }
         }
-        project.logger.info(">>> driverClasspath: $driverClasspath")
+        project.logger.info("[CubaDbTask] driverClasspath: $driverClasspath")
 
     }
 
@@ -121,7 +121,7 @@ public abstract class CubaDbTask extends DefaultTask {
         def commands = splitter.split(script)
         for (String sqlCommand : commands) {
             if (!isEmpty(sqlCommand)) {
-                project.logger.info(">>> executing SQL: $sqlCommand")
+                project.logger.info("[CubaDbTask] executing SQL: $sqlCommand")
                 sql.execute(sqlCommand)
             }
         }
@@ -236,7 +236,7 @@ public abstract class CubaDbTask extends DefaultTask {
             if (dbDir.exists()) {
                 String[] moduleDirs = dbDir.list()
                 Arrays.sort(moduleDirs)
-                logger?.info(">>> [getInitScripts] modules: $moduleDirs")
+                logger?.info("[CubaDbTask] [getInitScripts] modules: $moduleDirs")
                 for (String moduleDirName: moduleDirs) {
                     if (oneModuleDir && moduleDirName != oneModuleDir)
                         continue
@@ -275,14 +275,14 @@ public abstract class CubaDbTask extends DefaultTask {
 
                         list.sort { File f1, File f2 -> f1.getName().compareTo(f2.getName()) }
 
-                        logger?.info(">>> [getInitScripts] files: $list")
+                        logger?.info("[CubaDbTask] [getInitScripts] files: $list")
                         files.addAll(list)
                     } else {
-                        logger?.info(">>> [getInitScripts] $scriptDir doesn't exist")
+                        logger?.info("[CubaDbTask] [getInitScripts] $scriptDir doesn't exist")
                     }
                 }
             } else {
-                logger?.info(">>> [getInitScripts] $dbDir doesn't exist")
+                logger?.info("[CubaDbTask] [getInitScripts] $dbDir doesn't exist")
             }
             return files
         }

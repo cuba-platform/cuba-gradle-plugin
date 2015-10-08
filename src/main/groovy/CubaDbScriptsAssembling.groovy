@@ -38,16 +38,16 @@ class CubaDbScriptsAssembling extends DefaultTask {
     void assemble() {
         Configuration dbscripts = project.configurations.findByName('dbscripts')
         if (dbscripts) {
-            project.logger.info '>>> project has dbscripts'
+            project.logger.info '[CubaDbScriptsAssembling] project has dbscripts'
             def dir = new File("${project.buildDir}/db")
             if (dir.exists()) {
-                project.logger.info ">>> delete $dir.absolutePath"
+                project.logger.info "[CubaDbScriptsAssembling] delete $dir.absolutePath"
                 project.delete(dir)
             }
             dir.mkdir()
 
             dbscripts.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-                project.logger.info ">>> copy db from: $artifact.file.absolutePath"
+                project.logger.info "[CubaDbScriptsAssembling] copy db from: $artifact.file.absolutePath"
                 project.copy {
                     from project.zipTree(artifact.file.absolutePath)
                     into dir
@@ -55,7 +55,7 @@ class CubaDbScriptsAssembling extends DefaultTask {
             }
 
             def srcDbDir = new File(project.projectDir, 'db')
-            project.logger.info ">>> srcDbDir: $srcDbDir.absolutePath"
+            project.logger.info "[CubaDbScriptsAssembling] srcDbDir: $srcDbDir.absolutePath"
             if (srcDbDir.exists() && dir.exists()) {
                 def moduleDirName = moduleAlias
                 if (!moduleDirName) {
@@ -68,7 +68,7 @@ class CubaDbScriptsAssembling extends DefaultTask {
                 }
                 if (moduleDirName) {
                     project.copy {
-                        project.logger.info ">>> copy db from: $srcDbDir.absolutePath"
+                        project.logger.info "[CubaDbScriptsAssembling] copy db from: $srcDbDir.absolutePath"
                         from srcDbDir
                         into "${project.buildDir}/db/${moduleDirName}"
                     }

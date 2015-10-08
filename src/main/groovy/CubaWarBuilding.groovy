@@ -149,7 +149,7 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     private void copyLibs(Project theProject) {
-        theProject.logger.info(">>> copying libs from configurations.runtime")
+        theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
         theProject.copy {
             from theProject.configurations.runtime
             from theProject.libsDir
@@ -190,7 +190,7 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     private void copyWebContent(Project theProject) {
-        theProject.logger.info(">>> copying from web to ${warDir(theProject)}")
+        theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
         theProject.copy {
             from 'web'
             into warDir(theProject)
@@ -198,7 +198,7 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (webXml) {
-            theProject.logger.info(">>> copying web.xml from ${webXml} to ${warDir(theProject)}/web.xml")
+            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXml} to ${warDir(theProject)}/web.xml")
             theProject.copy {
                 from webXml
                 into "${warDir(theProject)}/WEB-INF/"
@@ -214,7 +214,7 @@ class CubaWarBuilding extends DefaultTask {
             if (theProject.configurations.getAsMap().webcontent) {
                 def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
                 theProject.configurations.webcontent.files.each { dep ->
-                    theProject.logger.info(">>> copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
+                    theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
                     theProject.copy {
                         from theProject.zipTree(dep.absolutePath)
                         into warDir(theProject)
@@ -222,7 +222,7 @@ class CubaWarBuilding extends DefaultTask {
                         includeEmptyDirs = false
                     }
                 }
-                theProject.logger.info(">>> copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
+                theProject.logger.info("[CubaWarBuilding] copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
                 theProject.copy {
                     from "${theProject.buildDir}/web"
                     into warDir(theProject)
@@ -231,7 +231,7 @@ class CubaWarBuilding extends DefaultTask {
             }
             def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
             if (webToolkit) {
-                theProject.logger.info(">>> copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
+                theProject.logger.info("[CubaWarBuilding] copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
                 theProject.copy {
                     from "${webToolkit.buildDir}/web"
                     into warDir(theProject)
@@ -239,7 +239,7 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
         } else {
-            theProject.logger.info(">>> copying webcontent from theProject-all directories to ${warDir(theProject)}")
+            theProject.logger.info("[CubaWarBuilding] copying webcontent from theProject-all directories to ${warDir(theProject)}")
             theProject.copy {
                 from new File(project.project(':cuba-web').projectDir, 'web')
                 from new File(project.project(':charts-web').projectDir, 'web')
@@ -257,7 +257,7 @@ class CubaWarBuilding extends DefaultTask {
 
     private void writeLocalAppProperties(Project theProject, def properties) {
         File appPropFile = new File("${warDir(theProject)}/WEB-INF/local.app.properties")
-        project.logger.info(">>> writing $appPropFile")
+        project.logger.info("[CubaWarBuilding] writing $appPropFile")
         appPropFile.withWriter('UTF-8') { writer ->
             properties.each { key, value ->
                 writer << key << ' = ' << value << '\n'
@@ -267,7 +267,7 @@ class CubaWarBuilding extends DefaultTask {
 
     private void processDoAfter() {
         if (doAfter) {
-            project.logger.info(">>> calling doAfter")
+            project.logger.info("[CubaWarBuilding] calling doAfter")
             doAfter.call()
         }
     }
@@ -275,7 +275,7 @@ class CubaWarBuilding extends DefaultTask {
     private void touchWebXml(Project theProject) {
         def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
         if (project.ext.has('webResourcesTs')) {
-            project.logger.info(">>> update web resources timestamp")
+            project.logger.info("[CubaWarBuilding] update web resources timestamp")
 
             // detect version automatically
             def buildTimeStamp = project.ext.get('webResourcesTs')
@@ -286,7 +286,7 @@ class CubaWarBuilding extends DefaultTask {
             }
             webXml.write(webXmlText)
         }
-        project.logger.info(">>> touch ${warDir(theProject)}/WEB-INF/web.xml")
+        project.logger.info("[CubaWarBuilding] touch ${warDir(theProject)}/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
