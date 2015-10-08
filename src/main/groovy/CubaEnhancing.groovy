@@ -125,7 +125,7 @@ class CubaEnhancing extends DefaultTask {
         }
         files.each { xmlFiles.add(it) }
 
-        logger.info("Persistence XML files: $xmlFiles")
+        logger.info("[CubaEnhancing] Persistence XML files: $xmlFiles")
 
         def parser = new XmlParser()
         Node doc = null
@@ -151,7 +151,7 @@ class CubaEnhancing extends DefaultTask {
         }
 
         def string = XmlUtil.serialize(doc)
-        logger.debug(string)
+        logger.debug('[CubaEnhancing] fullPersistenceXml:\n' + string)
 
         File fullPersistenceXml = new File("$project.buildDir/tmp/persistence/META-INF/persistence.xml")
         fullPersistenceXml.parentFile.mkdirs()
@@ -211,11 +211,12 @@ class CubaEnhancing extends DefaultTask {
         def outputDir = new File("$project.buildDir/enhanced-classes/main")
         List allClasses = []
 
-        logger.info("Metadata XML file: ${getMetadataXmlFile()}")
+        logger.info("[CubaEnhancing] Metadata XML file: ${getMetadataXmlFile()}")
 
         if (getPersistenceXmlFile()) {
             File fullPersistenceXml = createFullPersistenceXml()
             if (new File("$project.buildDir/classes/main").exists()) {
+                logger.info("[CubaEnhancing] start EclipseLink enhancing")
                 project.javaexec {
                     main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
                     classpath(
@@ -224,7 +225,7 @@ class CubaEnhancing extends DefaultTask {
                             project.configurations.enhance
                     )
                     args "-loglevel"
-                    args "FINER"
+                    args "INFO"
                     args "-persistenceinfo"
                     args "$project.buildDir/tmp/persistence"
                     args "$project.buildDir/classes/main"
@@ -276,12 +277,12 @@ class CubaEnhancing extends DefaultTask {
         }
 
         if (outputDir.exists()) {
-            // CUBA-specific enhancing
-            ClassPool pool = ClassPool.getDefault()
+            logger.info("[CubaEnhancing] start CUBA enhancing")
+            ClassPool pool = new ClassPool(null)
+            pool.appendSystemPath()
             project.sourceSets.main.compileClasspath.each { File file ->
                 pool.insertClassPath(file.toString())
             }
-            pool.insertClassPath(project.sourceSets.main.output.classesDir.toString())
             pool.insertClassPath(outputDir.toString())
 
             def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
