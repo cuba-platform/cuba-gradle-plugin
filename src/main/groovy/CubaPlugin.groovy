@@ -447,7 +447,7 @@ class CubaPlugin implements Plugin<Project> {
             project.logger.info "[CubaPlugin] configuring Eclipse module $project.name"
 
             project.eclipse.classpath {
-                plusConfigurations += project.configurations.provided
+                plusConfigurations += [project.configurations.provided]
                 file.whenMerged { classpath ->
                     classpath.entries.removeAll { entry ->
                         entry.path.contains('build/enhanced-classes')
