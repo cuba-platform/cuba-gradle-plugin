@@ -66,6 +66,17 @@ class CubaPlugin implements Plugin<Project> {
             def uploadUser = project.cuba.uploadRepository.user
             def uploadPassword = project.cuba.uploadRepository.password
 
+            // Override upload properties if passed as project parameters, gradle upload -PuploadUrl http://someurl
+            if (project.hasProperty('uploadUrl')) {
+                uploadUrl = project['uploadUrl']
+            }
+            if (project.hasProperty('uploadUser')) {
+                uploadUser = project['uploadUser']
+            }
+            if (project.hasProperty('uploadPassword')) {
+                uploadPassword = project['uploadPassword']
+            }
+
             project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
 
             project.uploadArchives.configure {
