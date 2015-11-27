@@ -213,6 +213,9 @@ class CubaPlugin implements Plugin<Project> {
                 for (String projectName : project.childProjects.keySet()) {
                     Node entry = classpath.appendNode('classpathentry')
                     entry.@kind = 'src'
+                    if (projectName.startsWith("app")) {
+                        projectName = projectName.replace("app", project.name);
+                    }
                     entry.@path = '/' + projectName;
                     entry.@exported = 'true'
 
@@ -466,10 +469,33 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
 
-            if (project.name.endsWith('-global')) {
-                project.eclipse.classpath.file.withXml { provider ->
-                    def root = provider.asNode()
+            project.eclipse.project.file.withXml { provider ->
+                def projectDescription = provider.asNode()
+                def projectName = project.name.startsWith("app") ? project.name.replace("app", project.parent.name) : project.name
+                def name = projectDescription.children().find { it.name() == 'name' }
+                if (name != null) {
+                    name.value = projectName
+                } else {
+                    projectDescription.appendNode('name', projectName)
+                }
+            }
 
+
+            project.eclipse.classpath.file.withXml { provider ->
+                def root = provider.asNode()
+
+                for (Node classpath : root.children()) {
+
+                    if (classpath.@kind == "src") {
+                        def path = classpath.@path
+                        if (path.startsWith("/app")) {
+                            path = path.replace("/app", "/$project.parent.name")
+                            classpath.@path = path
+                        }
+                    }
+                }
+
+                if (project.name.endsWith('-global')) {
                     Node entry = root.appendNode('classpathentry')
                     entry.@kind = 'lib'
                     entry.@path = "$project.buildDir/enhanced-classes"
