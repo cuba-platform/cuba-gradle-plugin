@@ -19,6 +19,7 @@ class CubaDeployment extends DefaultTask {
 
     private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
     private static final Pattern LIBRARY_SNAPSHOT_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(?:SNAPSHOT)\\.jar$')
+    private static final Pattern LIBRARY_WITHOUT_VERSION_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)\\.jar$')
     private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
     private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"     // split version string by '.' and '-' chars
 
@@ -193,6 +194,15 @@ class CubaDeployment extends DefaultTask {
 
             if (currentLibName != null) {
                 return new LibraryDefinition(name: currentLibName, version: 'SNAPSHOT')
+            }
+        }
+
+        def nvm = LIBRARY_WITHOUT_VERSION_PATTERN.matcher(libraryName)
+        if (nvm.matches()) {
+            def currentLibName = nvm.group(1)
+
+            if (currentLibName != null) {
+                return new LibraryDefinition(name: currentLibName)
             }
         }
 
