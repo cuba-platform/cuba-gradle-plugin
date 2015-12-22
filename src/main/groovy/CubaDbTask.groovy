@@ -51,6 +51,9 @@ public abstract class CubaDbTask extends DefaultTask {
             } else if (dbms == 'hsql') {
                 driver = 'org.hsqldb.jdbc.JDBCDriver'
                 dbUrl = "jdbc:hsqldb:hsql://$host/$dbName"
+            } else if (dbms == 'mysql') {
+                driver = 'com.mysql.jdbc.Driver'
+                dbUrl = "jdbc:mysql://$host/$dbName?useSSL=false"
             } else
                 throw new UnsupportedOperationException("DBMS $dbms is not supported. " +
                         "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property")

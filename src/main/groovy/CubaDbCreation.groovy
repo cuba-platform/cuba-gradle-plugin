@@ -72,6 +72,16 @@ grant create session,
             if (!timeStampType)
                 timeStampType = 'timestamp'
 
+        } else if (dbms == 'mysql') {
+            if (!masterUrl)
+                masterUrl = "jdbc:mysql://$host?useSSL=false"
+            if (!createDbSql)
+                createDbSql = "create database $dbName;"
+            if (!dropDbSql)
+                dropDbSql = "drop database $dbName;"
+            if (!timeStampType)
+                timeStampType = 'datetime'
+
         } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
             throw new UnsupportedOperationException("DBMS $dbms not supported. " +
                     "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
