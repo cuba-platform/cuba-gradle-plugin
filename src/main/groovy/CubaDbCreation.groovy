@@ -28,7 +28,7 @@ class CubaDbCreation extends CubaDbTask {
 
         if (dbms == 'postgres') {
             if (!masterUrl)
-                masterUrl = "jdbc:postgresql://$host/postgres"
+                masterUrl = "jdbc:postgresql://$host/postgres$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop database if exists $dbName;"
             if (!createDbSql)
@@ -38,7 +38,7 @@ class CubaDbCreation extends CubaDbTask {
 
         } else if (dbms == 'mssql') {
             if (!masterUrl)
-                masterUrl = "jdbc:jtds:sqlserver://$host/master"
+                masterUrl = "jdbc:jtds:sqlserver://$host/master$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
@@ -48,7 +48,7 @@ class CubaDbCreation extends CubaDbTask {
 
         } else if (dbms == 'oracle') {
             if (!masterUrl)
-                masterUrl = "jdbc:oracle:thin:@//$host/$dbName"
+                masterUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop user $dbUser cascade;"
             if (!createDbSql)
@@ -66,15 +66,17 @@ grant create session,
 
         } else if (dbms == 'hsql') {
             if (!masterUrl)
-                masterUrl = "jdbc:hsqldb:hsql://$host/$dbName"
+                masterUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop schema public cascade;"
             if (!timeStampType)
                 timeStampType = 'timestamp'
 
         } else if (dbms == 'mysql') {
-            if (!masterUrl)
-                masterUrl = "jdbc:mysql://$host?useSSL=false"
+            if (!masterUrl) {
+                if (!connectionParams) connectionParams = '?useSSL=false&allowMultiQueries=true'
+                masterUrl = "jdbc:mysql://$host$connectionParams"
+            }
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
             if (!dropDbSql)

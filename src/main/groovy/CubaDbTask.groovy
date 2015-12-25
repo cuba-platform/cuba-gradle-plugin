@@ -26,6 +26,7 @@ public abstract class CubaDbTask extends DefaultTask {
     def delimiter = '^'
     def host = 'localhost'
     def dbFolder = 'db'
+    def connectionParams = ''
     def dbName
     def dbUser
     def dbPassword
@@ -41,19 +42,20 @@ public abstract class CubaDbTask extends DefaultTask {
         if (!driver || !dbUrl) {
             if (dbms == 'postgres') {
                 driver = 'org.postgresql.Driver'
-                dbUrl = "jdbc:postgresql://$host/$dbName"
+                dbUrl = "jdbc:postgresql://$host/$dbName$connectionParams"
             } else if (dbms == 'mssql') {
                 driver = 'net.sourceforge.jtds.jdbc.Driver'
-                dbUrl = "jdbc:jtds:sqlserver://$host/$dbName"
+                dbUrl = "jdbc:jtds:sqlserver://$host/$dbName$connectionParams"
             } else if (dbms == 'oracle') {
                 driver = 'oracle.jdbc.OracleDriver'
-                dbUrl = "jdbc:oracle:thin:@//$host/$dbName"
+                dbUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
             } else if (dbms == 'hsql') {
                 driver = 'org.hsqldb.jdbc.JDBCDriver'
-                dbUrl = "jdbc:hsqldb:hsql://$host/$dbName"
+                dbUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
             } else if (dbms == 'mysql') {
                 driver = 'com.mysql.jdbc.Driver'
-                dbUrl = "jdbc:mysql://$host/$dbName?useSSL=false"
+                if (!connectionParams) connectionParams = '?useSSL=false&allowMultiQueries=true'
+                dbUrl = "jdbc:mysql://$host/$dbName$connectionParams"
             } else
                 throw new UnsupportedOperationException("DBMS $dbms is not supported. " +
                         "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property")
