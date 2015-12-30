@@ -294,7 +294,7 @@ class CubaDeployment extends DefaultTask {
             libDir.eachFile(FileType.FILES) { file ->
                 libraryNames << file.name
             }
-            libraryNames = copiedLibNames.collectAll { String copiedLibName ->
+            libraryNames = copiedLibNames.collectNested { String copiedLibName ->
                 libraryNames.findAll { it.startsWith(copiedLibName) }
             }.flatten().toSet().toList()
 
