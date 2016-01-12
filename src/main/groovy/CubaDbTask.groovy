@@ -33,6 +33,7 @@ public abstract class CubaDbTask extends DefaultTask {
     def driverClasspath
     def dbUrl
     def driver
+    def timeStampType
     protected File dbDir
     protected Sql sqlInstance
 
@@ -43,19 +44,34 @@ public abstract class CubaDbTask extends DefaultTask {
             if (dbms == 'postgres') {
                 driver = 'org.postgresql.Driver'
                 dbUrl = "jdbc:postgresql://$host/$dbName$connectionParams"
+                if (!timeStampType)
+                    timeStampType = 'timestamp'
+
             } else if (dbms == 'mssql') {
                 driver = 'net.sourceforge.jtds.jdbc.Driver'
                 dbUrl = "jdbc:jtds:sqlserver://$host/$dbName$connectionParams"
+                if (!timeStampType)
+                    timeStampType = 'datetime'
+
             } else if (dbms == 'oracle') {
                 driver = 'oracle.jdbc.OracleDriver'
                 dbUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
+                if (!timeStampType)
+                    timeStampType = 'timestamp'
+
             } else if (dbms == 'hsql') {
                 driver = 'org.hsqldb.jdbc.JDBCDriver'
                 dbUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
+                if (!timeStampType)
+                    timeStampType = 'timestamp'
+
             } else if (dbms == 'mysql') {
                 driver = 'com.mysql.jdbc.Driver'
                 if (!connectionParams) connectionParams = '?useSSL=false&allowMultiQueries=true'
                 dbUrl = "jdbc:mysql://$host/$dbName$connectionParams"
+                if (!timeStampType)
+                    timeStampType = 'datetime'
+
             } else
                 throw new UnsupportedOperationException("DBMS $dbms is not supported. " +
                         "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property")

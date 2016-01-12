@@ -14,7 +14,6 @@ class CubaDbCreation extends CubaDbTask {
     def dropDbSql
     def createDbSql
     def masterUrl
-    def timeStampType
     def oracleSystemUser = 'system'
     def oracleSystemPassword = 'manager'
 
@@ -33,8 +32,6 @@ class CubaDbCreation extends CubaDbTask {
                 dropDbSql = "drop database if exists $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
-            if (!timeStampType)
-                timeStampType = 'timestamp'
 
         } else if (dbms == 'mssql') {
             if (!masterUrl)
@@ -43,8 +40,6 @@ class CubaDbCreation extends CubaDbTask {
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
-            if (!timeStampType)
-                timeStampType = 'datetime'
 
         } else if (dbms == 'oracle') {
             if (!masterUrl)
@@ -61,16 +56,12 @@ grant create session,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
     to $dbUser;"""
-            if (!timeStampType)
-                timeStampType = 'timestamp'
 
         } else if (dbms == 'hsql') {
             if (!masterUrl)
                 masterUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop schema public cascade;"
-            if (!timeStampType)
-                timeStampType = 'timestamp'
 
         } else if (dbms == 'mysql') {
             if (!masterUrl) {
@@ -81,8 +72,6 @@ grant create session,
                 createDbSql = "create database $dbName;"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
-            if (!timeStampType)
-                timeStampType = 'datetime'
 
         } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
             throw new UnsupportedOperationException("DBMS $dbms not supported. " +

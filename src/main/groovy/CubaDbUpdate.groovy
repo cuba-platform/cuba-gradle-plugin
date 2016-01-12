@@ -56,30 +56,49 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected void runRequiredInitScripts() {
+        if (!tableExists('SYS_DB_CHANGELOG')) {
+            project.logger.warn("Table SYS_DB_CHANGELOG does not exist, running all init scripts")
+            try {
+                getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
+                        "SCRIPT_NAME varchar(300) not null primary key, " +
+                        "CREATE_TS $timeStampType default current_timestamp, " +
+                        "IS_INIT integer default 0)")
+
+                initDatabase()
+            } finally {
+                closeSql()
+            }
+            return
+        }
+
         ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
         scriptFinder.getModuleDirs().each { String dirName ->
             def moduleName = dirName.substring(3)
             def reqTable = requiredTables[moduleName]
-            if (reqTable) {
-                try {
-                    def sqlLogger = Logger.getLogger(Sql.class.getName())
-                    def saveLevel = sqlLogger.level
-                    try {
-                        sqlLogger.level = Level.SEVERE // suppress confusing error output
-                        getSql().rows("select * from $reqTable where 0=1".toString())
-                    } finally {
-                        sqlLogger.level = saveLevel
-                    }
-                } catch (SQLException e) {
-                    String mark = dbms == 'oracle' ? 'ora-00942' : reqTable
-                    if (e.message?.toLowerCase()?.contains(mark)) {
-                        project.logger.warn("Required table for $moduleName does not exist, running init scripts")
-                        // probably the required table does not exist
-                        initDatabase(dirName)
-                    } else {
-                        throw e;
-                    }
-                }
+            if (reqTable && !tableExists(reqTable)) {
+                project.logger.warn("Table $reqTable required for $moduleName does not exist, running init scripts")
+                initDatabase(dirName)
+            }
+        }
+    }
+
+    protected boolean tableExists(String tableName) {
+        try {
+            def sqlLogger = Logger.getLogger(Sql.class.getName())
+            def saveLevel = sqlLogger.level
+            try {
+                sqlLogger.level = Level.SEVERE // suppress confusing error output
+                getSql().rows("select * from $tableName where 0=1".toString())
+            } finally {
+                sqlLogger.level = saveLevel
+            }
+            return true
+        } catch (SQLException e) {
+            String mark = dbms == 'oracle' ? 'ora-00942' : tableName.toLowerCase()
+            if (e.message?.toLowerCase()?.contains(mark)) {
+                return false
+            } else {
+                throw e;
             }
         }
     }
