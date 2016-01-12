@@ -28,6 +28,34 @@ class CubaWarBuilding extends DefaultTask {
 
     def String distrDir = "${project.buildDir}/distributions/war"
 
+    CubaWarBuilding() {
+        project.afterEvaluate {
+            def childProjects = project.getChildProjects()
+
+            if (!coreProject) {
+                project.logger.info("[CubaWarBuilding] core project is not set, trying to find it automatically")
+                for (Map.Entry<String, Project> entry  : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-core")) {
+                        coreProject = entry.getValue()
+                        project.logger.info("[CubaWarBuilding] $coreProject is set as core project")
+                        break;
+                    }
+                }
+            }
+
+            if (!webProject) {
+                project.logger.info("[CubaWarBuilding] web project is not set, trying to find it automatically")
+                for (Map.Entry<String, Project> entry  : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-web")) {
+                        webProject = entry.getValue()
+                        project.logger.info("[CubaWarBuilding] $webProject is set as web project")
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     void setCoreProject(Project coreProject) {
         this.coreProject = coreProject
         def assembleCore = coreProject.getTasksByName('assemble', false).iterator().next()
