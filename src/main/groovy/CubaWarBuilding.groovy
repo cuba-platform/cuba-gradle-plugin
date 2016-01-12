@@ -191,13 +191,16 @@ class CubaWarBuilding extends DefaultTask {
 
     private void copyWebContent(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
-        theProject.copy {
-            from 'web'
-            into warDir(theProject)
-            exclude '**/context.xml'
-        }
 
         if (webXml) {
+            def webXmlFileName = new File(webXml).name
+            theProject.copy {
+                from 'web'
+                into warDir(theProject)
+                exclude '**/context.xml'
+                exclude "**/$webXmlFileName"//do not copy webXml file twice
+            }
+
             theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXml} to ${warDir(theProject)}/WEB-INF/web.xml")
             theProject.copy {
                 from webXml
@@ -205,6 +208,12 @@ class CubaWarBuilding extends DefaultTask {
                 rename { String fileName ->
                     "web.xml"
                 }
+            }
+        } else {
+            theProject.copy {
+                from 'web'
+                into warDir(theProject)
+                exclude '**/context.xml'
             }
         }
     }
