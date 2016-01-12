@@ -198,7 +198,7 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (webXml) {
-            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXml} to ${warDir(theProject)}/web.xml")
+            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXml} to ${warDir(theProject)}/WEB-INF/web.xml")
             theProject.copy {
                 from webXml
                 into "${warDir(theProject)}/WEB-INF/"
@@ -274,11 +274,11 @@ class CubaWarBuilding extends DefaultTask {
 
     private void touchWebXml(Project theProject) {
         def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
-        if (project.ext.has('webResourcesTs')) {
-            project.logger.info("[CubaWarBuilding] update web resources timestamp")
+        if (theProject.ext.has('webResourcesTs')) {
+            theProject.logger.info("[CubaWarBuilding] update web resources timestamp")
 
             // detect version automatically
-            def buildTimeStamp = project.ext.get('webResourcesTs')
+            def buildTimeStamp = theProject.ext.get('webResourcesTs')
 
             def webXmlText = webXml.text
             if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
@@ -286,7 +286,7 @@ class CubaWarBuilding extends DefaultTask {
             }
             webXml.write(webXmlText)
         }
-        project.logger.info("[CubaWarBuilding] touch ${warDir(theProject)}/WEB-INF/web.xml")
+        theProject.logger.info("[CubaWarBuilding] touch ${warDir(theProject)}/WEB-INF/web.xml")
         webXml.setLastModified(new Date().getTime())
     }
 
