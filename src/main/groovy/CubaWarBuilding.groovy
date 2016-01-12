@@ -117,6 +117,10 @@ class CubaWarBuilding extends DefaultTask {
             coreTmpWarDir = "${project.buildDir}/tmp/core/war"
             webTmpWarDir = "${project.buildDir}/tmp/web/war"
         }
+
+        if (!appName) {
+            appName = deployWeb.appName
+        }
     }
 
     private Map<String, Object> collectProperties(Project theProject) {
