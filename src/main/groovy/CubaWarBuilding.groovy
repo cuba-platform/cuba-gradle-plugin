@@ -11,6 +11,8 @@ import org.gradle.api.tasks.TaskAction
 class CubaWarBuilding extends DefaultTask {
     Project coreProject;
     Project webProject;
+    Project portalProject;
+
     def appHome
     def appName
     def singleWar = true
@@ -20,11 +22,14 @@ class CubaWarBuilding extends DefaultTask {
     def webcontentExclude = []
     Closure doAfter
     def appProperties
+
     def coreJarNames;
     def webJarNames;
+    def portalJarNames;
 
     def coreTmpWarDir
     def webTmpWarDir
+    def portalTmpWarDir
 
     def String distrDir = "${project.buildDir}/distributions/war"
 
@@ -34,7 +39,7 @@ class CubaWarBuilding extends DefaultTask {
 
             if (!coreProject) {
                 project.logger.info("[CubaWarBuilding] core project is not set, trying to find it automatically")
-                for (Map.Entry<String, Project> entry  : childProjects.entrySet()) {
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
                     if (entry.getKey().endsWith("-core")) {
                         coreProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $coreProject is set as core project")
@@ -45,7 +50,7 @@ class CubaWarBuilding extends DefaultTask {
 
             if (!webProject) {
                 project.logger.info("[CubaWarBuilding] web project is not set, trying to find it automatically")
-                for (Map.Entry<String, Project> entry  : childProjects.entrySet()) {
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
                     if (entry.getKey().endsWith("-web")) {
                         webProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $webProject is set as web project")
@@ -68,8 +73,17 @@ class CubaWarBuilding extends DefaultTask {
         this.dependsOn(assembleWeb)
     }
 
+    void setPortalProject(Project portalProject) {
+        this.portalProject = portalProject
+        def assembleWeb = portalProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assembleWeb)
+    }
+
     String warDir(Project project) {
-        project == coreProject ? coreTmpWarDir : webTmpWarDir
+        if (project == coreProject) return coreTmpWarDir
+        else if (project == webProject) return webTmpWarDir
+        else if (project == portalProject) return portalTmpWarDir
+        else return null
     }
 
     @TaskAction
@@ -78,20 +92,25 @@ class CubaWarBuilding extends DefaultTask {
 
         copyLibs(coreProject)
         copyLibs(webProject)
+        if (portalProject) copyLibs(portalProject)
 
         def coreProperties = collectProperties(coreProject)
         def webProperties = collectProperties(webProject)
+        def portalProperties = portalProject ? collectProperties(portalProject) : []
 
         copyDbScripts(coreProject)
 
         copyWebContent(coreProject)
         copyWebContent(webProject)
+        if (portalProject) copyWebContent(portalProject)
+
         copySpecificWebContent(webProject)
 
         processDoAfter()
 
         touchWebXml(coreProject)
         touchWebXml(webProject)
+        if (portalProject) touchWebXml(portalProject)
 
         if (singleWar) {
             def summaryProperties = coreProperties + webProperties
@@ -109,13 +128,23 @@ class CubaWarBuilding extends DefaultTask {
         } else {
             writeLocalAppProperties(coreProject, coreProperties)
             writeLocalAppProperties(webProject, webProperties)
+            if (portalProject) writeLocalAppProperties(portalProject, portalProperties)
 
             packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
             packWarFile(coreProject, coreProject.file("${warDir(coreProject)}/${appName}-core.war"))
+            if (portalProject) packWarFile(portalProject, portalProject.file("${warDir(portalProject)}/${appName}-portal.war"))
+
             webProject.copy {
                 from webProject.file("${warDir(webProject)}/${appName}.war")
                 from coreProject.file("${warDir(coreProject)}/${appName}-core.war")
                 into distrDir
+            }
+
+            if (portalProject) {
+                portalProject.copy {
+                    from portalProject.file("${warDir(portalProject)}/${appName}-portal.war")
+                    into distrDir
+                }
             }
 
             generateAppHome()
@@ -125,10 +154,21 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     private void init() {
+        if (!singleWar && webXml) {
+            throw new RuntimeException('[CubaWarBuilding] "webXml" property should only be used in Single WAR building. ' +
+                    'Please set "singleWar" = true or remove "webXml" property.')
+        }
+
+        if (singleWar && portalProject) {
+            throw new RuntimeException('"[CubaWarBuilding] "portalProject" property is not supported in Single WAR building and would be ignored. ' +
+                    'Please remove the "portalProject" property.')
+        }
+
         project.delete(distrDir)
 
         CubaDeployment deployCore = coreProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
         CubaDeployment deployWeb = webProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
+        CubaDeployment deployPortal = portalProject?.getTasksByName('deploy', false)?.iterator()?.next() as CubaDeployment
 
         if (!coreJarNames) {
             coreJarNames = deployCore.jarNames
@@ -138,12 +178,17 @@ class CubaWarBuilding extends DefaultTask {
             webJarNames = deployWeb.jarNames
         }
 
+        if (deployPortal && !portalJarNames) {
+            portalJarNames = deployPortal.jarNames
+        }
+
         if (singleWar) {
             coreTmpWarDir = "${project.buildDir}/tmp/war"
             webTmpWarDir = coreTmpWarDir
         } else {
             coreTmpWarDir = "${project.buildDir}/tmp/core/war"
             webTmpWarDir = "${project.buildDir}/tmp/web/war"
+            portalTmpWarDir = "${project.buildDir}/tmp/portal/war"
         }
 
         if (!appName) {
@@ -171,6 +216,13 @@ class CubaWarBuilding extends DefaultTask {
             properties += [
                     'cuba.connectionUrlList'        : "http://localhost:8080/${appName}-core",
                     'cuba.useLocalServiceInvocation': singleWar ? "true" : "false"
+            ]
+        }
+
+        if (theProject == portalProject) {
+            properties += [
+                    'cuba.connectionUrlList'        : "http://localhost:8080/${appName}-core",
+                    'cuba.useLocalServiceInvocation': "false"
             ]
         }
 
