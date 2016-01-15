@@ -66,6 +66,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         String port
         String debugPort
         String shutdownPort
+        String ajpPort
 
         TomcatConfiguration(Project project) {
             this.project = project
