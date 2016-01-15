@@ -36,6 +36,7 @@ class CubaStartTomcat extends DefaultTask {
                 env(key: 'NOPAUSE', value: true)
                 if (project.hasProperty('studioJavaHome')) {
                     env(key: 'JAVA_HOME', value: project.studioJavaHome)
+                    env(key: 'JRE_HOME', value: project.studioJavaHome)
                 }
                 arg(line: '/c start call_and_exit.bat debug.bat')
             }
@@ -48,6 +49,7 @@ class CubaStartTomcat extends DefaultTask {
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: tomcatStartScript, spawn: true) {
                 if (project.hasProperty('studioJavaHome')) {
                     env(key: 'JAVA_HOME', value: project.studioJavaHome)
+                    env(key: 'JRE_HOME', value: project.studioJavaHome)
                 }
                 arg(line: tomcatRootDir)
             }

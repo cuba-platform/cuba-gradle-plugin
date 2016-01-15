@@ -31,6 +31,7 @@ class CubaStopTomcat extends DefaultTask {
             env(key: 'NOPAUSE', value: true)
             if (project.hasProperty('studioJavaHome')) {
                 env(key: 'JAVA_HOME', value: project.studioJavaHome)
+                env(key: 'JRE_HOME', value: project.studioJavaHome)
             }
             arg(line: '/c start call_and_exit.bat shutdown.bat')
         }
