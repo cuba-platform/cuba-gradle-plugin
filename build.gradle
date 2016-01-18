@@ -40,7 +40,7 @@ configurations {
 }
 
 dependencies {
-    compile 'com.haulmont.thirdparty:eclipselink:2.6.1.cuba4'
+    compile 'com.haulmont.thirdparty:eclipselink:2.6.1.cuba6'
     compile('org.javassist:javassist:3.20.0-GA')
     compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
     compile('commons-io:commons-io:2.4')
