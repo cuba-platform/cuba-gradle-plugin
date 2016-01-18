@@ -56,7 +56,7 @@ class CubaSetupTomcat extends DefaultTask {
             }
         }
 
-        if (project.cuba.tomcat.port || project.cuba.tomcat.shutdownPort) {
+        if (project.cuba.tomcat.port || project.cuba.tomcat.shutdownPort || project.cuba.tomcat.ajpPort) {
             updateServerXml()
         }
         if (project.cuba.tomcat.debugPort) {
