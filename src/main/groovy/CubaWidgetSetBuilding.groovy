@@ -66,10 +66,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         // strip gwt-unitCache
         File gwtTemp = project.file("build/gwt")
-        if (gwtTemp.exists()) {
-            gwtTemp.deleteDir()
+        if (!gwtTemp.exists()) {
+            gwtTemp.mkdir()
         }
-        gwtTemp.mkdir()
 
         File gwtWidgetSetTemp = new File(gwtTemp, 'widgetset')
         gwtWidgetSetTemp.mkdir()
