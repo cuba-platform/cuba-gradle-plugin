@@ -383,33 +383,10 @@ class CubaPlugin implements Plugin<Project> {
 
         // add web resources version for correct caching
         if (project.name.endsWith('-web')) {
-            project.configurations {
-                themes
-            }
-
             def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
             project.logger.info("[CubaPlugin] set web resources timestamp for project " + project.name)
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
-
-            project.task('bindVaadinThemes') << {
-                def vaadinLib = project.configurations.compile.resolvedConfiguration.resolvedArtifacts.find {
-                    it.name.equals('vaadin-server')
-                }
-                // add default vaadin-themes dependency
-                if (vaadinLib) {
-                    def dependency = vaadinLib.moduleVersion.id
-                    project.logger.info("[CubaPlugin] add default themes dependency on com.vaadin:vaadin-themes:${dependency.version}")
-
-                    project.dependencies {
-                        themes(group: dependency.group, name: 'vaadin-themes', version: dependency.version)
-                    }
-                }
-            }
-
-            if (project.tasks.findByName('idea')) {
-                project.tasks.idea.dependsOn(project.tasks.bindVaadinThemes)
-            }
         }
 
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {

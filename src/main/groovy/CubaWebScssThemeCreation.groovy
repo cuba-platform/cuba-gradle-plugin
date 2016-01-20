@@ -58,10 +58,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
-
-        if (project.tasks.findByName('bindVaadinThemes')) {
-            dependsOn(project.tasks.bindVaadinThemes)
-        }
     }
 
     def addCompilerDependency() {
