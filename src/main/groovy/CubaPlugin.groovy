@@ -302,6 +302,7 @@ class CubaPlugin implements Plugin<Project> {
 
         project.configurations {
             provided
+            themes
             jdbc
         }
 
