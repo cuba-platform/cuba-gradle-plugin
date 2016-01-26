@@ -58,6 +58,17 @@ class CubaWarBuilding extends DefaultTask {
                     }
                 }
             }
+
+            if (!portalProject) {
+                project.logger.info("[CubaWarBuilding] portal project is not set, trying to find it automatically")
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-portal")) {
+                        portalProject = entry.getValue()
+                        project.logger.info("[CubaWarBuilding] $portalProject is set as portal project")
+                        break;
+                    }
+                }
+            }
         }
     }
 
