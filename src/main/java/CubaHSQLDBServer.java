@@ -5,11 +5,13 @@
 
 import org.apache.commons.lang.StringUtils;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationHandler;
@@ -108,6 +110,12 @@ public class CubaHSQLDBServer extends JFrame {
         this.pack();
         this.setResizable(true);
         this.setTitle("HSQLDB Server");
+
+        try {
+            this.setIconImage(ImageIO.read(getClass().getResourceAsStream("/icons/database.png")));
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to find icon for HSQLDB window");
+        }
     }
 
     private void addCopyPopup(final JTextArea source) {
