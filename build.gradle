@@ -41,6 +41,8 @@ configurations {
 
 dependencies {
     compile 'com.haulmont.thirdparty:eclipselink:2.6.1.cuba7'
+    compile 'org.apache.httpcomponents:httpmime:4.5.1'
+    compile 'org.apache.httpcomponents:httpcore:4.4.4'
     compile('org.javassist:javassist:3.20.0-GA')
     compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
     compile('commons-io:commons-io:2.4')
@@ -48,6 +50,7 @@ dependencies {
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(group: 'com.carrotsearch', name: 'smartsprites', version: '0.2.8')
     compile(group: 'com.vaadin', name: 'vaadin-sass-compiler', version: '0.9.12')
+    compile(group: 'com.jelastic', name: 'jelastic-public-j2se', version: '4.0')
     compile(gradleApi())
     compile(localGroovy())
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')

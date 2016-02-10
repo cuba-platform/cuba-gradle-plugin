@@ -31,6 +31,12 @@ class CubaWarBuilding extends DefaultTask {
     def webTmpWarDir
     def portalTmpWarDir
 
+    def includeJdbcDriver = false
+    def includeContextXml = false
+    def coreContextXml
+
+    def hsqlInProcess = false
+
     def String distrDir = "${project.buildDir}/distributions/war"
 
     CubaWarBuilding() {
@@ -114,6 +120,14 @@ class CubaWarBuilding extends DefaultTask {
         copyWebContent(coreProject)
         copyWebContent(webProject)
         if (portalProject) copyWebContent(portalProject)
+
+        if (includeContextXml) {
+            copyWebContext(coreProject)
+            if (!singleWar) {
+                copyWebContext(webProject)
+                if (portalProject) copyWebContext(portalProject)
+            }
+        }
 
         copySpecificWebContent(webProject)
 
@@ -254,6 +268,22 @@ class CubaWarBuilding extends DefaultTask {
                 return !(name.endsWith('-sources.jar'))
             }
         }
+
+        if (includeJdbcDriver) {
+            theProject.logger.info("[CubaWarBuilding] copying libs from configurations.jdbc")
+            theProject.copy {
+                from theProject.configurations.jdbc {
+                    exclude { f ->
+                        if (new File("${warDir(theProject)}/WEB-INF/lib".toString(), f.file.name).exists()) {
+                            return true
+                        }
+
+                        f.file.absolutePath.startsWith(project.file("${warDir(theProject)}/WEB-INF/lib/").absolutePath)
+                    }
+                }
+                into "${warDir(theProject)}/WEB-INF/lib"
+            }
+        }
     }
 
     private void writeDependencies(Project theProject, String applicationType, def jarNames) {
@@ -309,6 +339,37 @@ class CubaWarBuilding extends DefaultTask {
                 from 'web'
                 into warDir(theProject)
                 exclude '**/context.xml'
+            }
+        }
+    }
+
+    private void copyWebContext(Project theProject) {
+        theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
+        if (theProject == coreProject && coreContextXml) {
+            def coreContextXmlFileName = new File(coreContextXml).name
+            theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXml} to ${warDir(theProject)}/META-INF/context.xml")
+            theProject.copy {
+                from coreContextXml
+                into "${warDir(theProject)}/META-INF/"
+                rename { String fileName ->
+                    "context.xml"
+                }
+            }
+            theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
+        } else if (theProject == coreProject && hsqlInProcess) {
+            def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
+            def context = new XmlParser().parse(contextFile)
+            String url = context.Resource.@url.get(0)
+            context.Resource.@url = "jdbc:hsqldb:file:db/hsql" + url.substring(url.lastIndexOf('/'))
+
+            def targetFile = new File("${warDir(theProject)}/META-INF/context.xml")
+            def printer = new XmlNodePrinter(new PrintWriter(new FileWriter(targetFile)))
+            printer.preserveWhitespace = true
+            printer.print(context)
+        } else {
+            theProject.copy {
+                from 'web/META-INF/context.xml'
+                into "${warDir(theProject)}/META-INF"
             }
         }
     }
