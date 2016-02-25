@@ -3,17 +3,16 @@
  * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
  */
 
-
 import groovy.io.FileType
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
 import java.util.regex.Pattern
+import java.util.zip.ZipFile
 
 /**
  * @author hasanov
- * @version $Id$
  */
 class CubaDeployment extends DefaultTask {
 
@@ -122,17 +121,61 @@ class CubaDeployment extends DefaultTask {
                     includeEmptyDirs = false
                 }
             }
-            project.logger.info("[CubaDeployment] copying webcontent from ${project.buildDir}/web to ${tomcatRootDir}/webapps/$appName")
-            project.copy {
-                from "${project.buildDir}/web"
-                into "${tomcatRootDir}/webapps/$appName"
+        }
+
+        project.logger.info("[CubaDeployment] unpack web resources to ${tomcatRootDir}/webapps/$appName")
+
+        List<File> appJarFiles = []
+        project.file("${tomcatRootDir}/webapps/$appName/WEB-INF/lib").eachFile { f ->
+            def name = f.name
+            if (!(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) &&
+                    (jarNames.find { jarName -> name.startsWith(jarName) } != null)) {
+                appJarFiles.add(f)
             }
         }
 
-        project.logger.info("[CubaDeployment] copying from web to ${tomcatRootDir}/webapps/$appName")
+        def jarWebDir = project.file("$project.buildDir/jar-web-unzip")
+        if (jarWebDir.exists()) {
+            jarWebDir.deleteDir()
+        }
+
+        for (File appJar : appJarFiles) {
+            boolean webContentJar = false
+
+            ZipFile zf = new ZipFile(appJar);
+            try {
+                def webEntry = zf.getEntry("web/")
+                if (webEntry != null) {
+                    webContentJar = true
+                }
+            } finally {
+                zf.close()
+            }
+
+            if (webContentJar) {
+                // unpack only web directory
+                project.copy {
+                    from project.zipTree(appJar)
+                    into jarWebDir
+                    include 'web/**'
+                }
+            }
+        }
+
+        if (jarWebDir.exists()) {
+            project.copy {
+                from project.file("$jarWebDir/web")
+                into project.file("${tomcatRootDir}/webapps/$appName")
+            }
+
+            jarWebDir.deleteDir()
+        }
+
+        project.logger.info("[CubaDeployment] copying deployment descriptors from web to ${tomcatRootDir}/webapps/$appName")
         project.copy {
             from 'web'
             into "${tomcatRootDir}/webapps/$appName"
+            include 'WEB-INF/**', 'META-INF/**'
         }
 
         if (sharedlibResolve) {
@@ -151,21 +194,23 @@ class CubaDeployment extends DefaultTask {
         }
 
         def webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
-        if (project.ext.has('webResourcesTs')) {
-            project.logger.info("[CubaDeployment] update web resources timestamp")
+        if (webXml.exists()) {
+            if (project.ext.has('webResourcesTs')) {
+                project.logger.info("[CubaDeployment] update web resources timestamp")
 
-            // detect version automatically
-            def buildTimeStamp = project.ext.get('webResourcesTs')
+                // detect version automatically
+                def buildTimeStamp = project.ext.get('webResourcesTs')
 
-            def webXmlText = webXml.text
-            if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
-                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp.toString())
+                def webXmlText = webXml.text
+                if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
+                    webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp.toString())
+                }
+                webXml.write(webXmlText)
             }
-            webXml.write(webXmlText)
-        }
 
-        project.logger.info("[CubaDeployment] touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
-        webXml.setLastModified(System.currentTimeMillis())
+            project.logger.info("[CubaDeployment] touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
+            webXml.setLastModified(System.currentTimeMillis())
+        }
     }
 
     def appJars(Object... names) {

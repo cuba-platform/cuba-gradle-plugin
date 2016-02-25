@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat
 
 /**
  * @author krivopustov
- * @version $Id$
  */
 class CubaPlugin implements Plugin<Project> {
 
@@ -388,6 +387,23 @@ class CubaPlugin implements Plugin<Project> {
             project.logger.info("[CubaPlugin] set web resources timestamp for project " + project.name)
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
+
+            project.jar {
+                //noinspection GroovyAssignabilityCheck
+                with(project.copySpec {
+                    from project.file("$project.projectDir")
+                    include 'web/**'
+                    exclude '**/web.xml', '**/context.xml'
+                    includeEmptyDirs false
+                })
+
+                //noinspection GroovyAssignabilityCheck
+                with(project.copySpec {
+                    from project.file("$project.buildDir")
+                    include 'web/**'
+                    includeEmptyDirs false
+                })
+            }
         }
 
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
