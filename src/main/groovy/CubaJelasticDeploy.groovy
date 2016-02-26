@@ -57,6 +57,7 @@ class CubaJelasticDeploy extends DefaultTask {
     String srcDir = "${project.buildDir}/distributions/war"
 
     CubaJelasticDeploy() {
+        setDescription('Deploys applications to defined Jelastic server')
         setGroup('Jelastic')
     }
 
