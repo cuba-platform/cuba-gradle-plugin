@@ -49,7 +49,9 @@ dependencies {
     compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(group: 'com.carrotsearch', name: 'smartsprites', version: '0.2.8')
-    compile(group: 'com.vaadin', name: 'vaadin-sass-compiler', version: '0.9.13')
+    compile(group: 'com.vaadin', name: 'vaadin-sass-compiler', version: '0.9.13') {
+        exclude group: 'com.yahoo.platform.yui', module: 'yuicompressor'
+    }
     compile(group: 'com.jelastic', name: 'jelastic-public-j2se', version: '4.0')
     compile(gradleApi())
     compile(localGroovy())
