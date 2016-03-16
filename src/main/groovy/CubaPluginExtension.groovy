@@ -7,8 +7,7 @@ import org.gradle.api.Project
  */
 class CubaPluginExtension {
 
-    final String CUBA_COPYRIGHT = '''Copyright (c) 2008-$today.year Haulmont. All rights reserved.
-Use is subject to license terms, see http://www.cuba-platform.com/license for details.'''
+    final static String DEFAULT_COPYRIGHT = 'TODO Copyright'
 
     Project project
 
@@ -29,7 +28,7 @@ Use is subject to license terms, see http://www.cuba-platform.com/license for de
         uploadRepository = new UploadRepositoryConfiguration(project)
 
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
-        ide.copyright = CUBA_COPYRIGHT
+        ide.copyright = DEFAULT_COPYRIGHT
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
         uploadRepository.password = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
         artifact.group = 'com.company'

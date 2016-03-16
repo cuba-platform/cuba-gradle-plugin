@@ -142,13 +142,14 @@ class CubaPlugin implements Plugin<Project> {
                     node.@'project-jdk-name' = '1.8'
 
                     node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                    node.@default = 'cuba'
+                    node.@default = 'default'
+
                     node = node.appendNode('copyright')
                     node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
 
                     node.appendNode('option', [name: 'keyword', value: 'Copyright'])
                     node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                    node.appendNode('option', [name: 'myName', value: 'cuba'])
+                    node.appendNode('option', [name: 'myName', value: 'default'])
                     node.appendNode('option', [name: 'myLocal', value: 'true'])
 
                     if (project.cuba.ide.vcs)
@@ -328,8 +329,6 @@ class CubaPlugin implements Plugin<Project> {
             options.compilerArgs << "-Xlint:-options"
         }
 
-        project.assemble.doFirst { acceptLicense(project) }
-
         project.jar {
             // Ensure there will be no duplicates in jars
             exclude { details -> !details.isDirectory() && isEnhanced(details.file, project.buildDir) }
@@ -390,7 +389,6 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
-            project.ideaModule.doFirst { acceptLicense(project) }
             project.logger.info "[CubaPlugin] configuring IDEA module $project.name"
 
             List<Configuration> providedConfs = new ArrayList<>()
@@ -481,37 +479,6 @@ class CubaPlugin implements Plugin<Project> {
                     root.children().add(0, entry)
                 }
             }
-        }
-    }
-
-    private static void acceptLicense(Project project) {
-        if (!project.rootProject.hasProperty('licenseAgreementAccepted')) {
-            boolean saved = false
-            Properties props = new Properties()
-            File file = new File("${System.getProperty('user.home')}/.haulmont/license.properties")
-            if (file.exists()) {
-                props.load(file.newDataInputStream())
-                saved = Boolean.parseBoolean(props.getProperty("accepted"))
-            }
-            if (!saved) {
-                def license = '''
-================================================================
-       Do you accept the terms of CUBA license agreement
-      published at http://www.cuba-platform.com/license ?
-                     (Y - yes, N - no)
-================================================================
-'''
-                project.ant.input(message: license, addproperty: 'licenseAgreement')
-
-                if (project.ant.licenseAgreement.toLowerCase() != 'y' && project.ant.licenseAgreement.toLowerCase() != 'yes') {
-                    throw new IllegalStateException("=========== License agreement is not accepted ===========")
-                }
-
-                file.parentFile.mkdirs()
-                props.setProperty("accepted", "true")
-                props.store(file.newDataOutputStream(), "")
-            }
-            project.rootProject.ext.licenseAgreementAccepted = true
         }
     }
 
