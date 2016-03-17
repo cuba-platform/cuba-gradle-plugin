@@ -254,6 +254,11 @@ class CubaDeployment extends DefaultTask {
                     return aLibraryVersion
                 }
 
+                if (aVersionPart.startsWith("RC") && bVersionPart.startsWith("RC")) {
+                    aVersionPart = aVersionPart.substring(2)
+                    bVersionPart = bVersionPart.substring(2)
+                }
+
                 def matcherA = DIGITAL_PATTERN.matcher(aVersionPart)
                 def matcherB = DIGITAL_PATTERN.matcher(bVersionPart)
 
@@ -285,6 +290,13 @@ class CubaDeployment extends DefaultTask {
                     return aLibraryVersion
                 }
             } else {
+                if (i < labelAVersionArray.size()) {
+                    def part = labelAVersionArray[i]
+                    if (part.startsWith("RC")) {
+                        return aLibraryVersion
+                    }
+                }
+
                 return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
             }
         }
