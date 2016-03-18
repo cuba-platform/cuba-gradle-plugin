@@ -195,8 +195,12 @@ class CubaWarBuilding extends DefaultTask {
 
     private void init() {
         if (!singleWar && webXml) {
-            throw new RuntimeException('[CubaWarBuilding] "webXml" property should only be used in Single WAR building. ' +
+            throw new RuntimeException('[CubaWarBuilding] "webXml" property should only be used in single WAR building. ' +
                     'Please set "singleWar" = true or remove "webXml" property.')
+        }
+
+        if (singleWar && !webXml) {
+            throw new RuntimeException('[CubaWarBuilding] To build single WAR, you should set the "webXml" property')
         }
 
         if (singleWar && portalProject) {
