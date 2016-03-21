@@ -56,7 +56,7 @@ class CubaJelasticDeploy extends DefaultTask {
     protected static final String BASE_USER_AGENT = "Mozzila/5.0"
     protected static final int SAME_FILES_LIMIT = 5;
 
-    String appName
+    protected String appName
     String email
     String password
     String context = 'ROOT'
@@ -67,9 +67,9 @@ class CubaJelasticDeploy extends DefaultTask {
     protected Environment environmentService
     protected File tmpFile
     protected String session
-    protected Map<String, String> headers;
+    protected Map<String, String> headers
 
-    String srcDir = "${project.buildDir}/distributions/war"
+    protected String warDir
 
     CubaJelasticDeploy() {
         setDescription('Deploys applications to defined Jelastic server')
@@ -95,7 +95,13 @@ class CubaJelasticDeploy extends DefaultTask {
     }
 
     protected void init() {
-
+        for (Object obj : dependsOn) {
+            if (obj instanceof CubaWarBuilding) {
+                CubaWarBuilding task = obj as CubaWarBuilding
+                appName = task.appName
+                warDir = task.distrDir
+            }
+        }
         if (!appName) {
             project.logger.info("[CubaJelasticDeploy] 'appName' is not set, trying to find it automatically")
             for (Map.Entry<String, Project> entry : project.getChildProjects().entrySet()) {
@@ -117,7 +123,7 @@ class CubaJelasticDeploy extends DefaultTask {
         environmentService = new Environment()
         environmentService.setServerUrl(uri.toString())
 
-        tmpFile = new File("${srcDir}/${appName}.war")
+        tmpFile = new File("${warDir}/${appName}.war")
         if (!tmpFile.exists()) {
             throw new RuntimeException("[CubaJelasticDeploy] war file not found")
         }
