@@ -117,6 +117,7 @@ class CubaPlugin implements Plugin<Project> {
         project.task([type: Exec], 'tomcat')
         project.task([type: CubaStopTomcat], 'stop')
         project.task([type: CubaDropTomcat], 'dropTomcat')
+        project.task([type: CubaZipProject], 'zipProject')
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
