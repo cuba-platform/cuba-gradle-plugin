@@ -78,6 +78,7 @@ class CubaJelasticDeploy extends DefaultTask {
 
     @TaskAction
     def deployJelastic() {
+        project.logger.lifecycle("Deploying to Jelastic. This may take several minutes to complete")
         init()
 
         def response = (Map) upload()
