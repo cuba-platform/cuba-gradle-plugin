@@ -15,7 +15,7 @@
  *
  */
 
-
+import org.apache.commons.io.FileUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
@@ -25,9 +25,20 @@ import java.nio.file.Paths
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-/**
- */
 class CubaSetupTomcat extends DefaultTask {
+
+    public static final List<String> TOMCAT_RESOURCES = Collections.unmodifiableList([
+            "/tomcat/bin/call_and_exit.bat",
+            "/tomcat/bin/catalina.sh",
+            "/tomcat/bin/debug.bat",
+            "/tomcat/bin/debug.sh",
+            "/tomcat/bin/kill_by_port.sh",
+            "/tomcat/bin/setenv.bat",
+            "/tomcat/bin/setenv.sh",
+            "/tomcat/conf/catalina.properties",
+            "/tomcat/conf/logging.properties",
+            "/tomcat/conf/logback.xml"
+    ])
 
     def tomcatRootDir = project.cuba.tomcat.dir
 
@@ -59,11 +70,14 @@ class CubaSetupTomcat extends DefaultTask {
         }
         project.delete("$tomcatRootDir/tmp")
 
-        project.configurations.tomcatInit.files.each { dep ->
-            project.copy {
-                from project.zipTree(dep.absolutePath)
-                into tomcatRootDir
-            }
+        TOMCAT_RESOURCES.each { resourceName ->
+            def resourcePath = Paths.get(resourceName)
+            def resourceSubPath = resourcePath.subpath(1, resourcePath.getNameCount())
+
+            def targetFile = project.file(tomcatRootDir).toPath().resolve(resourceSubPath).toFile()
+            logger.debug("Copy ${resourceName} to ${targetFile.getAbsolutePath()}")
+
+            FileUtils.copyInputStreamToFile(getClass().getResourceAsStream(resourceName), targetFile)
         }
 
         if (project.cuba.tomcat.port || project.cuba.tomcat.shutdownPort || project.cuba.tomcat.ajpPort) {

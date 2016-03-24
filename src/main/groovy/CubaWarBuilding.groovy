@@ -20,9 +20,6 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskAction
 
-/**
- *
- */
 class CubaWarBuilding extends DefaultTask {
     Project coreProject;
     Project webProject;
@@ -150,7 +147,9 @@ class CubaWarBuilding extends DefaultTask {
 
         touchWebXml(coreProject)
         touchWebXml(webProject)
-        if (portalProject) touchWebXml(portalProject)
+        if (portalProject) {
+            touchWebXml(portalProject)
+        }
 
         if (singleWar) {
             def summaryProperties = coreProperties + webProperties
@@ -163,8 +162,6 @@ class CubaWarBuilding extends DefaultTask {
                 from webProject.file("${warDir(webProject)}/${appName}.war")
                 into distrDir
             }
-
-            generateAppHome()
         } else {
             writeLocalAppProperties(coreProject, coreProperties)
             writeLocalAppProperties(webProject, webProperties)
@@ -186,8 +183,6 @@ class CubaWarBuilding extends DefaultTask {
                     into distrDir
                 }
             }
-
-            generateAppHome()
         }
 
         project.delete("${project.buildDir}/tmp")
@@ -476,20 +471,5 @@ class CubaWarBuilding extends DefaultTask {
 
     private void packWarFile(Project project, File destFile) {
         ant.jar(destfile: destFile, basedir: warDir(project))
-    }
-
-    private Set<File> generateAppHome() {
-        String appHomeName = new File(appHome).name
-
-        project.configurations.tomcatInit.files.each { dep ->
-            project.copy {
-                from project.zipTree(dep.absolutePath).files
-                into "$distrDir/$appHomeName"
-                include '**/log4j.xml'
-                filter { String line ->
-                    line.replace('${catalina.home}', appHome)
-                }
-            }
-        }
     }
 }
