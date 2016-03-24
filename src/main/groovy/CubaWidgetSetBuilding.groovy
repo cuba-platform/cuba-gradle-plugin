@@ -25,8 +25,6 @@ import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.*
 
-/**
- */
 class CubaWidgetSetBuilding extends DefaultTask {
 
     String widgetSetsDir
@@ -38,7 +36,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     boolean draft = false
     boolean disableCastChecking = false
 
-    int workers = Runtime.getRuntime().availableProcessors()
+    int workers = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
     int optimize = 9
 
     String style = 'OBF'
