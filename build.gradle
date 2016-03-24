@@ -86,7 +86,7 @@ artifacts {
     archives sourceJar
 }
 
-def uploadUrl = project.hasProperty('uploadUrl')
+def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl : null
 def haulmontUploadRepo = System.getenv('HAULMONT_REPOSITORY_UPLOAD_URL')
 if (uploadUrl == null && haulmontUploadRepo) {
     if (!haulmontUploadRepo.endsWith('/')) {
