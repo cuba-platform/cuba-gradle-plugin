@@ -71,8 +71,16 @@ class CubaPlugin implements Plugin<Project> {
                 deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
             }
 
-            def uploadUrl = project.cuba.uploadRepository.url ? project.cuba.uploadRepository.url
-                    : "http://repository.haulmont.com:8587/nexus/content/repositories/${project.cuba.artifact.isSnapshot ? 'snapshots' : 'releases'}"
+            def uploadUrl = project.cuba.uploadRepository.url
+            def haulmontUploadRepo = System.getenv('HAULMONT_REPOSITORY_UPLOAD_URL')
+            if (uploadUrl == null && haulmontUploadRepo) {
+                if (!haulmontUploadRepo.endsWith('/')) {
+                    haulmontUploadRepo += '/'
+                }
+
+                uploadUrl = haulmontUploadRepo + "${project.cuba.artifact.isSnapshot ? 'snapshots' : 'releases'}"
+            }
+
             def uploadUser = project.cuba.uploadRepository.user
             def uploadPassword = project.cuba.uploadRepository.password
 
