@@ -29,9 +29,9 @@ def isSnapshot = artifactVersion.endsWith('-SNAPSHOT')
 group = 'com.haulmont.gradle'
 version = artifactVersion
 
-ext.repositoryUrl = 'http://repository.haulmont.com:8587/nexus/content'
-ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER')
-ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
+ext.repositoryUrl = System.getenv('HAULMONT_REPOSITORY_URL') ?: 'https://repo.cuba-platform.com/content/groups/work'
+ext.repositoryUser = System.getenv('HAULMONT_REPOSITORY_USER') ?: 'cuba'
+ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD') ?: 'cuba123'
 
 repositories {
     mavenLocal()
@@ -40,7 +40,7 @@ repositories {
             username repositoryUser
             password repositoryPassword
         }
-        url "http://repository.haulmont.com:8587/nexus/content/groups/work"
+        url repositoryUrl
     }
 }
 
@@ -86,8 +86,15 @@ artifacts {
     archives sourceJar
 }
 
-def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl :
-    "http://repository.haulmont.com:8587/nexus/content/repositories/${isSnapshot ? 'snapshots' : 'releases'}"
+def uploadUrl = project.hasProperty('uploadUrl')
+def haulmontUploadRepo = System.getenv('HAULMONT_REPOSITORY_UPLOAD_URL')
+if (uploadUrl == null && haulmontUploadRepo) {
+    if (!haulmontUploadRepo.endsWith('/')) {
+        haulmontUploadRepo += '/'
+    }
+    uploadUrl = haulmontUploadRepo + "${isSnapshot ? 'snapshots' : 'releases'}"
+}
+
 def uploadUser = project.hasProperty('uploadUser') ? project.uploadUser :
     System.getenv('HAULMONT_REPOSITORY_USER')
 def uploadPassword = project.hasProperty('uploadPassword') ? project.uploadPassword :
@@ -136,4 +143,3 @@ if (!hasProperty('isAggregatedProject')) {
         }
     }
 }
-
