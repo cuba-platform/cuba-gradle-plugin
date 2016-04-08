@@ -28,7 +28,9 @@ class CubaWarBuilding extends DefaultTask {
     def appHome
     def appName
     def singleWar = true
+    @Deprecated
     def webXml
+    def webXmlPath
 
     def projectAll
     def webcontentExclude = []
@@ -45,7 +47,9 @@ class CubaWarBuilding extends DefaultTask {
 
     def includeJdbcDriver = false
     def includeContextXml = false
+    @Deprecated
     def coreContextXml
+    def coreContextXmlPath
 
     def hsqlInProcess = false
 
@@ -189,13 +193,16 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     private void init() {
-        if (!singleWar && webXml) {
-            throw new RuntimeException('[CubaWarBuilding] "webXml" property should only be used in single WAR building. ' +
-                    'Please set "singleWar" = true or remove "webXml" property.')
+        webXmlPath = webXmlPath ? "$project.rootDir/$webXmlPath" : webXml
+        coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
+
+        if (!singleWar && webXmlPath) {
+            throw new RuntimeException('[CubaWarBuilding] "webXmlPath" property should only be used in single WAR building. ' +
+                    'Please set "singleWar" = true or remove "webXmlPath" property.')
         }
 
-        if (singleWar && !webXml) {
-            throw new RuntimeException('[CubaWarBuilding] To build single WAR, you should set the "webXml" property')
+        if (singleWar && !webXmlPath) {
+            throw new RuntimeException('[CubaWarBuilding] To build single WAR, you should set the "webXmlPath" property')
         }
 
         if (singleWar && portalProject) {
@@ -331,8 +338,8 @@ class CubaWarBuilding extends DefaultTask {
     private void copyWebContent(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
 
-        if (webXml) {
-            def webXmlFileName = new File(webXml).name
+        if (webXmlPath) {
+            def webXmlFileName = new File(webXmlPath).name
             theProject.copy {
                 from 'web'
                 into warDir(theProject)
@@ -340,9 +347,9 @@ class CubaWarBuilding extends DefaultTask {
                 exclude "**/$webXmlFileName"//do not copy webXml file twice
             }
 
-            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXml} to ${warDir(theProject)}/WEB-INF/web.xml")
+            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXmlPath} to ${warDir(theProject)}/WEB-INF/web.xml")
             theProject.copy {
-                from webXml
+                from webXmlPath
                 into "${warDir(theProject)}/WEB-INF/"
                 rename { String fileName ->
                     "web.xml"
@@ -359,11 +366,11 @@ class CubaWarBuilding extends DefaultTask {
 
     private void copyWebContext(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
-        if (theProject == coreProject && coreContextXml) {
-            def coreContextXmlFileName = new File(coreContextXml).name
-            theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXml} to ${warDir(theProject)}/META-INF/context.xml")
+        if (theProject == coreProject && coreContextXmlPath) {
+            def coreContextXmlFileName = new File(coreContextXmlPath).name
+            theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXmlPath} to ${warDir(theProject)}/META-INF/context.xml")
             theProject.copy {
-                from coreContextXml
+                from coreContextXmlPath
                 into "${warDir(theProject)}/META-INF/"
                 rename { String fileName ->
                     "context.xml"
