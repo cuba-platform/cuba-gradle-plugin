@@ -53,7 +53,7 @@ class CubaJelasticDeploy extends DefaultTask {
     protected static final String ADD_FILE_PATH = 'development/scripting/rest/eval'
     protected static final String GET_ARCHIVES_PATH = "/GetArchives"
     protected static final String DELETE_ARCHIVE_PATH = "/DeleteArchive"
-    protected static final String BASE_USER_AGENT = "Mozzila/5.0"
+    protected static final String BASE_USER_AGENT = "Mozilla/5.0"
     protected static final int SAME_FILES_LIMIT = 5;
 
     protected String appName
