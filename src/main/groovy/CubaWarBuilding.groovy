@@ -376,7 +376,9 @@ class CubaWarBuilding extends DefaultTask {
                     "context.xml"
                 }
             }
-            theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
+            if (!'context.xml'.equals(coreContextXmlFileName)) {
+                theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
+            }
         } else if (theProject == coreProject && hsqlInProcess) {
             def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
             def context = new XmlParser().parse(contextFile)
