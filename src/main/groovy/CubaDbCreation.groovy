@@ -15,6 +15,8 @@
  *
  */
 
+
+import org.apache.commons.lang.StringUtils
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -34,14 +36,22 @@ class CubaDbCreation extends CubaDbTask {
     @TaskAction
     def createDb() {
         init()
-
+        String createSchemaSql
         if (dbms == 'postgres') {
             if (!masterUrl)
                 masterUrl = "jdbc:postgresql://$host/postgres$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop database if exists $dbName;"
-            if (!createDbSql)
+            if (!createDbSql) {
                 createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
+                if (connectionParams) {
+                    Map<String, Object> paramsMap = parsePostgresParams(connectionParams);
+                    String currentSchema = paramsMap.get("currentSchema")
+                    if (StringUtils.isNotEmpty(currentSchema)) {
+                        createSchemaSql = "create schema $currentSchema;"
+                    }
+                }
+            }
 
         } else if (dbms == 'mssql') {
             if (!masterUrl)
@@ -122,6 +132,20 @@ grant create session,
             )
         }
 
+        if (createSchemaSql) {
+            project.logger.warn("Executing SQL: $createDbSql")
+            project.ant.sql(
+                    classpath: driverClasspath,
+                    driver: driver,
+                    url: dbUrl,
+                    userid: dbUser,
+                    password: dbPassword,
+                    autocommit: true,
+                    encoding: "UTF-8",
+                    createSchemaSql
+            )
+        }
+
         project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
         try {
             getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
@@ -133,5 +157,23 @@ grant create session,
         } finally {
             closeSql()
         }
+    }
+
+    protected static Map<String, String> parsePostgresParams(String connectionParams) {
+        Map<String, String> result = new HashMap<>();
+        if (connectionParams.startsWith('?')) {
+            connectionParams = connectionParams.replace('?', '');
+        }
+        for (String param : connectionParams.split('&')) {
+            int index = param.indexOf('=');
+            if (index > 0) {
+                String key = param.substring(0, index);
+                String value = param.substring(index + 1);
+                if (StringUtils.isNotBlank(key) && StringUtils.isNotBlank(value)) {
+                    result.put(key.trim(), value.trim());
+                }
+            }
+        }
+        return result;
     }
 }
