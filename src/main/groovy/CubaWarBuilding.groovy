@@ -91,6 +91,16 @@ class CubaWarBuilding extends DefaultTask {
                     }
                 }
             }
+
+            // look for web toolkit module
+            for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
+                if (entry.getKey().endsWith("-web-toolkit")) {
+                    def webToolkit = entry.getValue()
+                    def assembleWebToolkit = webToolkit.getTasksByName("assemble", false).iterator().next()
+                    this.dependsOn(assembleWebToolkit)
+                    break;
+                }
+            }
         }
     }
 
