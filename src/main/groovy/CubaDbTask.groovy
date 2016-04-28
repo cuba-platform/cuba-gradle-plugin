@@ -48,6 +48,8 @@ public abstract class CubaDbTask extends DefaultTask {
     protected Sql sqlInstance
 
     private static final String SQL_COMMENT_PREFIX = "--"
+    protected static final String CURRENT_SCHEMA_PARAM = "currentSchema"
+
 
     protected void init() {
         if (!driver || !dbUrl) {
@@ -317,6 +319,28 @@ public abstract class CubaDbTask extends DefaultTask {
             }
             return files
         }
+    }
+
+    protected Map<String, String> parseDatabaseParams(String connectionParams) {
+        Map<String, String> result = new HashMap<>();
+        if (connectionParams.startsWith('?')) {
+            connectionParams = connectionParams.replace('?', '');
+        }
+        for (String param : connectionParams.split('[&,;]')) {
+            int index = param.indexOf('=');
+            if (index > 0) {
+                String key = param.substring(0, index);
+                String value = param.substring(index + 1);
+                if (StringUtils.isNotBlank(key) && StringUtils.isNotBlank(value)) {
+                    result.put(key.trim(), value.trim());
+                }
+            }
+        }
+        return result;
+    }
+
+    protected String cleanSchemaName(String schemaName) {
+        return StringUtils.isNotEmpty(schemaName) ? schemaName.replace('\"', '') : schemaName;
     }
 
     static class ScriptSplitter {

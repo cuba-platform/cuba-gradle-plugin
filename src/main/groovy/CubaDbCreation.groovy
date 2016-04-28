@@ -45,10 +45,10 @@ class CubaDbCreation extends CubaDbTask {
             if (!createDbSql) {
                 createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
                 if (connectionParams) {
-                    Map<String, Object> paramsMap = parsePostgresParams(connectionParams);
-                    String currentSchema = paramsMap.get("currentSchema")
+                    Map<String, Object> paramsMap = parseDatabaseParams(connectionParams);
+                    String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
                     if (StringUtils.isNotEmpty(currentSchema)) {
-                        createSchemaSql = "create schema $currentSchema;"
+                        createSchemaSql = "create schema \"$currentSchema\";"
                     }
                 }
             }
@@ -133,7 +133,7 @@ grant create session,
         }
 
         if (createSchemaSql) {
-            project.logger.warn("Executing SQL: $createDbSql")
+            project.logger.warn("Executing SQL: $createSchemaSql")
             project.ant.sql(
                     classpath: driverClasspath,
                     driver: driver,
@@ -157,23 +157,5 @@ grant create session,
         } finally {
             closeSql()
         }
-    }
-
-    protected static Map<String, String> parsePostgresParams(String connectionParams) {
-        Map<String, String> result = new HashMap<>();
-        if (connectionParams.startsWith('?')) {
-            connectionParams = connectionParams.replace('?', '');
-        }
-        for (String param : connectionParams.split('&')) {
-            int index = param.indexOf('=');
-            if (index > 0) {
-                String key = param.substring(0, index);
-                String value = param.substring(index + 1);
-                if (StringUtils.isNotBlank(key) && StringUtils.isNotBlank(value)) {
-                    result.put(key.trim(), value.trim());
-                }
-            }
-        }
-        return result;
     }
 }

@@ -16,8 +16,12 @@
  */
 
 import groovy.sql.Sql
+import org.apache.commons.lang.StringUtils
 import org.gradle.api.tasks.TaskAction
 
+import java.sql.Connection
+import java.sql.DatabaseMetaData
+import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -26,10 +30,10 @@ import java.util.logging.Logger
  */
 class CubaDbUpdate extends CubaDbTask {
 
-    def requiredTables = ['reports': 'report_report',
-                          'workflow': 'wf_proc',
+    def requiredTables = ['reports'   : 'report_report',
+                          'workflow'  : 'wf_proc',
                           'ccpayments': 'cc_credit_card',
-                          'bpm': 'bpm_proc_definition']
+                          'bpm'       : 'bpm_proc_definition']
 
     CubaDbUpdate() {
         setGroup('Database')
@@ -52,7 +56,7 @@ class CubaDbUpdate extends CubaDbTask {
             }
 
             if (project.logger.isInfoEnabled()) {
-                project.logger.info("Updates: \n" + toExecute.collect{ "\t" + it.getAbsolutePath() }.join("\n") )
+                project.logger.info("Updates: \n" + toExecute.collect { "\t" + it.getAbsolutePath() }.join("\n"))
             }
 
             toExecute.each { File file ->
@@ -93,6 +97,13 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected boolean tableExists(String tableName) {
+        if (connectionParams) {
+            Map<String, String> paramsMap = parseDatabaseParams(connectionParams);
+            String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
+            if (StringUtils.isNotEmpty(currentSchema)) {
+                return tableExistsInSchema(tableName, currentSchema);
+            }
+        }
         try {
             def sqlLogger = Logger.getLogger(Sql.class.getName())
             def saveLevel = sqlLogger.level
@@ -111,6 +122,19 @@ class CubaDbUpdate extends CubaDbTask {
                 throw e;
             }
         }
+    }
+
+    protected boolean tableExistsInSchema(String tableName, String schemaName) {
+        Connection connection = getSql().getConnection();
+        DatabaseMetaData dbMetaData = connection.getMetaData();
+        ResultSet tables = dbMetaData.getTables(null, schemaName, null, null);
+        while (tables.next()) {
+            String tableNameFromDb = tables.getString("TABLE_NAME");
+            if (tableName.equalsIgnoreCase(tableNameFromDb)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void executeScript(File file) {
