@@ -242,7 +242,7 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
             def cleanTask = project.getTasksByName("clean", false).iterator().next()
-            cleanTask.delete = ['build/libs', 'build/tmp', 'build/distributions']
+            cleanTask.delete = ['build/libs', 'build/tmp']
         }
 
         defineTasksExecutionOrder(project)
