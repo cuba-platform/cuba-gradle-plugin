@@ -324,7 +324,7 @@ public abstract class CubaDbTask extends DefaultTask {
     protected Map<String, String> parseDatabaseParams(String connectionParams) {
         Map<String, String> result = new HashMap<>();
         if (connectionParams.startsWith('?')) {
-            connectionParams = connectionParams.replace('?', '');
+            connectionParams = connectionParams.substring(1);
         }
         for (String param : connectionParams.split('[&,;]')) {
             int index = param.indexOf('=');
