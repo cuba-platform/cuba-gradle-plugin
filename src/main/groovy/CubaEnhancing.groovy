@@ -148,6 +148,7 @@ class CubaEnhancing extends DefaultTask {
                 int idx = docPu.children().findLastIndexOf {
                     it instanceof Node && it.name().localPart == 'class'
                 }
+                if (idx == -1) idx = 0;
 
                 def currentPu = current.'persistence-unit'[0]
                 currentPu.'class'.each {
