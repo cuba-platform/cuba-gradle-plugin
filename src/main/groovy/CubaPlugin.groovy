@@ -95,14 +95,19 @@ class CubaPlugin implements Plugin<Project> {
                 uploadPassword = project['uploadPassword']
             }
 
-            project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
+            if (!uploadUrl) {
+                project.logger.warn("WARNING! Please specify upload repository using cuba.uploadRepository.url property " +
+                        "or HAULMONT_REPOSITORY_UPLOAD_URL environment variable!")
+            } else {
+                project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
 
-            project.uploadArchives.configure {
-                repositories.mavenDeployer {
-                    name = 'httpDeployer'
-                    configuration = project.configurations.deployerJars
-                    repository(url: uploadUrl) {
-                        authentication(userName: uploadUser, password: uploadPassword)
+                project.uploadArchives.configure {
+                    repositories.mavenDeployer {
+                        name = 'httpDeployer'
+                        configuration = project.configurations.deployerJars
+                        repository(url: uploadUrl) {
+                            authentication(userName: uploadUser, password: uploadPassword)
+                        }
                     }
                 }
             }
