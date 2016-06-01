@@ -14,6 +14,8 @@
  * limitations under the License.
  *
  */
+
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -95,19 +97,21 @@ class CubaPlugin implements Plugin<Project> {
                 uploadPassword = project['uploadPassword']
             }
 
-            if (!uploadUrl) {
-                project.logger.warn("WARNING! Please specify upload repository using cuba.uploadRepository.url property " +
-                        "or HAULMONT_REPOSITORY_UPLOAD_URL environment variable!")
-            } else {
-                project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
+            project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
 
-                project.uploadArchives.configure {
-                    repositories.mavenDeployer {
-                        name = 'httpDeployer'
-                        configuration = project.configurations.deployerJars
-                        repository(url: uploadUrl) {
-                            authentication(userName: uploadUser, password: uploadPassword)
-                        }
+            if (uploadUrl == null) {
+                project.getTasks().getByName('uploadArchives').doFirst {
+                    throw new GradleException("Please specify upload repository using cuba.uploadRepository.url property " +
+                            "or HAULMONT_REPOSITORY_UPLOAD_URL environment variable!")
+                }
+            }
+
+            project.uploadArchives.configure {
+                repositories.mavenDeployer {
+                    name = 'httpDeployer'
+                    configuration = project.configurations.deployerJars
+                    repository(url: uploadUrl) {
+                        authentication(userName: uploadUser, password: uploadPassword)
                     }
                 }
             }
