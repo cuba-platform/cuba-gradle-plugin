@@ -52,7 +52,7 @@ configurations {
 }
 
 dependencies {
-    compile 'com.haulmont.thirdparty:eclipselink:2.6.2.cuba5'
+    compile 'com.haulmont.thirdparty:eclipselink:2.6.2.cuba6'
     compile 'org.apache.httpcomponents:httpmime:4.5.1'
     compile 'org.apache.httpcomponents:httpcore:4.4.4'
     compile('org.javassist:javassist:3.20.0-GA')
