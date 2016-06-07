@@ -215,6 +215,11 @@ class CubaWarBuilding extends DefaultTask {
             throw new RuntimeException('[CubaWarBuilding] To build single WAR, you should set the "webXmlPath" property')
         }
 
+        def webXmlFile = new File(webXmlPath)
+        if (!webXmlFile.exists()) {
+            throw new RuntimeException("[CubaWarBuilding] File $webXmlPath does not exist")
+        }
+
         if (singleWar && portalProject) {
             throw new RuntimeException('"[CubaWarBuilding] "portalProject" property is not supported in Single WAR building and would be ignored. ' +
                     'Please remove the "portalProject" property.')
