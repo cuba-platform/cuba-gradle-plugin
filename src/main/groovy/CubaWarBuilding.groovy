@@ -414,7 +414,7 @@ class CubaWarBuilding extends DefaultTask {
 
     private void copySpecificWebContent(Project theProject) {
         if (!projectAll) {
-            if (theProject.configurations.getAsMap().webcontent) {
+            if (theProject.configurations.findByName('webcontent')) {
                 def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
                 theProject.configurations.webcontent.files.each { dep ->
                     theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
@@ -425,12 +425,12 @@ class CubaWarBuilding extends DefaultTask {
                         includeEmptyDirs = false
                     }
                 }
-                theProject.logger.info("[CubaWarBuilding] copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
-                theProject.copy {
-                    from "${theProject.buildDir}/web"
-                    into warDir(theProject)
-                    exclude '**/context.xml'
-                }
+            }
+            theProject.logger.info("[CubaWarBuilding] copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
+            theProject.copy {
+                from "${theProject.buildDir}/web"
+                into warDir(theProject)
+                exclude '**/context.xml'
             }
             def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
             if (webToolkit) {
