@@ -78,7 +78,7 @@ class CubaJelasticDeploy extends DefaultTask {
 
     @TaskAction
     def deployJelastic() {
-        project.logger.lifecycle("Deploying to Jelastic. This may take several minutes to complete")
+        project.logger.lifecycle("[CubaJelasticDeploy] Deploying to Jelastic. This may take several minutes to complete")
         init()
 
         def response = (Map) upload()
@@ -147,7 +147,7 @@ class CubaJelasticDeploy extends DefaultTask {
     }
 
     protected Object upload() {
-        project.logger.info("[CubaJelasticDeploy] uploading application...")
+        project.logger.lifecycle("[CubaJelasticDeploy] uploading application...")
 
         URI uri = new URI(SCHEME, hostUrl, "${VERSION}${UPLOAD_PATH}", null);
         HttpPost httpPost = new HttpPost(uri)
@@ -170,7 +170,11 @@ class CubaJelasticDeploy extends DefaultTask {
             void progress(float progress) {
                 int currProgress = progress
                 if (currProgress != this.progress) {
-                    project.logger.info("[CubaJelasticDeploy] uploading process: [${currProgress}%]")
+                    if (currProgress % 10 == 0) {
+                        project.logger.lifecycle("[CubaJelasticDeploy] uploading progress: [${currProgress}%]")
+                    } else {
+                        project.logger.info("[CubaJelasticDeploy] uploading progress: [${currProgress}%]")
+                    }
                     this.progress = currProgress
                 }
             }
@@ -329,7 +333,7 @@ class CubaJelasticDeploy extends DefaultTask {
     }
 
     protected void deploy(String fileUrl) {
-        project.logger.info("[CubaJelasticDeploy] deploying application...")
+        project.logger.lifecycle("[CubaJelasticDeploy] deploying application...")
         NodeSSHResponses response = environmentService.deployApp(
                 environment, session, fileUrl, "${appName}.war", context, true, headers)
         if (response.isOK()) {
