@@ -15,6 +15,7 @@
  *
  */
 
+import com.vaadin.sass.SassCompiler
 import com.yahoo.platform.yui.compressor.CssCompressor
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
@@ -33,8 +34,6 @@ import org.kohsuke.args4j.CmdLineParser
 import java.nio.file.Files
 import java.util.regex.Pattern
 
-/**
- */
 class CubaWebScssThemeCreation extends DefaultTask {
 
     // additional scss root from modules
@@ -68,17 +67,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
-    }
-
-    def addCompilerDependency() {
-        def scssConf = project.configurations.findByName('scss')
-        if (!scssConf) {
-            project.configurations.create('scss').extendsFrom(project.configurations.getByName("compile"))
-        }
-
-        project.dependencies {
-            scss(CubaPlugin.getArtifactDefinition())
-        }
     }
 
     @OutputDirectory
@@ -120,8 +108,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @TaskAction
     def buildThemes() {
-        addCompilerDependency()
-
         File themesTmp = project.file("${project.buildDir}/themes-tmp")
         if (themesTmp.exists())
             themesTmp.deleteDir()
@@ -261,19 +247,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def scssFilePath = project.file("${themeBuildDir}/styles.scss").absolutePath
             def cssFilePath = project.file("${themeDestDir}/styles.css").absolutePath
 
-            Configuration scssConfiguration = project.configurations.getByName('scss')
-            def scssArtifacts = new ArrayList<File>()
-            scssConfiguration.resolvedConfiguration.resolvedArtifacts.each {
-                scssArtifacts.add(it.file)
-            }
-            def scssClassPath = new SimpleFileCollection(scssArtifacts)
-
-            project.javaexec {
-                main = 'com.vaadin.sass.SassCompiler'
-                classpath = scssClassPath
-                args = [scssFilePath, cssFilePath]
-                jvmArgs = []
-            }
+            SassCompiler.main(scssFilePath, cssFilePath)
 
             if (sprites) {
                 project.logger.info("[CubaWebScssThemeCreation] compile sprites for theme '${themeDir.name}'")
