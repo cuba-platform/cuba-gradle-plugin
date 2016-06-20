@@ -207,22 +207,23 @@ class CubaWarBuilding extends DefaultTask {
         coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
 
         if (!singleWar && webXmlPath) {
-            throw new RuntimeException('[CubaWarBuilding] "webXmlPath" property should only be used in single WAR building. ' +
-                    'Please set "singleWar" = true or remove "webXmlPath" property.')
+            throw new RuntimeException("[CubaWarBuilding] 'webXmlPath' property should be used only in single WAR building. " +
+                    "Please set 'singleWar = true' or remove 'webXmlPath' property.")
         }
 
-        if (singleWar && !webXmlPath) {
-            throw new RuntimeException('[CubaWarBuilding] To build single WAR, you should set the "webXmlPath" property')
-        }
+        if (singleWar) {
+            if (!webXmlPath)
+                throw new RuntimeException("[CubaWarBuilding] To build single WAR, you should set the 'webXmlPath' property")
 
-        def webXmlFile = new File(webXmlPath)
-        if (!webXmlFile.exists()) {
-            throw new RuntimeException("[CubaWarBuilding] File $webXmlPath does not exist")
-        }
+            def webXmlFile = new File(webXmlPath)
+            if (!webXmlFile.exists()) {
+                throw new RuntimeException("[CubaWarBuilding] File '$webXmlPath' does not exist")
+            }
 
-        if (singleWar && portalProject) {
-            throw new RuntimeException('"[CubaWarBuilding] "portalProject" property is not supported in Single WAR building and would be ignored. ' +
-                    'Please remove the "portalProject" property.')
+            if (portalProject) {
+                throw new RuntimeException("[CubaWarBuilding] 'portalProject' property is not supported in single WAR building. " +
+                        "Please remove the 'portalProject' property.")
+            }
         }
 
         project.delete(distrDir)
