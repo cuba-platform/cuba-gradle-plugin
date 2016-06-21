@@ -30,9 +30,13 @@ class CubaDeployment extends DefaultTask {
     private static final Pattern LIBRARY_SNAPSHOT_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(?:SNAPSHOT)\\.jar$')
     private static final Pattern LIBRARY_WITHOUT_VERSION_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)\\.jar$')
     private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
-    private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"     // split version string by '.' and '-' chars
+    private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"
 
-    def jarNames
+    public static final String INHERITED_JAR_NAMES = 'inheritedDeployJarNames'
+
+    // split version string by '.' and '-' chars
+
+    def jarNames = new HashSet()
     def appName
     def Closure doAfter
     def tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
@@ -46,8 +50,24 @@ class CubaDeployment extends DefaultTask {
         setGroup('Deployment')
     }
 
+    public Set getAllJarNames() {
+        Set res = new HashSet()
+        res.addAll(jarNames)
+        if (project.hasProperty(INHERITED_JAR_NAMES)) {
+            def inheritedJarNames = project[INHERITED_JAR_NAMES]
+            res.addAll(inheritedJarNames)
+        }
+        return res
+    }
+
     @TaskAction
     def deploy() {
+        if (project.hasProperty(INHERITED_JAR_NAMES)) {
+            def inheritedJarNames = project[INHERITED_JAR_NAMES]
+            project.logger.info("[CubaDeployment] adding inherited JAR names: ${inheritedJarNames}")
+            jarNames.addAll(inheritedJarNames)
+        }
+
         if (!tomcatRootDir)
             tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
         project.logger.info("[CubaDeployment] copying from configurations.jdbc to ${tomcatRootDir}/lib")
@@ -179,7 +199,11 @@ class CubaDeployment extends DefaultTask {
     }
 
     def appJars(Object... names) {
-        jarNames = names
+        jarNames.addAll(names)
+    }
+
+    def appJar(String name) {
+        jarNames.add(name)
     }
 
     public static class LibraryDefinition {
@@ -321,9 +345,7 @@ class CubaDeployment extends DefaultTask {
             }.flatten().toSet().toList()
 
             if (logger) {
-                libraryNames.each {
-                    logger(">> check library " + it)
-                }
+                logger("[CubaDeployment] check libraries: " + libraryNames.join(','))
             }
 
             // filenames to remove

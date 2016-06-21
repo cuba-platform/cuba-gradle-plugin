@@ -228,20 +228,35 @@ class CubaWarBuilding extends DefaultTask {
 
         project.delete(distrDir)
 
-        CubaDeployment deployCore = coreProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
-        CubaDeployment deployWeb = webProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
-        CubaDeployment deployPortal = portalProject?.getTasksByName('deploy', false)?.iterator()?.next() as CubaDeployment
+
+        Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
+        if (coreDeployTasks.isEmpty())
+            throw new RuntimeException("[CubaWarBuilding] 'core' module has no 'deploy' task")
+        def deployCore = coreDeployTasks.first()
+
+        Set webDeployTasks = webProject.getTasksByName('deploy', false)
+        if (webDeployTasks.isEmpty())
+            throw new RuntimeException("[CubaWarBuilding] 'web' module has no 'deploy' task")
+        def deployWeb = webDeployTasks.first()
+
+        def deployPortal = null
+        if (portalProject) {
+            Set portalDeployTasks = webProject.getTasksByName('deploy', false)
+            if (portalDeployTasks.isEmpty())
+                throw new RuntimeException("[CubaWarBuilding] 'portal' module has no 'deploy' task")
+            deployPortal = portalDeployTasks.first()
+        }
 
         if (!coreJarNames) {
-            coreJarNames = deployCore.jarNames
+            coreJarNames = deployCore.getAllJarNames()
         }
 
         if (!webJarNames) {
-            webJarNames = deployWeb.jarNames
+            webJarNames = deployWeb.getAllJarNames()
         }
 
         if (deployPortal && !portalJarNames) {
-            portalJarNames = deployPortal.jarNames
+            portalJarNames = deployPortal.getAllJarNames()
         }
 
         if (singleWar) {
