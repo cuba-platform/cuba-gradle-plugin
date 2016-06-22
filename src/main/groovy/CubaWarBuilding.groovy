@@ -37,9 +37,9 @@ class CubaWarBuilding extends DefaultTask {
     Closure doAfter
     def appProperties
 
-    def coreJarNames;
-    def webJarNames;
-    def portalJarNames;
+    def coreJarNames
+    def webJarNames
+    def portalJarNames
 
     def coreTmpWarDir
     def webTmpWarDir
@@ -415,8 +415,8 @@ class CubaWarBuilding extends DefaultTask {
 
     private void copySpecificWebContent(Project theProject) {
         if (!projectAll) {
+            def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
             if (theProject.configurations.findByName('webcontent')) {
-                def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
                 theProject.configurations.webcontent.files.each { dep ->
                     theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
                     theProject.copy {
@@ -431,7 +431,13 @@ class CubaWarBuilding extends DefaultTask {
             theProject.copy {
                 from "${theProject.buildDir}/web"
                 into warDir(theProject)
-                exclude '**/context.xml'
+                excludes = excludePatterns
+            }
+            project.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
+            project.copy {
+                from theProject.file('web')
+                into warDir(theProject)
+                excludes = excludePatterns
             }
             def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
             if (webToolkit) {
@@ -451,6 +457,7 @@ class CubaWarBuilding extends DefaultTask {
                 from new File(project.project(':reports-web').projectDir, 'web')
                 from new File(project.project(':refapp-web').buildDir, 'web')
                 from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
+                from new File(project.project(':refapp-web').projectDir, 'web')
                 into warDir(theProject)
                 exclude '**/web.xml'
                 exclude '**/context.xml'
@@ -482,7 +489,7 @@ class CubaWarBuilding extends DefaultTask {
             theProject.logger.info("[CubaWarBuilding] update web resources timestamp")
 
             // detect version automatically
-            def buildTimeStamp = theProject.ext.get('webResourcesTs')
+            String buildTimeStamp = theProject.ext.get('webResourcesTs').toString()
 
             def webXmlText = webXml.text
             if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
