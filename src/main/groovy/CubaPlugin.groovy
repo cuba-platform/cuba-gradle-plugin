@@ -139,7 +139,7 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private def doAfterEvaluateForModuleProject(Project project) {
-        addDependenciesFromProjectInfos(project)
+        addDependenciesFromAppComponents(project)
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
@@ -518,7 +518,7 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private void addDependenciesFromProjectInfos(Project project) {
+    private void addDependenciesFromAppComponents(Project project) {
         def moduleName = getModuleName(project)
 
         project.logger.info("[CubaPlugin] Setting up dependencies for module $moduleName")
