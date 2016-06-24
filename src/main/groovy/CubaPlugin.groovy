@@ -530,16 +530,17 @@ class CubaPlugin implements Plugin<Project> {
         while (manifests.hasMoreElements()) {
             Manifest manifest = new Manifest(manifests.nextElement().openStream());
 
-            def compDescrPath = manifest.mainAttributes.getValue('App-Component-Descriptor')
-            def compGroup = manifest.mainAttributes.getValue('App-Component-Artifact-Group')
+            def compId = manifest.mainAttributes.getValue('App-Component-Id')
             def compVersion = manifest.mainAttributes.getValue('App-Component-Version')
 
-            if (compDescrPath && compGroup && compVersion) {
+            if (compId && compVersion) {
+                def compDescrPath = compId.replace('.', '/') + '/app-component.xml'
+                def compGroup = compId
+
                 def url = CubaPlugin.class.getResource(compDescrPath)
                 if (url) {
                     project.logger.info("[CubaPlugin] Found app-component info in $url")
                     def xml = new XmlSlurper().parseText(url.openStream().getText('UTF-8'))
-                    String compId = xml.@id.text()
                     def module = xml.module.find { it.@name == moduleName }
                     if (module.size() > 0) {
                         module.artifact.each { art ->
