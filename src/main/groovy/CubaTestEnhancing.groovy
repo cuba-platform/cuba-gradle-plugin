@@ -12,25 +12,25 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 /**
  * Enhances entity classes specified in persistence xml
  *
  */
-class CubaEnhancing extends CubaEnhancingTask {
+class CubaTestEnhancing extends CubaEnhancingTask {
 
-    CubaEnhancing() {
-        setDescription('Enhances persistent classes')
+    CubaTestEnhancing() {
+        setDescription('Enhances persistent test classes')
         setGroup('Compile')
 
-        srcRoot = 'src'
-        classesRoot = 'main'
-        sourceSet = project.sourceSets.main
+        srcRoot = 'test'
+        classesRoot = 'test'
+        sourceSet = project.sourceSets.test
 
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileJava', false))
-        project.getTasksByName('classes', false).each { it.dependsOn(this) }
+        setDependsOn(project.getTasksByName('compileTestJava', false))
+        project.getTasksByName('testClasses', false).each { it.dependsOn(this) }
+
         // add default assist dependency on cuba-plugin
         def enhanceConfiguration = project.configurations.findByName("enhance")
         if (!enhanceConfiguration)
@@ -39,5 +39,8 @@ class CubaEnhancing extends CubaEnhancingTask {
         project.dependencies {
             enhance(CubaPlugin.getArtifactDefinition())
         }
+
+        // move enhanced classes to the beginning of test classpath
+        project.sourceSets.test.runtimeClasspath = project.files('build/enhanced-classes/test').plus(project.sourceSets.test.runtimeClasspath)
     }
 }

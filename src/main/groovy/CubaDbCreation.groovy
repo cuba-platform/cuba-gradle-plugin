@@ -29,6 +29,8 @@ class CubaDbCreation extends CubaDbTask {
     def oracleSystemUser = 'system'
     def oracleSystemPassword = 'manager'
 
+    File auxiliaryScript
+
     CubaDbCreation() {
         setGroup('Database')
     }
@@ -155,6 +157,11 @@ grant create session,
                     "IS_INIT integer default 0)")
 
             initDatabase()
+
+            if (auxiliaryScript) {
+                project.logger.warn("Executing SQL script: ${auxiliaryScript.absolutePath}")
+                executeSqlScript(auxiliaryScript)
+            }
         } finally {
             closeSql()
         }

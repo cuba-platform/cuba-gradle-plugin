@@ -443,11 +443,6 @@ class CubaPlugin implements Plugin<Project> {
             project.idea.module.iml.withXml { provider ->
                 Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
 
-                Node enhNode = (Node) rootNode.children().find {
-                    it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
-                        it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/main') // it.library.CLASSES.root.@url is a List here
-                }
-
                 // set module language level to 1.6 if it is -toolkit module
                 if (project.name.endsWith('-toolkit')) {
                     rootNode.@LANGUAGE_LEVEL = 'JDK_1_6'
@@ -456,15 +451,19 @@ class CubaPlugin implements Plugin<Project> {
                 int srcIdx = rootNode.children().findIndexOf {
                     it instanceof Node && it.name() == 'orderEntry' && it.@type == 'sourceFolder'
                 }
-                if (!enhNode && project.name.endsWith('-global')) {
-                    enhNode = rootNode.appendNode('orderEntry', [type: 'module-library', exported: '', scope: 'RUNTIME'])
-                    Node libNode = enhNode.appendNode('library')
-                    libNode.appendNode('CLASSES').appendNode('root', [url: 'file://$MODULE_DIR$/build/enhanced-classes/main'])
-                    libNode.appendNode('JAVADOC')
-                    libNode.appendNode('SOURCES')
+
+                Closure moveBeforeSources = { String dir ->
+                    Node enhNode = (Node) rootNode.children().find {
+                        it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
+                                it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/' + dir)
+                    }
+                    if (enhNode) {
+                        rootNode.children().remove(enhNode)
+                        rootNode.children().add(srcIdx, enhNode)
+                    }
                 }
-                rootNode.children().remove(enhNode)
-                rootNode.children().add(srcIdx, enhNode)
+                moveBeforeSources('main')
+                moveBeforeSources('test')
             }
         }
 
