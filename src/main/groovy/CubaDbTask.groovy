@@ -27,8 +27,6 @@ import org.gradle.api.DefaultTask
 import java.nio.file.Path
 import java.util.regex.Pattern
 
-/**
- */
 public abstract class CubaDbTask extends DefaultTask {
 
     def dbms
