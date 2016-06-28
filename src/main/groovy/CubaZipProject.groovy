@@ -72,6 +72,8 @@ class CubaZipProject extends DefaultTask {
 
         ant.zip(destfile: zipFilePath, basedir: tmpDir)
 
+        println("Zip archive has been created at '${project.file(zipFilePath).absolutePath}'")
+
         DirectoryScanner.resetDefaultExcludes()
 
         project.delete(tmpDir)
