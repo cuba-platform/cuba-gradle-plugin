@@ -47,6 +47,15 @@ public class CubaEnhancer {
         try {
             CtClass cc = pool.get(className);
 
+            CtClass superclass = cc.getSuperclass();
+            while (superclass != null && !superclass.getName().equals("com.haulmont.chile.core.model.impl.AbstractInstance")) {
+                superclass = superclass.getSuperclass();
+            }
+            if (superclass == null) {
+                log.info("[CubaEnhancer] " + className + " is not an AbstractInstance and should not be enhanced");
+                return;
+            }
+
             for (CtClass intf : cc.getInterfaces()) {
                 if (intf.getName().equals(ENHANCED_TYPE) || intf.getName().equals(CubaEnhancer.ENHANCED_DISABLED_TYPE)) {
                     log.info("[CubaEnhancer] " + className + " has already been enhanced or should not be enhanced at all");
