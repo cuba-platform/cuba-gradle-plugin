@@ -38,8 +38,11 @@ import java.util.regex.Pattern
 class CubaEnhancingTask extends DefaultTask {
 
     String persistenceConfig
+    String metadataConfig
 
+    @Deprecated
     String metadataXml
+
     String metadataPackageRegExp
 
     protected String srcRoot
@@ -51,7 +54,7 @@ class CubaEnhancingTask extends DefaultTask {
 
     @InputFiles
     def List getInputFiles() {
-        List entities = getPersistentEntities(getPersistenceXmlFile())
+        List entities = getPersistentEntities(getOwnPersistenceXmlFiles())
         entities.addAll(getTransientEntities())
 
         entities.collect { name ->
@@ -61,7 +64,7 @@ class CubaEnhancingTask extends DefaultTask {
 
     @OutputFiles
     def List getOutputFiles() {
-        List entities = getPersistentEntities(getPersistenceXmlFile())
+        List entities = getPersistentEntities(getOwnPersistenceXmlFiles())
         entities.addAll(getTransientEntities())
 
         entities.collect { name ->
@@ -69,28 +72,25 @@ class CubaEnhancingTask extends DefaultTask {
         }
     }
 
-    private File getPersistenceXmlFile() {
+    private List<File> getOwnPersistenceXmlFiles() {
+        List<File> files = []
         if (persistenceConfig) {
-            def fileName = Arrays.asList(persistenceConfig.split('\\s')).last()
-            File file = project.file("$srcRoot/$fileName")
-            if (file.exists())
-                return file
-            else {
-                throw new IllegalArgumentException("File $file doesn't exist")
+            List<String> fileNames = Arrays.asList(persistenceConfig.split('\\s'))
+            fileNames.each { fileName ->
+                File file = project.file("$srcRoot/$fileName")
+                if (!file.exists())
+                    throw new IllegalArgumentException("File $file doesn't exist")
+                else
+                    files.add(file)
             }
         } else {
             FileTree fileTree = project.fileTree(srcRoot).matching {
-                include '*-persistence.xml'
-                include 'persistence.xml'
+                include '**/*-persistence.xml'
+                include '**/persistence.xml'
             }
-            if (fileTree.isEmpty()) {
-                return null
-            } else if (fileTree.getFiles().size() > 1) {
-                throw new IllegalArgumentException("There are more than one persistence XML file in the source tree - please specify 'persistenceConfig' property for the task")
-            } else {
-                return fileTree.getSingleFile()
-            }
+            fileTree.each { files.add(it) }
         }
+        return files
     }
 
     private File createFullPersistenceXml() {
@@ -106,8 +106,8 @@ class CubaEnhancingTask extends DefaultTask {
                         include "$name"
                     }
                 } else {
-                    include '*-persistence.xml'
-                    include 'persistence.xml'
+                    include '**/*-persistence.xml'
+                    include '**/persistence.xml'
                 }
             }
             files.each { xmlFiles.add(it) }
@@ -119,8 +119,8 @@ class CubaEnhancingTask extends DefaultTask {
                     include "$name"
                 }
             } else {
-                include '*-persistence.xml'
-                include 'persistence.xml'
+                include '**/*-persistence.xml'
+                include '**/persistence.xml'
             }
         }
         files.each { xmlFiles.add(it) }
@@ -160,51 +160,58 @@ class CubaEnhancingTask extends DefaultTask {
         return fullPersistenceXml
     }
 
-    private List getPersistentEntities(File persistenceXml) {
-        if (!persistenceXml)
-            return []
-
-        def persistence = new XmlParser().parse(persistenceXml)
-        def pu = persistence.'persistence-unit'[0]
-        pu.'class'.collect { it.value()[0] }
+    private List getPersistentEntities(List<File> persistenceXmlList) {
+        List resultList = []
+        persistenceXmlList.each { file ->
+            def persistence = new XmlParser().parse(file)
+            def pu = persistence.'persistence-unit'[0]
+            resultList.addAll(pu.'class'.collect { it.value()[0] })
+        }
+        return resultList
     }
 
     private List getTransientEntities() {
-        File file = getMetadataXmlFile()
-        if (file) {
+        List resultList = []
+        getOwnMetadataXmlFiles().each { file ->
             def metadata = new XmlParser().parse(file)
             def mm = metadata.'metadata-model'[0]
             List allClasses = mm.'class'.collect { it.value()[0] }
             if (metadataPackageRegExp) {
                 Pattern pattern = Pattern.compile(metadataPackageRegExp)
-                return allClasses.findAll { it.matches(pattern) }
+                resultList.addAll(allClasses.findAll { it.matches(pattern) })
             } else
-                return allClasses
-        } else {
-            return []
+                resultList.addAll(allClasses)
         }
+        return resultList
     }
 
-    private File getMetadataXmlFile() {
+    private List<File> getOwnMetadataXmlFiles() {
+        List<File> files = []
         if (metadataXml) {
             File f = new File(metadataXml)
             if (!f.exists()) {
                 throw new IllegalArgumentException("File $metadataXml doesn't exist")
             }
-            return f
+            files.add(f)
+
+        } else if (metadataConfig) {
+            List<String> fileNames = Arrays.asList(metadataConfig.split('\\s'))
+            fileNames.each { fileName ->
+                File file = project.file("$srcRoot/$fileName")
+                if (!file.exists())
+                    throw new IllegalArgumentException("File $file doesn't exist")
+                else
+                    files.add(file)
+            }
+
         } else {
             FileTree fileTree = project.fileTree(srcRoot).matching {
-                include '*-metadata.xml'
-                include 'metadata.xml'
+                include '**/*-metadata.xml'
+                include '**/metadata.xml'
             }
-            if (fileTree.isEmpty()) {
-                return null
-            } else if (fileTree.getFiles().size() > 1) {
-                throw new IllegalArgumentException("There are more than one metadata XML file in the source tree - please specify 'metadataXml' property for the task")
-            } else  {
-                return fileTree.getSingleFile()
-            }
+            fileTree.each { files.add(it) }
         }
+        return files
     }
 
     @TaskAction
@@ -212,9 +219,9 @@ class CubaEnhancingTask extends DefaultTask {
         def outputDir = new File("$project.buildDir/enhanced-classes/$classesRoot")
         List allClasses = []
 
-        logger.info("[CubaEnhancing] Metadata XML file: ${getMetadataXmlFile()}")
+        logger.info("[CubaEnhancing] Metadata XML files: ${getOwnMetadataXmlFiles()}")
 
-        if (getPersistenceXmlFile()) {
+        if (!getOwnPersistenceXmlFiles().isEmpty()) {
             File fullPersistenceXml = createFullPersistenceXml()
             if (new File("$project.buildDir/classes/$classesRoot").exists()) {
                 logger.info("[CubaEnhancing] start EclipseLink enhancing")
@@ -234,7 +241,8 @@ class CubaEnhancingTask extends DefaultTask {
                     debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
                 }
             }
-            // delete files that are not in persistence.xml and metadata.xml
+            // EclipseLink enhancer copies all classes to build/enhanced-classes,
+            // so we should delete files that are not in persistence.xml and metadata.xml
             def persistence = new XmlParser().parse(fullPersistenceXml)
             def pu = persistence.'persistence-unit'[0]
             allClasses.addAll(pu.'class'.collect { it.value()[0] })
@@ -278,6 +286,7 @@ class CubaEnhancingTask extends DefaultTask {
         }
 
         if (outputDir.exists()) {
+            // run CUBA enhancing on all classes remaining in build/enhanced-classes
             logger.info("[CubaEnhancing] start CUBA enhancing")
             ClassPool pool = new ClassPool(null)
             pool.appendSystemPath()
