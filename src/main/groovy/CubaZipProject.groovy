@@ -32,6 +32,7 @@ class CubaZipProject extends DefaultTask {
     def zipProject() {
 
         def tmpDir = "${project.buildDir}/zip"
+        def tmpRootDir = "${project.buildDir}/zip/${project.name}"
 
         def includeToZip = ['.gitignore']
         includeToZip += this.includeToZip
@@ -56,7 +57,7 @@ class CubaZipProject extends DefaultTask {
         project.logger.info("[CubaZipProject] Packing files from: ${project.rootDir}")
         project.copy {
             from '.'
-            into tmpDir
+            into tmpRootDir
             exclude { details ->
                 String name = details.file.name
                 if (isFileMatched(name, includeToZip)) return false
