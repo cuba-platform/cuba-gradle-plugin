@@ -68,7 +68,7 @@ class CubaZipProject extends DefaultTask {
         }
         project.copy {
             from 'build/hsqldb'
-            into "$tmpDir/build/hsqldb"
+            into "$tmpRootDir/build/hsqldb"
         }
 
         ant.zip(destfile: zipFilePath, basedir: tmpDir)
