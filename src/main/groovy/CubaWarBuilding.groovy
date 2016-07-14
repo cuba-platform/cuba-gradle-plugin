@@ -17,6 +17,7 @@
 
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskAction
 
@@ -25,33 +26,33 @@ class CubaWarBuilding extends DefaultTask {
     Project webProject;
     Project portalProject;
 
-    def appHome
-    def appName
-    def singleWar = true
+    def String appHome
+    def String appName
+    def boolean singleWar = true
     @Deprecated
-    def webXml
-    def webXmlPath
+    def File webXml
+    def String webXmlPath
 
-    def projectAll
-    def webcontentExclude = []
+    def boolean projectAll
+    def List<String> webContentExclude = []
     Closure doAfter
-    def appProperties
+    def  Map<String, Object> appProperties
 
     def coreJarNames
     def webJarNames
     def portalJarNames
 
-    def coreTmpWarDir
-    def webTmpWarDir
-    def portalTmpWarDir
+    def String coreTmpWarDir
+    def String webTmpWarDir
+    def String portalTmpWarDir
 
-    def includeJdbcDriver = false
-    def includeContextXml = false
+    def boolean includeJdbcDriver = false
+    def boolean includeContextXml = false
     @Deprecated
-    def coreContextXml
-    def coreContextXmlPath
+    def String coreContextXml
+    def String coreContextXmlPath
 
-    def hsqlInProcess = false
+    def Boolean hsqlInProcess = false
 
     def String distrDir = "${project.buildDir}/distributions/war"
 
@@ -207,43 +208,42 @@ class CubaWarBuilding extends DefaultTask {
         coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
 
         if (!singleWar && webXmlPath) {
-            throw new RuntimeException("[CubaWarBuilding] 'webXmlPath' property should be used only in single WAR building. " +
+            throw new GradleException("[CubaWarBuilding] 'webXmlPath' property should be used only in single WAR building. " +
                     "Please set 'singleWar = true' or remove 'webXmlPath' property.")
         }
 
         if (singleWar) {
             if (!webXmlPath)
-                throw new RuntimeException("[CubaWarBuilding] To build single WAR, you should set the 'webXmlPath' property")
+                throw new GradleException("[CubaWarBuilding] To build single WAR, you should set the 'webXmlPath' property")
 
             def webXmlFile = new File(webXmlPath)
             if (!webXmlFile.exists()) {
-                throw new RuntimeException("[CubaWarBuilding] File '$webXmlPath' does not exist")
+                throw new GradleException("[CubaWarBuilding] File '$webXmlPath' does not exist")
             }
 
             if (portalProject) {
-                throw new RuntimeException("[CubaWarBuilding] 'portalProject' property is not supported in single WAR building. " +
+                throw new GradleException("[CubaWarBuilding] 'portalProject' property is not supported in single WAR building. " +
                         "Please remove the 'portalProject' property.")
             }
         }
 
         project.delete(distrDir)
 
-
         Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
         if (coreDeployTasks.isEmpty())
-            throw new RuntimeException("[CubaWarBuilding] 'core' module has no 'deploy' task")
+            throw new GradleException("[CubaWarBuilding] 'core' module has no 'deploy' task")
         def deployCore = coreDeployTasks.first()
 
         Set webDeployTasks = webProject.getTasksByName('deploy', false)
         if (webDeployTasks.isEmpty())
-            throw new RuntimeException("[CubaWarBuilding] 'web' module has no 'deploy' task")
+            throw new GradleException("[CubaWarBuilding] 'web' module has no 'deploy' task")
         def deployWeb = webDeployTasks.first()
 
         def deployPortal = null
         if (portalProject) {
             Set portalDeployTasks = webProject.getTasksByName('deploy', false)
             if (portalDeployTasks.isEmpty())
-                throw new RuntimeException("[CubaWarBuilding] 'portal' module has no 'deploy' task")
+                throw new GradleException("[CubaWarBuilding] 'portal' module has no 'deploy' task")
             deployPortal = portalDeployTasks.first()
         }
 
@@ -323,23 +323,30 @@ class CubaWarBuilding extends DefaultTask {
 
         if (includeJdbcDriver) {
             theProject.logger.info("[CubaWarBuilding] copying libs from configurations.jdbc")
+            def libsDir = "${warDir(theProject)}/WEB-INF/lib"
             theProject.copy {
                 from theProject.configurations.jdbc {
                     exclude { f ->
-                        if (new File("${warDir(theProject)}/WEB-INF/lib".toString(), f.file.name).exists()) {
+                        def file = f.file
+                        def fileName = (String) file.name
+                        if (new File(libsDir, fileName).exists()) {
                             return true
                         }
 
-                        f.file.absolutePath.startsWith(project.file("${warDir(theProject)}/WEB-INF/lib/").absolutePath)
+                        file.absolutePath.startsWith(project.file(libsDir).absolutePath)
                     }
                 }
-                into "${warDir(theProject)}/WEB-INF/lib"
+                into libsDir
             }
         }
     }
 
     private void writeDependencies(Project theProject, String applicationType, def jarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
+        if (!dependenciesFile.exists()) {
+            throw new GradleException("[CubaWarBuilding] Can't find dependencies file.")
+        }
+
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
                 if (!lib.name.endsWith('-sources.jar')
@@ -370,7 +377,12 @@ class CubaWarBuilding extends DefaultTask {
         theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
 
         if (webXmlPath) {
-            def webXmlFileName = new File(webXmlPath).name
+            def webXml = new File(webXmlPath)
+            if (!webXml.exists()) {
+                throw new GradleException("[CubaWarBuilding] Can't find web.xml.")
+            }
+
+            def webXmlFileName = webXml.name
             theProject.copy {
                 from 'web'
                 into warDir(theProject)
@@ -398,7 +410,12 @@ class CubaWarBuilding extends DefaultTask {
     private void copyWebContext(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
         if (theProject == coreProject && coreContextXmlPath) {
-            def coreContextXmlFileName = new File(coreContextXmlPath).name
+            def coreContextXml = new File(coreContextXmlPath)
+            if (!coreContextXml.exists()) {
+                throw new GradleException("[CubaWarBuilding] Can't find core context.xml.")
+            }
+
+            def coreContextXmlFileName = coreContextXml.name
             theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXmlPath} to ${warDir(theProject)}/META-INF/context.xml")
             theProject.copy {
                 from coreContextXmlPath
@@ -412,7 +429,17 @@ class CubaWarBuilding extends DefaultTask {
             }
         } else if (theProject == coreProject && hsqlInProcess) {
             def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
-            def context = new XmlParser().parse(contextFile)
+            if (!contextFile.exists()) {
+                throw new GradleException("[CubaWarBuilding] Can't find core context.xml.")
+            }
+
+            def context
+            try {
+                context = new XmlParser().parse(contextFile)
+            } catch (Exception ignored) {
+                throw new GradleException("[CubaWarBuilding] Core context.xml parsing error.")
+            }
+
             String url = context.Resource.@url.get(0)
             context.Resource.@url = "jdbc:hsqldb:file:db/hsql" + url.substring(url.lastIndexOf('/'))
 
@@ -430,7 +457,7 @@ class CubaWarBuilding extends DefaultTask {
 
     private void copySpecificWebContent(Project theProject) {
         if (!projectAll) {
-            def excludePatterns = ['**/web.xml', '**/context.xml'] + webcontentExclude
+            def excludePatterns = ['**/web.xml', '**/context.xml'] + webContentExclude
             if (theProject.configurations.findByName('webcontent')) {
                 theProject.configurations.webcontent.files.each { dep ->
                     theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
@@ -483,6 +510,7 @@ class CubaWarBuilding extends DefaultTask {
 
     private void writeLocalAppProperties(Project theProject, def properties) {
         File appPropFile = new File("${warDir(theProject)}/WEB-INF/local.app.properties")
+
         project.logger.info("[CubaWarBuilding] writing $appPropFile")
         appPropFile.withWriter('UTF-8') { writer ->
             properties.each { key, value ->
@@ -500,6 +528,10 @@ class CubaWarBuilding extends DefaultTask {
 
     private void touchWebXml(Project theProject) {
         def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
+        if (!webXml.exists()) {
+            throw new GradleException("[CubaWarBuilding] Can't find web.xml for the ${theProject}")
+        }
+
         if (theProject.ext.has('webResourcesTs')) {
             theProject.logger.info("[CubaWarBuilding] update web resources timestamp")
 
