@@ -30,7 +30,7 @@ class CubaWarBuilding extends DefaultTask {
     def String appName
     def boolean singleWar = true
     @Deprecated
-    def File webXml
+    def Object webXml
     def String webXmlPath
 
     def boolean projectAll
