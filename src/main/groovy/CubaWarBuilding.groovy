@@ -343,9 +343,6 @@ class CubaWarBuilding extends DefaultTask {
 
     private void writeDependencies(Project theProject, String applicationType, def jarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
-        if (!dependenciesFile.exists()) {
-            throw new GradleException("[CubaWarBuilding] Can't find dependencies file.")
-        }
 
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
