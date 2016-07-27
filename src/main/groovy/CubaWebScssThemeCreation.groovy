@@ -333,6 +333,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 }
                 // write
                 versionedFile.write(cssContent, "UTF-8")
+                cssFile.delete()
                 versionedFile.renameTo(cssFile)
             }
 
