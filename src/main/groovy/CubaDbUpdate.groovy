@@ -30,11 +30,6 @@ import java.util.logging.Logger
  */
 class CubaDbUpdate extends CubaDbTask {
 
-    def requiredTables = ['reports'   : 'report_report',
-                          'workflow'  : 'wf_proc',
-                          'ccpayments': 'cc_credit_card',
-                          'bpm'       : 'bpm_proc_definition']
-
     CubaDbUpdate() {
         setGroup('Database')
     }
@@ -44,15 +39,15 @@ class CubaDbUpdate extends CubaDbTask {
         init()
 
         try {
-            runRequiredInitScripts()
+            List<String> scripts = getExecutedScripts()
+            runRequiredInitScripts(scripts)
 
             ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
             List<File> files = scriptFinder.getUpdateScripts()
 
-            List<String> scripts = getExecutedScripts()
             def toExecute = files.findAll { File file ->
                 String name = getScriptName(file)
-                !scripts.contains(name)
+                !containsIgnoringPrefix(scripts, name)
             }
 
             if (project.logger.isInfoEnabled()) {
@@ -69,7 +64,7 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
-    protected void runRequiredInitScripts() {
+    protected void runRequiredInitScripts(List<String> executedScripts) {
         if (!tableExists('SYS_DB_CHANGELOG')) {
             project.logger.warn("Table SYS_DB_CHANGELOG does not exist, running all init scripts")
             try {
@@ -87,14 +82,31 @@ class CubaDbUpdate extends CubaDbTask {
         }
 
         ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
-        scriptFinder.getModuleDirs().each { String dirName ->
-            def moduleName = dirName.substring(3)
-            def reqTable = requiredTables[moduleName]
-            if (reqTable && !tableExists(reqTable)) {
-                project.logger.warn("Table $reqTable required for $moduleName does not exist, running init scripts")
-                initDatabase(dirName)
+        def dirs = scriptFinder.getModuleDirs()
+        if (dirs.size() > 1) {
+            // check all db folders except the last because it is the folder of the app and we need only components
+            dirs.subList(0, dirs.size() - 1).each { String dirName ->
+                def unappliedScript = null
+                List<File> initScripts = scriptFinder.getInitScripts(dirName)
+                if (!initScripts.isEmpty()) {
+                    for (File file : initScripts) {
+                        String script = getScriptName(file)
+                        if (!containsIgnoringPrefix(executedScripts, script)) {
+                            unappliedScript = script
+                            break
+                        }
+                    }
+                    if (unappliedScript) {
+                        project.logger.warn("Script $unappliedScript has not been applied, running init scripts")
+                        initDatabase(dirName)
+                    }
+                }
             }
         }
+    }
+
+    protected boolean containsIgnoringPrefix(List<String> strings, String s) {
+        return strings.find { it -> it.length() > 3 && s.length() > 3 && it.substring(3) == s.substring(3) }
     }
 
     protected boolean tableExists(String tableName) {

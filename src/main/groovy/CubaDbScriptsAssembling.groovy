@@ -48,7 +48,7 @@ class CubaDbScriptsAssembling extends DefaultTask {
     void assemble() {
         Configuration dbscripts = project.configurations.findByName('dbscripts')
         if (dbscripts) {
-            project.logger.info '[CubaDbScriptsAssembling] project has dbscripts'
+            project.logger.info "[CubaDbScriptsAssembling] project '$project.name' has dbscripts"
             def dir = new File("${project.buildDir}/db")
             if (dir.exists()) {
                 project.logger.info "[CubaDbScriptsAssembling] delete $dir.absolutePath"
