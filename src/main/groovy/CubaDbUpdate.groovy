@@ -39,12 +39,12 @@ class CubaDbUpdate extends CubaDbTask {
         init()
 
         try {
-            List<String> scripts = getExecutedScripts()
-            runRequiredInitScripts(scripts)
+            runRequiredInitScripts()
 
             ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
             List<File> files = scriptFinder.getUpdateScripts()
 
+            List<String> scripts = getExecutedScripts()
             def toExecute = files.findAll { File file ->
                 String name = getScriptName(file)
                 !containsIgnoringPrefix(scripts, name)
@@ -64,7 +64,7 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
-    protected void runRequiredInitScripts(List<String> executedScripts) {
+    protected void runRequiredInitScripts() {
         if (!tableExists('SYS_DB_CHANGELOG')) {
             project.logger.warn("Table SYS_DB_CHANGELOG does not exist, running all init scripts")
             try {
@@ -81,6 +81,7 @@ class CubaDbUpdate extends CubaDbTask {
             return
         }
 
+        List<String> executedScripts = getExecutedScripts()
         ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
         def dirs = scriptFinder.getModuleDirs()
         if (dirs.size() > 1) {
