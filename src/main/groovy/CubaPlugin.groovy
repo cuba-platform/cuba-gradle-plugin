@@ -127,7 +127,7 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         project.dependencies {
-            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.5.4', ext: 'zip')
+            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.0.35', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat')
