@@ -22,8 +22,6 @@ import org.gradle.api.tasks.TaskAction
 
 import java.util.regex.Pattern
 
-/**
- */
 class CubaDeployment extends DefaultTask {
 
     private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
@@ -97,7 +95,9 @@ class CubaDeployment extends DefaultTask {
                     return false
                 }
 
-                if (!(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && (jarNames.find { name.startsWith(it) } == null)) {
+                def libraryName = getLibraryDefinition(name).name
+
+                if (!(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && !jarNames.contains(libraryName)) {
                     copiedToSharedLib.add(name)
 
                     return true
@@ -116,12 +116,15 @@ class CubaDeployment extends DefaultTask {
             into "${tomcatRootDir}/webapps/$appName/WEB-INF/lib"  //
             include { details ->
                 String name = details.file.name
+
                 if (new File(appLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
                     return false
                 }
 
+                def libraryName = getLibraryDefinition(name).name
+
                 if (!(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) &&
-                        (jarNames.find { name.startsWith(it) } != null)) {
+                        jarNames.contains(libraryName)) {
                     copiedToAppLib.add(name)
 
                     return true
@@ -348,7 +351,7 @@ class CubaDeployment extends DefaultTask {
                 logger("[CubaDeployment] check libraries: " + libraryNames.join(','))
             }
 
-            // filenames to remove
+            // file names to remove
             def removeSet = new HashSet<String>()
             // key - nameOfLib , value = list of matched versions
             def versionsMap = new HashMap<String, List<String>>()
