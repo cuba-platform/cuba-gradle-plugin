@@ -346,17 +346,21 @@ class CubaWarBuilding extends DefaultTask {
 
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
+                def libraryName = getLibraryDefinition(name).name
+
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
-                        && jarNames.find { lib.name.startsWith(it) } != null) {
+                        && jarNames.contains(libraryName)) {
                     writer << lib.name << '\n'
                 }
             }
 
             new File("$theProject.libsDir").listFiles().each { File lib ->
+                def libraryName = getLibraryDefinition(name).name
+
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
-                        && jarNames.find { lib.name.startsWith(it) } != null) {
+                        && jarNames.contains(libraryName)) {
                     writer << lib.name << '\n'
                 }
             }
