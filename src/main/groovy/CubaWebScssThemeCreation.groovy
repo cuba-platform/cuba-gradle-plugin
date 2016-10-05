@@ -91,6 +91,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
+        // we need to scan dependendent jar files
+        setDependsOn(project.getTasksByName('compileJava', false))
     }
 
     @OutputDirectory
