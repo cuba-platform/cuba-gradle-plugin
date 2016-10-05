@@ -52,6 +52,7 @@ class CubaPlugin implements Plugin<Project> {
             project.extensions.create("cuba", CubaPluginExtension, project)
             applyToRootProject(project)
         } else {
+            project.extensions.extraProperties.set("appModuleType", null)
             applyToModuleProject(project)
         }
 
@@ -639,7 +640,7 @@ class CubaPlugin implements Plugin<Project> {
 
     private Object getModuleName(Project project) {
         def moduleName
-        if (project.hasProperty('appModuleType'))
+        if (project.hasProperty('appModuleType') && project['appModuleType'] != null)
             moduleName = project['appModuleType']
         else
             moduleName = project.projectDir.name
