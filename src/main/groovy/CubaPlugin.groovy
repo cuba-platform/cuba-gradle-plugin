@@ -30,11 +30,12 @@ import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.jar.Manifest
 
-/**
- */
 class CubaPlugin implements Plugin<Project> {
 
     public static final String VERSION_RESOURCE = "cuba-plugin.version"
+
+    public static final String APP_COMPONENT_ID_MANIFEST_ATTRIBUTE = 'App-Component-Id'
+    public static final String APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE = 'App-Component-Version'
 
     @Override
     void apply(Project project) {
@@ -529,8 +530,8 @@ class CubaPlugin implements Plugin<Project> {
         while (manifests.hasMoreElements()) {
             Manifest manifest = new Manifest(manifests.nextElement().openStream());
 
-            def compId = manifest.mainAttributes.getValue('App-Component-Id')
-            def compVersion = manifest.mainAttributes.getValue('App-Component-Version')
+            def compId = manifest.mainAttributes.getValue(APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
+            def compVersion = manifest.mainAttributes.getValue(APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
 
             if (compId && compVersion) {
                 def compDescrPath = compId.replace('.', '/') + '/app-component.xml'
