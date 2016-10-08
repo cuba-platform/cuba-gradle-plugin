@@ -111,16 +111,20 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 project.file(scssDir).listFiles(dirFilter).toList() :
                 themes.collect { new File(project.file(scssDir), it) }
 
-        files.addAll(project.fileTree(scssDir, {
-            for (themeDir in themeDirs)
+        project.fileTree(scssDir, {
+            for (def themeDir : themeDirs)
                 include "${themeDir.name}/**"
             exclude '**/.*'
-        }))
+        }).each { def file ->
+            files.add(file)
+        }
 
         for (include in includes) {
-            files.addAll(project.rootProject.fileTree(include, {
+            project.rootProject.fileTree(include, {
                 exclude '**/.*'
-            }))
+            }).each {def file ->
+                files.add(file)
+            }
         }
 
         return new SimpleFileCollection(files)
