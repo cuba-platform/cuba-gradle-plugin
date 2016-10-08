@@ -15,10 +15,9 @@
  *
  */
 
+import com.haulmont.gradle.utils.CssUrlInspector
 import org.apache.commons.io.IOUtils
 
-/**
- */
 class CssUrlsTest extends GroovyTestCase {
     void testUrlMatcher() {
         String cssContent = IOUtils.toString(getClass().getResourceAsStream('css-version-test.css'))
@@ -26,7 +25,7 @@ class CssUrlsTest extends GroovyTestCase {
         def urls = ['picture1.png', 'url/path/picture2.png', 'picture3.png', 'picture4.png']
         def foundUrls = []
 
-        def inspector = new CubaWebScssThemeCreation.CssUrlInspector()
+        def inspector = new CssUrlInspector()
 
         for (String url : inspector.getUrls(cssContent)) {
             assertFalse(foundUrls.contains(url))
