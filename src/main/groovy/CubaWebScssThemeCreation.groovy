@@ -15,14 +15,12 @@
  *
  */
 
-
 import com.haulmont.gradle.utils.CssUrlInspector
 import com.vaadin.sass.internal.ScssContext
 import com.vaadin.sass.internal.ScssStylesheet
 import com.vaadin.sass.internal.handler.SCSSDocumentHandlerImpl
 import com.vaadin.sass.internal.handler.SCSSErrorHandler
 import com.yahoo.platform.yui.compressor.CssCompressor
-import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
@@ -32,7 +30,6 @@ import org.carrot2.labs.smartsprites.message.MessageSink
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.*
@@ -40,20 +37,22 @@ import org.kohsuke.args4j.CmdLineParser
 import org.w3c.css.sac.CSSException
 import org.w3c.css.sac.CSSParseException
 
-import java.nio.file.Files
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
+
+import static org.apache.commons.io.FileUtils.deleteQuietly
 
 class CubaWebScssThemeCreation extends DefaultTask {
 
     // additional scss root from modules
     List<File> includes = []
+    List<String> includedAppComponentIds = []
 
     // theme names to build
     List<String> themes = []
 
     Object scssDir = 'themes'
-    Object destDir = "${project.buildDir}/web/VAADIN/themes"
+    Object destDir = "${project.buildDir}/web"
 
     def buildTimeStamp = ''
     def compress = true
@@ -73,6 +72,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             'VAADIN/themes/chameleon/**',
             'VAADIN/themes/runo/**',
             'VAADIN/themes/liferay/**',
+            'VAADIN/themes/valo/util/readme.txt',
             'VAADIN/themes/valo/fonts/lato/*.eot',
             'VAADIN/themes/valo/fonts/lato/*.ttf',
             'VAADIN/themes/valo/fonts/lato/*.woff',
@@ -88,18 +88,13 @@ class CubaWebScssThemeCreation extends DefaultTask {
             'META-INF/**',
     ]
 
-    def dirFilter = new FileFilter() {
-        @Override
-        boolean accept(File pathname) {
-            return pathname.isDirectory() && !pathname.name.startsWith(".")
-        }
+    def dirFilter = { File pathname ->
+        return pathname.isDirectory() && !pathname.name.startsWith(".")
     }
 
     CubaWebScssThemeCreation() {
         setDescription('Compile scss styles in theme')
         setGroup('Web resources')
-        // we need to scan dependent jar files
-        setDependsOn(project.getTasksByName('compileJava', false))
     }
 
     @OutputDirectory
@@ -117,7 +112,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 themes.collect { new File(project.file(scssDir), it) }
 
         files.addAll(project.fileTree(scssDir, {
-            for (def themeDir : themeDirs)
+            for (themeDir in themeDirs)
                 include "${themeDir.name}/**"
             exclude '**/.*'
         }))
@@ -138,64 +133,22 @@ class CubaWebScssThemeCreation extends DefaultTask {
             themesTmp.deleteDir()
         themesTmp.mkdir()
 
-        File destinationDirectory
-        if (destDir instanceof String)
-            destinationDirectory = project.file(destDir)
-        else
-            destinationDirectory = destDir as File
+        def vaadinThemesRoot = new File(themesTmp, "VAADIN/themes")
+        vaadinThemesRoot.mkdir()
 
-        File stylesDirectory
-        if (scssDir instanceof String)
-            stylesDirectory = project.file(scssDir)
-        else
-            stylesDirectory = scssDir as File
+        def destinationDirectory = project.file(destDir)
+        def stylesDirectory = project.file(scssDir)
 
         if (themes.empty) {
-            project.logger.info("[CubaWebScssThemeCreation] scan directory '{}' for themes", stylesDirectory)
+            project.logger.info("[CubaWebScssThemeCreation] scan directory '{}' for themes", stylesDirectory.absolutePath)
 
-            themes.addAll(project.file(stylesDirectory)
+            themes.addAll(stylesDirectory
                     .listFiles(dirFilter)
                     .collect { it.name })
         }
 
-        // unpack dependencies to destDir
-        Configuration themesConf = project.configurations.findByName('themes')
-        if (themesConf) {
-            // unpack dependencies first
-            def themesResolvedArtifacts = themesConf.resolvedConfiguration
-                    .getResolvedArtifacts()
-                    .toList()
-                    .reverse()
-
-            themesResolvedArtifacts.each { ResolvedArtifact artifact ->
-                project.logger.info("[CubaWebScssThemeCreation] unpack themes artifact {}", artifact.name)
-
-                File tmpDir = Files.createTempDirectory('themes_' + artifact.name).toFile()
-                try {
-                    project.copy {
-                        from project.zipTree(artifact.file.absolutePath)
-                        into tmpDir
-                        excludes = doNotUnpackPaths.toSet()
-                    }
-
-                    File artifactThemesRoot = tmpDir
-                    // if used vaadin-style theme artifact
-                    def vaadinThemesRoot = new File(tmpDir, 'VAADIN/themes')
-                    if (vaadinThemesRoot.exists()) {
-                        artifactThemesRoot = vaadinThemesRoot
-                    }
-
-                    artifactThemesRoot.eachDir { File dir ->
-                        project.copy {
-                            from dir
-                            into new File(themesTmp, dir.name)
-                        }
-                    }
-                } finally {
-                    tmpDir.deleteDir()
-                }
-            }
-        }
+        unpackVaadinAddonsThemes(themesTmp)
+        unpackThemesConfDependencies(themesTmp, vaadinThemesRoot)
 
         // copy includes to build dir
         for (includeThemeDir in includes) {
@@ -205,45 +158,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             project.copy {
                 from includeThemeDir
-                into new File(themesTmp, includeThemeDir.name)
+                into new File(vaadinThemesRoot, includeThemeDir.name)
             }
-        }
-
-        // copy include resources
-        for (includeThemeDir in includes) {
-            project.logger.info("[CubaWebScssThemeCreation] copy resources from '{}", includeThemeDir.name)
-            if (!includeThemeDir.exists())
-                throw new GradleException("Could not find include dir ${includeThemeDir.absolutePath}")
-
-            def themeDestDir = new File(destinationDirectory, includeThemeDir.name)
-
-            copyIncludeResources(includeThemeDir, themeDestDir)
-        }
-
-        File[] themeDirs = themesTmp.listFiles()
-        if (themeDirs) {
-            for (File themeSourceDir : themeDirs) {
-                if (themeSourceDir.isDirectory()) {
-                    project.logger.info("[CubaWebScssThemeCreation] copy resources from '{}'", themeSourceDir.name)
-
-                    def themeDestDir = new File(destinationDirectory, themeSourceDir.name)
-                    copyIncludeResources(themeSourceDir, themeDestDir)
-                }
-            }
-        }
-
-        for (themeName in excludedThemes) {
-            def themeDestDir = new File(destinationDirectory, themeName)
-            project.logger.info("[CubaWebScssThemeCreation] excluded theme '{}'", themeName)
-
-            FileUtils.deleteQuietly(themeDestDir)
-        }
-
-        for (path in excludePaths) {
-            def pathFile = new File(destinationDirectory, path)
-            project.logger.info("[CubaWebScssThemeCreation] excluded path '{}'", path)
-
-            FileUtils.deleteQuietly(pathFile)
         }
 
         def cssBuildTimeStamp = buildTimeStamp
@@ -252,24 +168,92 @@ class CubaWebScssThemeCreation extends DefaultTask {
             cssBuildTimeStamp = project.ext.get('webResourcesTs')
         }
 
-        def unpackedVaadinAddons = new HashSet<File>()
-
         for (themeDirName in themes) {
-            buildTheme(themeDirName, stylesDirectory, themesTmp, destinationDirectory,
-                    unpackedVaadinAddons, cssBuildTimeStamp)
+            buildTheme(themeDirName, stylesDirectory, vaadinThemesRoot, cssBuildTimeStamp)
+        }
+
+        copyResources(themesTmp, destinationDirectory)
+
+        if (cleanup) {
+            // remove empty directories
+            removeEmptyDirs(destinationDirectory)
+        }
+
+        for (themeName in excludedThemes) {
+            def themeDestDir = new File(destinationDirectory, themeName)
+            project.logger.info("[CubaWebScssThemeCreation] excluded theme '{}'", themeName)
+
+            deleteQuietly(themeDestDir)
+        }
+
+        for (path in excludePaths) {
+            def pathFile = new File(destinationDirectory, path)
+            project.logger.info("[CubaWebScssThemeCreation] excluded path '{}'", path)
+
+            deleteQuietly(pathFile)
         }
     }
 
-    void buildTheme(String themeDirName, File stylesDirectory, File themesTmp, File destinationDirectory,
-                    HashSet<File> unpackedVaadinAddons, String buildTimeStamp) {
+    void unpackThemesConfDependencies(File themesTmp, File vaadinThemesRoot) {
+        Configuration themesConf = project.configurations.findByName('themes')
+        if (themesConf) {
+            // unpack dependencies first
+            def themesResolvedArtifacts = themesConf.resolvedConfiguration
+                    .getResolvedArtifacts()
+                    .toList()
+                    .reverse()
+
+            for (artifact in themesResolvedArtifacts) {
+                project.logger.info("[CubaWebScssThemeCreation] unpack themes artifact {}", artifact.name)
+
+                if (artifact.name != 'vaadin-themes') {
+                    project.copy {
+                        from project.zipTree(artifact.file)
+                        into vaadinThemesRoot
+                        excludes = doNotUnpackPaths.toSet()
+                    }
+                } else {
+                    project.copy {
+                        from project.zipTree(artifact.file)
+                        into themesTmp
+                        include 'VAADIN/**'
+                        excludes = doNotUnpackPaths.toSet()
+                    }
+                }
+            }
+        }
+    }
+
+    void unpackVaadinAddonsThemes(File themesTmp) {
+        def compileConfiguration = project.configurations.compile
+        def resolvedArtifacts = compileConfiguration.resolvedConfiguration.resolvedArtifacts
+        def dependentJarFiles = resolvedArtifacts.collect { it.file }.findAll { it.exists() && it.file && it.name.endsWith(".jar") }
+
+        for (jarFile in dependentJarFiles) {
+            jarFile.withInputStream { is ->
+                def jarStream = new JarInputStream(is)
+                def mf = jarStream.manifest
+                def attributes = mf?.mainAttributes
+                if (attributes) {
+                    def vaadinStylesheets = attributes.getValue('Vaadin-Stylesheets')
+                    if (vaadinStylesheets) {
+                        project.logger.info("[CubaWebScssThemeCreation] unpack Vaadin addon styles {}", jarFile.name)
+                        project.copy {
+                            from project.zipTree(jarFile)
+                            into themesTmp
+                            include 'VAADIN/**'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void buildTheme(String themeDirName, File stylesDirectory, File vaadinThemesRoot, String buildTimeStamp) {
         project.logger.info("[CubaWebScssThemeCreation] build theme '{}'", themeDirName)
 
         def themeDir = new File(stylesDirectory, themeDirName)
-
-        def themeBuildDir = new File(themesTmp, themeDirName)
-        def themeDestDir = new File(destinationDirectory, themeDirName)
-        if (!themeDestDir.exists())
-            themeDestDir.mkdir()
+        def themeBuildDir = new File(vaadinThemesRoot, themeDirName)
 
         project.logger.info("[CubaWebScssThemeCreation] copy theme '{}' to build directory", themeDir.name)
         // copy theme to build directory
@@ -281,44 +265,21 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
         }
 
-        project.logger.info("[CubaWebScssThemeCreation] copy theme resources for '{}'", themeDir.name)
-        // copy resources from themeBuildDir, override may be used
-        project.copy {
-            from themeBuildDir
-            into themeDestDir
-            exclude {
-                it.file.name.startsWith('.') || it.file.name.endsWith('.scss')
-            }
-        }
-
-        prepareAppComponentsInclude(themeBuildDir, unpackedVaadinAddons)
+        prepareAppComponentsInclude(themeBuildDir)
 
         project.logger.info("[CubaWebScssThemeCreation] compile theme '{}'", themeDir.name)
 
         def scssFile = project.file("${themeBuildDir}/styles.scss")
-        def cssFile = project.file("${themeDestDir}/styles.css")
+        def cssFile = project.file("${themeBuildDir}/styles.css")
 
         compileScss(scssFile, cssFile)
 
         if (sprites) {
-            performSpritesProcessing(themeDir, themeDestDir, cssFile.absolutePath)
+            performSpritesProcessing(themeDir, themeBuildDir, cssFile.absolutePath)
         }
 
         if (compress) {
             performCssCompression(themeDir, cssFile)
-        }
-
-        if (cleanup) {
-            // remove empty directories
-            recursiveVisitDir(themeDestDir, { File f ->
-                boolean isEmpty = f.list().length == 0
-                if (isEmpty) {
-                    project.logger.debug("[CubaWebScssThemeCreation] remove empty dir {} in '{}'",
-                            themeDestDir.toPath().relativize(f.toPath()),
-                            themeDir.name)
-                    f.deleteDir()
-                }
-            })
         }
 
         // update build timestamp for urls
@@ -395,8 +356,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         errorHandler.setWarningsAreErrors(false)
 
         try {
-            ScssStylesheet scss = ScssStylesheet.get(scssFile.absolutePath, null,
-                    new SCSSDocumentHandlerImpl(), errorHandler);
+            def scss = ScssStylesheet.get(scssFile.absolutePath, null, new SCSSDocumentHandlerImpl(), errorHandler);
 
             if (scss == null) {
                 throw new GradleException("Unable to find SCSS file " + scssFile.absolutePath)
@@ -417,14 +377,14 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     void performCssCompression(File themeDir, File cssFile) {
-        project.logger.info("[CubaWebScssThemeCreation] compress theme '${themeDir.name}'")
+        project.logger.info("[CubaWebScssThemeCreation] compress theme '{}'", themeDir.name)
 
         def compressedFile = new File(cssFile.absolutePath + '.compressed')
 
         def cssReader = new FileReader(cssFile)
-        BufferedWriter out = new BufferedWriter(new FileWriter(compressedFile))
+        def out = new BufferedWriter(new FileWriter(compressedFile))
 
-        CssCompressor compressor = new CssCompressor(cssReader)
+        def compressor = new CssCompressor(cssReader)
         compressor.compress(out, 0)
 
         out.close()
@@ -436,21 +396,21 @@ class CubaWebScssThemeCreation extends DefaultTask {
         }
     }
 
-    void performSpritesProcessing(File themeDir, File themeDestDir, String cssFilePath) {
-        project.logger.info("[CubaWebScssThemeCreation] compile sprites for theme '${themeDir.name}'")
+    void performSpritesProcessing(File themeDir, File themeBuildDir, String cssFilePath) {
+        project.logger.info("[CubaWebScssThemeCreation] compile sprites for theme '{}'", themeDir.name)
 
-        def compiledSpritesDir = new File(themeDestDir, 'compiled')
+        def compiledSpritesDir = new File(themeBuildDir, 'compiled')
         if (!compiledSpritesDir.exists())
             compiledSpritesDir.mkdir()
 
-        def processedFile = new File(themeDestDir, 'styles-sprite.css')
+        def processedFile = new File(themeBuildDir, 'styles-sprite.css')
         def cssFile = new File(cssFilePath)
 
         // process
         def parameters = new SmartSpritesParameters()
         def parser = new CmdLineParser(parameters)
 
-        parser.parseArgument('--root-dir-path', themeDestDir.absolutePath)
+        parser.parseArgument('--root-dir-path', themeBuildDir.absolutePath)
 
         def messageToString = { Message m ->
             def stringBuilder = new StringBuilder("[CubaWebScssThemeCreation] ")
@@ -493,7 +453,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         def dirsToDelete = []
         // remove sprites directories
-        themeDestDir.eachDirRecurse { if ('sprites' == it.name) dirsToDelete.add(it) }
+        themeBuildDir.eachDirRecurse { if ('sprites' == it.name) dirsToDelete.add(it) }
         dirsToDelete.each { it.deleteDir() }
 
         // replace file
@@ -503,7 +463,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         }
     }
 
-    void prepareAppComponentsInclude(File themeBuildDir, Set<File> includedVaadinAddons) {
+    void prepareAppComponentsInclude(File themeBuildDir) {
         project.logger.info("[CubaWebScssThemeCreation] include styles from app components")
 
         def appComponentsIncludeFile = new File(themeBuildDir, 'app-components.scss')
@@ -519,7 +479,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
         def includedAddonsPaths = new HashSet<String>()
         def scannedJars = new HashSet<File>()
 
-        Enumeration<URL> manifests = CubaWebScssThemeCreation.class.getClassLoader().getResources("META-INF/MANIFEST.MF")
+        def classLoader = CubaWebScssThemeCreation.class.getClassLoader()
+        def manifests = classLoader.getResources("META-INF/MANIFEST.MF")
         while (manifests.hasMoreElements()) {
             Manifest manifest = new Manifest(manifests.nextElement().openStream());
 
@@ -527,7 +488,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def compVersion = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
 
             if (compId && compVersion) {
-                project.logger.info("[CubaWebScssThemeCreation] include styles from app component $compId")
+                project.logger.info("[CubaWebScssThemeCreation] include styles from app component {}", compId)
 
                 def componentThemeDir = new File(themeBuildDir, compId)
                 def addonsIncludeFile = new File(componentThemeDir, 'vaadin-addons.scss')
@@ -538,15 +499,21 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
                 // ignore automatic lookup if defined file vaadin-addons.scss
                 if (!addonsIncludeFile.exists()) {
-                    findAndIncludeVaadinStyles(themeBuildDir.parentFile, dependentJarFiles, includedVaadinAddons,
-                            includedAddonsPaths, includeMixins, appComponentsIncludeBuilder)
+                    findAndIncludeVaadinStyles(dependentJarFiles, includedAddonsPaths, includeMixins, appComponentsIncludeBuilder)
                 } else {
-                    project.logger.info("[CubaWebScssThemeCreation] ignore vaadin addon styles for $compId")
+                    project.logger.info("[CubaWebScssThemeCreation] ignore vaadin addon styles for {}", compId)
                 }
 
-                // check if exists directory with name == compId
                 includeComponentScss(themeBuildDir, compId, appComponentsIncludeBuilder, includeMixins)
             }
+        }
+
+        for (includeAppComponentId in includedAppComponentIds) {
+            project.logger.info("[CubaWebScssThemeCreation] include styles from app component {}", includeAppComponentId)
+
+            // autowiring of vaadin addons from includes is not supported
+
+            includeComponentScss(themeBuildDir, includeAppComponentId, appComponentsIncludeBuilder, includeMixins)
         }
 
         appComponentsIncludeBuilder.append('\n')
@@ -561,10 +528,11 @@ class CubaWebScssThemeCreation extends DefaultTask {
         if (!addonsIncludeFile.exists()) {
             def compileConfiguration = project.configurations.compile
             def resolvedArtifacts = compileConfiguration.resolvedConfiguration.resolvedArtifacts
-            def currentProjectDependencies = resolvedArtifacts.collect({ it.file }) - scannedJars
+            def resolvedFiles = resolvedArtifacts.collect({ it.file })
+            def currentProjectDependencies = resolvedFiles.findAll({it.exists() && it.name.endsWith(".jar")}) - scannedJars
 
-            findAndIncludeVaadinStyles(themeBuildDir.parentFile, currentProjectDependencies, includedVaadinAddons,
-                    includedAddonsPaths, includeMixins, appComponentsIncludeBuilder)
+            findAndIncludeVaadinStyles(currentProjectDependencies, includedAddonsPaths, includeMixins,
+                    appComponentsIncludeBuilder)
         } else {
             project.logger.info("[CubaWebScssThemeCreation] ignore vaadin addon styles for $currentProjectId")
         }
@@ -600,8 +568,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         return firstLevelModuleDependencies.collectMany({ rd ->
             if (compId == rd.moduleGroup) {
-                def jarArtifacts = rd.allModuleArtifacts.findAll({ ra -> ra.file.name.endsWith('.jar') })
-                def jarFiles = jarArtifacts.collect { it.file }
+                def jarArtifacts = rd.allModuleArtifacts.findAll({ ra -> ra.file.name.endsWith('.jar') && ra.file.exists() })
+                def jarFiles = jarArtifacts.collect{ it.file }
 
                 return jarFiles
             }
@@ -611,8 +579,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     // find all vaadin addons in dependencies of this app component
-    void findAndIncludeVaadinStyles(File themesBuildDir, List<File> dependentJarFiles,
-                                    Set<File> includedVaadinAddons, Set<String> includedAddonsPaths,
+    void findAndIncludeVaadinStyles(List<File> dependentJarFiles, Set<String> includedAddonsPaths,
                                     List<String> includeMixins, StringBuilder appComponentsIncludeBuilder) {
         for (def file : dependentJarFiles) {
             file.withInputStream { is ->
@@ -622,17 +589,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 if (attributes) {
                     def vaadinStylesheets = attributes.getValue('Vaadin-Stylesheets')
                     if (vaadinStylesheets) {
-                        if (!includedVaadinAddons.contains(file)) {
-                            project.logger.info("[CubaWebScssThemeCreation] unpack Vaadin addon styles ${file.name}")
-                            project.copy {
-                                from project.zipTree(file)
-                                into themesBuildDir
-                                include 'VAADIN/**'
-                            }
-
-                            includedVaadinAddons.add(file)
-                        }
-
                         includeVaadinStyles(vaadinStylesheets, includeMixins, includedAddonsPaths, appComponentsIncludeBuilder)
                     }
                 }
@@ -658,45 +614,45 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             includedPaths.add(include)
 
-            project.logger.info("[CubaWebScssThemeCreation] include vaadin addons styles '${include}'")
+            project.logger.info("[CubaWebScssThemeCreation] include vaadin addons styles '{}'", include)
 
             if (include.endsWith('.css')) {
-                appComponentsIncludeBuilder.append("@import url(\"..$include\");\n")
+                appComponentsIncludeBuilder.append("@import url(\"../../..$include\");\n")
             } else {
                 def mixin = include.substring(include.lastIndexOf("/") + 1,
                         include.length() - '.scss'.length());
 
-                appComponentsIncludeBuilder.append("@import \"..$include\";\n")
+                appComponentsIncludeBuilder.append("@import \"../../..$include\";\n")
 
                 includeMixins.add(mixin)
             }
         }
     }
 
-    void copyIncludeResources(File themeSourceDir, File themeDestDir) {
+    void copyResources(File themesBuildDir, File themesDestDir) {
         project.copy {
-            from themeSourceDir
-            into themeDestDir
+            from themesBuildDir
+            into themesDestDir
             exclude {
-                it.file.name.startsWith('.') || 'favicon.ico' == it.file.name || it.file.name.endsWith('.scss') || it.file.name.endsWith('.css')
+                it.file.name.startsWith('.') || it.file.name.endsWith('.scss')
             }
-        }
-
-        if (cleanup) {
-            // remove empty directories
-            recursiveVisitDir(themeDestDir, { File f ->
-                boolean isEmpty = f.list().length == 0
-                if (isEmpty) {
-                    def relativePath = themeDestDir.toPath().relativize(f.toPath())
-                    project.logger.debug("[CubaWebScssThemeCreation] remove empty dir $relativePath in '${themeDestDir.name}'")
-                    f.deleteDir()
-                }
-            })
         }
     }
 
+    void removeEmptyDirs(File themesDestDir) {
+        recursiveVisitDir(themesDestDir, { File f ->
+            boolean isEmpty = f.list().length == 0
+            if (isEmpty) {
+                def relativePath = themesDestDir.toPath().relativize(f.toPath())
+                project.logger.debug("[CubaWebScssThemeCreation] remove empty dir {} in '{}'", relativePath,
+                        themesDestDir.name)
+                f.deleteDir()
+            }
+        })
+    }
+
     void recursiveVisitDir(File dir, Closure apply) {
-        for (def f : dir.listFiles()) {
+        for (f in dir.listFiles()) {
             if (f.exists() && f.isDirectory()) {
                 recursiveVisitDir(f, apply)
                 apply(f)
