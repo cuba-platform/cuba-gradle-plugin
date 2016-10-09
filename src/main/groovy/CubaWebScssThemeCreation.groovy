@@ -88,8 +88,11 @@ class CubaWebScssThemeCreation extends DefaultTask {
             'META-INF/**',
     ]
 
-    def dirFilter = { File pathname ->
-        return pathname.isDirectory() && !pathname.name.startsWith(".")
+    def dirFilter = new FileFilter() {
+        @Override
+        boolean accept(File pathname) {
+            return pathname.isDirectory() && !pathname.name.startsWith(".")
+        }
     }
 
     CubaWebScssThemeCreation() {
@@ -112,7 +115,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 themes.collect { new File(project.file(scssDir), it) }
 
         project.fileTree(scssDir, {
-            for (def themeDir : themeDirs)
+            for (themeDir in themeDirs)
                 include "${themeDir.name}/**"
             exclude '**/.*'
         }).each { def file ->
@@ -486,7 +489,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         def classLoader = CubaWebScssThemeCreation.class.getClassLoader()
         def manifests = classLoader.getResources("META-INF/MANIFEST.MF")
         while (manifests.hasMoreElements()) {
-            Manifest manifest = new Manifest(manifests.nextElement().openStream());
+            def manifest = new Manifest(manifests.nextElement().openStream());
 
             def compId = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
             def compVersion = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
@@ -543,7 +546,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         // print mixins
         appComponentsIncludeBuilder.append('\n@mixin app_components {\n')
-        for (def mixin : includeMixins) {
+        for (mixin in includeMixins) {
             appComponentsIncludeBuilder.append('  @include ').append(mixin).append(';\n')
         }
         appComponentsIncludeBuilder.append('}')
@@ -585,7 +588,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     // find all vaadin addons in dependencies of this app component
     void findAndIncludeVaadinStyles(List<File> dependentJarFiles, Set<String> includedAddonsPaths,
                                     List<String> includeMixins, StringBuilder appComponentsIncludeBuilder) {
-        for (def file : dependentJarFiles) {
+        for (file in dependentJarFiles) {
             file.withInputStream { is ->
                 def jarStream = new JarInputStream(is)
                 def mf = jarStream.manifest
@@ -607,7 +610,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 .findAll({ it.length() > 0 })
                 .unique()
 
-        for (def include : vAddonIncludes) {
+        for (include in vAddonIncludes) {
             if (!include.startsWith('/')) {
                 include = '/' + include
             }
