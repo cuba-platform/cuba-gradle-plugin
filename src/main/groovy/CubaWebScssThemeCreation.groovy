@@ -39,6 +39,7 @@ import org.w3c.css.sac.CSSParseException
 
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
+import java.util.zip.GZIPOutputStream
 
 import static org.apache.commons.io.FileUtils.deleteQuietly
 
@@ -58,6 +59,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     def compress = true
     def sprites = true
     def cleanup = true
+    def gzip = true
 
     def excludedThemes = new ArrayList<String>()
     def excludePaths = new ArrayList<String>()
@@ -292,6 +294,24 @@ class CubaWebScssThemeCreation extends DefaultTask {
         // update build timestamp for urls
         if (StringUtils.isNotEmpty(buildTimeStamp)) {
             performCssResourcesVersioning(themeDir, cssFile, buildTimeStamp)
+        }
+
+        if (gzip) {
+            project.logger.info("[CubaWebScssThemeCreation] compress css file 'styles.css'")
+
+            def uncompressedStream = new FileInputStream(new File("${themeBuildDir}/styles.css"))
+            def gzos = new GZIPOutputStream(new FileOutputStream(new File("${themeBuildDir}/styles.css.gz")))
+
+            def buffer = new byte[1024]
+            int len
+            while ((len = uncompressedStream.read(buffer)) > 0) {
+                gzos.write(buffer, 0, len)
+            }
+
+            uncompressedStream.close()
+
+            gzos.finish()
+            gzos.close()
         }
 
         project.logger.info("[CubaWebScssThemeCreation] successfully compiled theme '{}'", themeDir.name)
