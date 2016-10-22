@@ -86,10 +86,10 @@ class CubaDbUpdate extends CubaDbTask {
         def dirs = scriptFinder.getModuleDirs()
         if (dirs.size() > 1) {
             def lastDir = dirs[dirs.size() - 1]
-            def split = lastDir.split('-')
-            if (split.length != 2)
+            def dashIdx = lastDir.indexOf('-')
+            if (dashIdx < 1 || dashIdx > lastDir.length() - 2)
                 throw new RuntimeException("Invalid DB scripts directory name format: $lastDir")
-            if (split[1] == project.rootProject.name) {
+            if (lastDir.substring(dashIdx + 1) == project.rootProject.name) {
                 // if own scripts exist, check all db folders except the last because it is the folder of the app and we need only components
                 dirs = dirs.subList(0, dirs.size() - 1)
             }
