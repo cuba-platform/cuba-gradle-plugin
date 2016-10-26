@@ -66,6 +66,7 @@ dependencies {
         exclude group: 'com.yahoo.platform.yui', module: 'yuicompressor'
     }
     compile(group: 'com.jelastic', name: 'jelastic-public-j2se', version: '4.0')
+    compile(group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: '0.13')
     compile(gradleApi())
     compile(localGroovy())
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
