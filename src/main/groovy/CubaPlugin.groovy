@@ -15,6 +15,8 @@
  *
  */
 
+import com.moowork.gradle.node.NodeExtension
+import com.moowork.gradle.node.NodePlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -40,6 +42,11 @@ class CubaPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.logger.info("[CubaPlugin] applying to project $project.name")
+
+        if (project != project.rootProject && project.name.endsWith('-polymer-client')) {
+            applyToPolymerClientProject(project)
+            return
+        }
 
         project.repositories {
             project.rootProject.buildscript.repositories.each {
@@ -517,6 +524,22 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
         }
+    }
+
+    private void applyToPolymerClientProject(Project project) {
+        project.plugins.apply(NodePlugin)
+        NodeExtension nodeExtension = project.extensions.getByType(NodeExtension)
+        nodeExtension.version = '4.6.1'
+        nodeExtension.npmVersion = '3.10.9'
+        nodeExtension.download = true
+
+        project.tasks.addRule('Pattern: "'+ CubaPolymerScaffoldingTask.NAME_PREFIX +'<command>"') { String taskName ->
+            if (taskName.startsWith(CubaPolymerScaffoldingTask.NAME_PREFIX)) {
+                def scaffoldingTask = project.tasks.create(taskName, CubaPolymerScaffoldingTask)
+                scaffoldingTask.command = taskName - CubaPolymerScaffoldingTask.NAME_PREFIX
+            }
+        }
+
     }
 
     private void addDependenciesFromAppComponents(Project project) {
