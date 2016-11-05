@@ -17,6 +17,7 @@
 
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
+import com.moowork.gradle.node.task.NpmInstallTask
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -530,13 +531,17 @@ class CubaPlugin implements Plugin<Project> {
         project.plugins.apply(NodePlugin)
         NodeExtension nodeExtension = project.extensions.getByType(NodeExtension)
         nodeExtension.version = '4.6.1'
-        nodeExtension.npmVersion = '3.10.9'
         nodeExtension.download = true
+
+        project.task([type: NpmInstallTask], "installPolymerGenerator") {
+            args = ['generator-cuba@0.0.5']
+        }
 
         project.tasks.addRule('Pattern: "'+ CubaPolymerScaffoldingTask.NAME_PREFIX +'<command>"') { String taskName ->
             if (taskName.startsWith(CubaPolymerScaffoldingTask.NAME_PREFIX)) {
                 def scaffoldingTask = project.tasks.create(taskName, CubaPolymerScaffoldingTask)
                 scaffoldingTask.command = taskName - CubaPolymerScaffoldingTask.NAME_PREFIX
+                scaffoldingTask.dependsOn("installPolymerGenerator")
             }
         }
 

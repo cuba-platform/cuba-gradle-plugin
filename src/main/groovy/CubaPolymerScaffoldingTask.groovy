@@ -1,5 +1,4 @@
 import com.moowork.gradle.node.task.NodeTask
-import com.moowork.gradle.node.task.NpmInstallTask
 import groovy.json.JsonSlurper
 import org.gradle.api.GradleException
 
@@ -31,7 +30,6 @@ class CubaPolymerScaffoldingTask extends NodeTask {
                 'Invokes node command line code generator for CUBA Polymer client. ' +
                 'Sample usage: ' + NAME_PREFIX + 'el  -P' + OPTIONS_PROPERTY + '=\'["--elementName=test-element"]\'')
         setGroup('Polymer Client')
-        setDependsOn(project.getTasksByName(NpmInstallTask.NAME, false))
         setScript(project.file('node_modules/generator-cuba/generators/cli.js'))
     }
 
