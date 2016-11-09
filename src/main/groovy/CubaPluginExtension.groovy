@@ -15,13 +15,10 @@
  *
  */
 
+import com.haulmont.gradle.utils.BOMVersions
 import org.gradle.api.Project
 
-/**
- *
- */
 class CubaPluginExtension {
-
     final static String DEFAULT_COPYRIGHT = 'TODO Copyright'
 
     Project project
@@ -34,6 +31,8 @@ class CubaPluginExtension {
 
     UploadRepositoryConfiguration uploadRepository
 
+    BOMVersions bom
+
     CubaPluginExtension(Project project) {
         this.project = project
 
@@ -41,6 +40,7 @@ class CubaPluginExtension {
         ide = new IdeConfiguration(project)
         artifact = new ArtifactConfiguration(project)
         uploadRepository = new UploadRepositoryConfiguration(project)
+        bom = new BOMVersions(project.logger)
 
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
         ide.copyright = DEFAULT_COPYRIGHT

@@ -15,14 +15,17 @@
  *
  */
 
+import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import com.moowork.gradle.node.task.NpmInstallTask
+import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
@@ -57,8 +60,8 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project == project.rootProject) {
-            project.extensions.create("cuba", CubaPluginExtension, project)
-            applyToRootProject(project)
+            def cubaExtension = project.extensions.create("cuba", CubaPluginExtension, project)
+            applyToRootProject(project, cubaExtension)
         } else {
             project.extensions.extraProperties.set("appModuleType", null)
             applyToModuleProject(project)
@@ -131,13 +134,15 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private void applyToRootProject(Project project) {
+    private void applyToRootProject(Project project, CubaPluginExtension cubaExtension) {
+        importCubaBOM(cubaExtension.bom)
+        enableBOMVersionResolver(project, cubaExtension.bom)
+
         project.configurations {
             tomcat
         }
-
         project.dependencies {
-            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.0.35', ext: 'zip')
+            tomcat(group: 'org.apache.tomcat', name: 'tomcat', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat')
@@ -146,6 +151,20 @@ class CubaPlugin implements Plugin<Project> {
         project.task([type: CubaStopTomcat], 'stop')
         project.task([type: CubaDropTomcat], 'dropTomcat')
         project.task([type: CubaZipProject], 'zipProject')
+    }
+
+    private void enableBOMVersionResolver(Project project, BOMVersions bomStore) {
+        project.ext.bom = bomStore
+    }
+
+    private void importCubaBOM(BOMVersions bomStore) {
+        def inputStream = CubaPlugin.class.getResourceAsStream("/bom/cuba-platform-dependencies.groovy")
+        inputStream.withCloseable {
+            Map dependencies = (Map)Eval.me(IOUtils.toString(it))
+            for (libEntry in dependencies.entrySet()) {
+                bomStore.putBOMRule((String)libEntry.key, (String)libEntry.value)
+            }
+        }
     }
 
     private def doAfterEvaluateForModuleProject(Project project) {

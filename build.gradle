@@ -51,8 +51,13 @@ configurations {
     deployerJars
 }
 
+// Use the same version of eclipse link and some libraries
+def dependenciesFile = file('src/main/resources/bom/cuba-platform-dependencies.groovy')
+Map<String, String> versions = new GroovyShell().evaluate(dependenciesFile)
+
 dependencies {
-    compile 'com.haulmont.thirdparty:eclipselink:2.6.2.cuba11'
+    compile('com.haulmont.thirdparty:eclipselink:' + versions.get('com.haulmont.thirdparty:eclipselink'))
+
     compile 'org.apache.httpcomponents:httpmime:4.5.2'
     compile 'org.apache.httpcomponents:httpcore:4.4.5'
     compile('org.javassist:javassist:3.20.0-GA')
@@ -67,8 +72,10 @@ dependencies {
     }
     compile(group: 'com.jelastic', name: 'jelastic-public-j2se', version: '4.0')
     compile(group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: '0.13')
+
     compile(gradleApi())
     compile(localGroovy())
+
     deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
 }
 
