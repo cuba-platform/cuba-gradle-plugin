@@ -438,12 +438,6 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        // set module language level to 1.6 if it is -toolkit module
-        if (project.name.endsWith('-toolkit')) {
-            project.sourceCompatibility = '1.6'
-            project.targetCompatibility = '1.6'
-        }
-
         // add web resources version for correct caching
         if (project.name.endsWith('-web')) {
             def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
@@ -470,11 +464,6 @@ class CubaPlugin implements Plugin<Project> {
             // Enhanced classes library entry must go before source folder
             project.idea.module.iml.withXml { provider ->
                 Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
-
-                // set module language level to 1.6 if it is -toolkit module
-                if (project.name.endsWith('-toolkit')) {
-                    rootNode.@LANGUAGE_LEVEL = 'JDK_1_6'
-                }
 
                 int srcIdx = rootNode.children().findIndexOf {
                     it instanceof Node && it.name() == 'orderEntry' && it.@type == 'sourceFolder'
