@@ -25,7 +25,6 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.DependencyResolveDetails
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
@@ -142,7 +141,7 @@ class CubaPlugin implements Plugin<Project> {
             tomcat
         }
         project.dependencies {
-            tomcat(group: 'org.apache.tomcat', name: 'tomcat', ext: 'zip')
+            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.0.35', ext: 'zip')
         }
 
         project.task([type: CubaSetupTomcat], 'setupTomcat')
