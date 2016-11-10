@@ -552,7 +552,7 @@ class CubaPlugin implements Plugin<Project> {
         nodeExtension.download = true
 
         project.task([type: NpmInstallTask], "installPolymerGenerator") {
-            args = ['generator-cuba@0.0.5']
+            args = ['generator-cuba@~0.0.7']
         }
 
         project.tasks.addRule('Pattern: "'+ CubaPolymerScaffoldingTask.NAME_PREFIX +'<command>"') { String taskName ->
