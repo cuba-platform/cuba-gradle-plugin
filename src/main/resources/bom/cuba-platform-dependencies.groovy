@@ -15,9 +15,9 @@
  *
  */
 
-def springVersion = '4.3.1.RELEASE'
-def springSecurityVersion = '4.1.1.RELEASE'
-def thymeleafVersion = '3.0.0.RELEASE'
+def springVersion = '4.3.3.RELEASE'
+def springSecurityVersion = '4.1.3.RELEASE'
+def thymeleafVersion = '3.0.2.RELEASE'
 def jacksonVersion = '2.8.0'
 def vaadinVersion = '7.6.8.cuba.14'
 
@@ -129,12 +129,12 @@ def yargVersion = '1.0.67'
   'org.springframework.security:spring-security-config' : springSecurityVersion,
   'org.springframework.security:spring-security-taglibs' : springSecurityVersion,
 
-  'org.springframework.security.oauth:spring-security-oauth2' : '2.0.10.RELEASE',
-  'org.springframework.ldap:spring-ldap-core' : '2.0.2.RELEASE',
+  'org.springframework.security.oauth:spring-security-oauth2' : '2.0.11.RELEASE',
+  'org.springframework.ldap:spring-ldap-core' : '2.0.4.RELEASE',
 
   'org.thymeleaf:thymeleaf' : thymeleafVersion,
   'org.thymeleaf:thymeleaf-spring4' : thymeleafVersion,
-  'org.thymeleaf.extras:thymeleaf-extras-springsecurity4' : thymeleafVersion,
+  'org.thymeleaf.extras:thymeleaf-extras-springsecurity4' : '3.0.0.RELEASE',
 
   'com.fasterxml.jackson.core:jackson-databind' : jacksonVersion,
   'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml' : jacksonVersion,
