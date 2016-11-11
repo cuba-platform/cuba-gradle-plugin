@@ -115,7 +115,7 @@ def yargVersion = '1.0.67'
   'com.vaadin:vaadin-themes' : vaadinVersion,
   'com.vaadin:vaadin-push' : vaadinVersion,
   'com.google.gwt:gwt-elemental' : googleGwtVersion,
-  'com.google:gwt-dev' : googleGwtVersion,
+  'com.google.gwt:gwt-dev' : googleGwtVersion,
 
   'org.springframework:spring-core' : springVersion,
   'org.springframework:spring-beans' : springVersion,
