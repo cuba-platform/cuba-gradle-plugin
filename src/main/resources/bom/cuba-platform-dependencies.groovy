@@ -19,7 +19,8 @@ def springVersion = '4.3.3.RELEASE'
 def springSecurityVersion = '4.1.3.RELEASE'
 def thymeleafVersion = '3.0.2.RELEASE'
 def jacksonVersion = '2.8.0'
-def vaadinVersion = '7.6.8.cuba.14'
+def vaadinVersion = '7.7.3.cuba.1'
+def googleGwtVersion='2.8.0'
 
 def luceneVersion = '5.3.0'
 def morphologyVersion = '1.1'
@@ -61,7 +62,7 @@ def yargVersion = '1.0.67'
   'com.haulmont.thirdparty:popupbutton' : '2.5.2.cuba.3',
   'org.vaadin.addons:aceeditor' : '0.8.14',
   'org.vaadin.addons:contextmenu' : '4.5',
-  'org.vaadin.addons:dragdroplayouts' : '1.2.2.cuba.4',
+  'org.vaadin.addons:dragdroplayouts' : '1.3.2.cuba.0',
   'com.haulmont.thirdparty:jbpm' : '4.4.20130109',
   'com.haulmont.thirdparty:yui' : '2.8.1',
 
@@ -113,6 +114,8 @@ def yargVersion = '1.0.67'
   'com.vaadin:vaadin-client-compiler' : vaadinVersion,
   'com.vaadin:vaadin-themes' : vaadinVersion,
   'com.vaadin:vaadin-push' : vaadinVersion,
+  'com.google.gwt:gwt-elemental' : googleGwtVersion,
+  'com.google:gwt-dev' : googleGwtVersion,
 
   'org.springframework:spring-core' : springVersion,
   'org.springframework:spring-beans' : springVersion,
