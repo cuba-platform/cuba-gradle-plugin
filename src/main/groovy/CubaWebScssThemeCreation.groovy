@@ -32,7 +32,10 @@ import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
-import org.gradle.api.tasks.*
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
 import org.kohsuke.args4j.CmdLineParser
 import org.w3c.css.sac.CSSException
 import org.w3c.css.sac.CSSParseException
@@ -46,24 +49,33 @@ import static org.apache.commons.io.FileUtils.deleteQuietly
 class CubaWebScssThemeCreation extends DefaultTask {
 
     // additional scss root from modules
+    @Input
     List<File> includes = []
+    @Input
     List<String> includedAppComponentIds = []
 
     // theme names to build
+    @Input
     List<String> themes = []
 
+    @Input
     Object scssDir = 'themes'
     Object destDir = "${project.buildDir}/web"
 
-    def buildTimeStamp = ''
-    def compress = true
-    def sprites = true
-    def cleanup = true
-    def gzip = true
+    @Input
+    boolean compress = true
+    @Input
+    boolean sprites = true
+    @Input
+    boolean cleanup = true
+    @Input
+    boolean gzip = true
 
-    def excludedThemes = new ArrayList<String>()
-    def excludePaths = new ArrayList<String>()
-    def doNotUnpackPaths = [
+    String buildTimeStamp = ''
+
+    List<String> excludedThemes = new ArrayList<String>()
+    List<String> excludePaths = new ArrayList<String>()
+    List<String> doNotUnpackPaths = [
             'VAADIN/themes/base/*.css',
             'VAADIN/themes/base/*.css.gz',
             'VAADIN/themes/base/favicon.ico',
@@ -90,7 +102,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             'META-INF/**',
     ]
 
-    def dirFilter = new FileFilter() {
+    private FileFilter dirFilter = new FileFilter() {
         @Override
         boolean accept(File pathname) {
             return pathname.isDirectory() && !pathname.name.startsWith(".")
@@ -108,13 +120,16 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     @InputFiles
-    @SkipWhenEmpty
-    @Optional
     FileCollection getSourceFiles() {
+        def scssRoot = project.file(scssDir)
+        if (!scssRoot.exists()) {
+            return new SimpleFileCollection()
+        }
+
         def files = new ArrayList<File>()
         def themeDirs = themes.empty ?
-                project.file(scssDir).listFiles(dirFilter).toList() :
-                themes.collect { new File(project.file(scssDir), it) }
+                scssRoot.listFiles(dirFilter).toList() :
+                themes.collect { new File(scssRoot, it) }
 
         project.fileTree(scssDir, {
             for (themeDir in themeDirs)
@@ -137,6 +152,11 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @TaskAction
     void buildThemes() {
+        def stylesDirectory = project.file(scssDir)
+        if (!stylesDirectory.exists()) {
+            throw new FileNotFoundException("Unable to find SCSS themes root directory ${scssRoot.absolutePath}")
+        }
+
         def themesTmp = new File(project.buildDir, "themes-tmp")
         if (themesTmp.exists())
             themesTmp.deleteDir()
@@ -146,7 +166,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
         vaadinThemesRoot.mkdir()
 
         def destinationDirectory = project.file(destDir)
-        def stylesDirectory = project.file(scssDir)
 
         if (themes.empty) {
             project.logger.info("[CubaWebScssThemeCreation] scan directory '{}' for themes", stylesDirectory.absolutePath)
@@ -262,6 +281,10 @@ class CubaWebScssThemeCreation extends DefaultTask {
         project.logger.info("[CubaWebScssThemeCreation] build theme '{}'", themeDirName)
 
         def themeDir = new File(stylesDirectory, themeDirName)
+        if (!themeDir.exists()) {
+            throw new FileNotFoundException("Unable to find theme directory ${themeDir.absolutePath}")
+        }
+
         def themeBuildDir = new File(vaadinThemesRoot, themeDirName)
 
         project.logger.info("[CubaWebScssThemeCreation] copy theme '{}' to build directory", themeDir.name)
