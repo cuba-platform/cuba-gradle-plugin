@@ -42,8 +42,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
     String style = 'OBF'
     String logLevel = 'INFO'
 
-    String xmx = '-Xmx512m'
+    String xmx = '-Xmx768m'
     String xss = '-Xss8m'
+    @Deprecated
     String xxMPS = '-XX:MaxPermSize=256m'
 
     private def excludes = []
@@ -147,7 +148,6 @@ class CubaWidgetSetBuilding extends DefaultTask {
     protected List collectCompilerJvmArgs() {
         compilerJvmArgs.add(xmx)
         compilerJvmArgs.add(xss)
-        compilerJvmArgs.add(xxMPS)
 
         println('JVM Args:')
         print('\t')
