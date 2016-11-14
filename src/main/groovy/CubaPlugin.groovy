@@ -537,21 +537,8 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToPolymerClientProject(Project project) {
         project.plugins.apply(NodePlugin)
         NodeExtension nodeExtension = project.extensions.getByType(NodeExtension)
-        nodeExtension.version = '4.6.1'
+        nodeExtension.version = '6.9.1'
         nodeExtension.download = true
-
-        project.task([type: NpmInstallTask], "installPolymerGenerator") {
-            args = ['generator-cuba@~0.0.7']
-        }
-
-        project.tasks.addRule('Pattern: "'+ CubaPolymerScaffoldingTask.NAME_PREFIX +'<command>"') { String taskName ->
-            if (taskName.startsWith(CubaPolymerScaffoldingTask.NAME_PREFIX)) {
-                def scaffoldingTask = project.tasks.create(taskName, CubaPolymerScaffoldingTask)
-                scaffoldingTask.command = taskName - CubaPolymerScaffoldingTask.NAME_PREFIX
-                scaffoldingTask.dependsOn("installPolymerGenerator")
-            }
-        }
-
     }
 
     private void addDependenciesFromAppComponents(Project project) {
