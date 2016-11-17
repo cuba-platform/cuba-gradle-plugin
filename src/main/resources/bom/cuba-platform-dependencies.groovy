@@ -108,6 +108,9 @@ def yargVersion = '1.0.67'
   'org.javassist:javassist' : '3.20.0-GA',
   'org.hibernate:hibernate-core' : '3.3.1.GA',
 
+  'org.hibernate:hibernate-validator': '5.3.0.Final',
+  'org.glassfish.web:javax.el' : '2.2.6',
+
   'com.vaadin:vaadin-shared' : vaadinVersion,
   'com.vaadin:vaadin-server' : vaadinVersion,
   'com.vaadin:vaadin-client' : vaadinVersion,

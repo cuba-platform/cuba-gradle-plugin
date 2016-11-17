@@ -18,7 +18,6 @@
 import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
-import com.moowork.gradle.node.task.NpmInstallTask
 import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
@@ -436,6 +435,13 @@ class CubaPlugin implements Plugin<Project> {
                 project.artifacts {
                     archives project.dbScriptsArchive
                 }
+            }
+        }
+
+        if (project.name.endsWith('-toolkit')) {
+            // hibernate validator breaks GWT compilation
+            project.configurations {
+                compile.exclude group: 'org.hibernate', module: 'hibernate-validator'
             }
         }
 
