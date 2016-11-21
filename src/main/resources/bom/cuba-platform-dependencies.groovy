@@ -54,7 +54,7 @@ def yargVersion = '1.0.67'
   'org.apache.commons:commons-dbcp2': '2.1.1',
   'org.apache.commons:commons-compress' : '1.9',
 
-  'com.haulmont.thirdparty:eclipselink' : '2.6.2.cuba11',
+  'com.haulmont.thirdparty:eclipselink' : '2.6.2.cuba12',
   'com.haulmont.thirdparty:xstream' : '1.4.2.20120702',
   'com.haulmont.thirdparty:glazedlists' : '1.9.20110801',
   'com.haulmont.thirdparty:swingx-core' : '1.6.5-1.cuba.0',
