@@ -427,6 +427,7 @@ class CubaPlugin implements Plugin<Project> {
             if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
                 project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
                     from "${project.buildDir}/db"
+                    include "*-$project.rootProject.name/**/*"
                     exclude '**/*.bat'
                     exclude '**/*.sh'
                     classifier = 'db'
