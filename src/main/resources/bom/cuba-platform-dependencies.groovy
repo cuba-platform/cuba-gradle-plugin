@@ -58,7 +58,7 @@ def yargVersion = '1.0.67'
   'com.haulmont.thirdparty:xstream' : '1.4.2.20120702',
   'com.haulmont.thirdparty:glazedlists' : '1.9.20110801',
   'com.haulmont.thirdparty:swingx-core' : '1.6.5-1.cuba.0',
-  'com.haulmont.thirdparty:poi' : '3.12.cuba.1',
+  'org.apache.poi:poi' : '3.15',
   'com.haulmont.thirdparty:popupbutton' : '2.5.2.cuba.3',
   'org.vaadin.addons:aceeditor' : '0.8.14',
   'org.vaadin.addons:contextmenu' : '4.5',
