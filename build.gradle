@@ -35,6 +35,7 @@ ext.repositoryPassword = System.getenv('HAULMONT_REPOSITORY_PASSWORD') ?: 'cuba1
 
 repositories {
     mavenLocal()
+    jcenter()
     maven {
         credentials {
             username repositoryUser
