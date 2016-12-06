@@ -50,6 +50,7 @@ def yargVersion = '1.1.1'
   'org.apache.httpcomponents:httpclient' : '4.5.2',
   'org.apache.httpcomponents:httpmime' : '4.5.2',
   'org.apache.httpcomponents:httpcore' : '4.4.5',
+  'org.apache.httpcomponents:fluent-hc' :'4.5.2',
   'org.apache.commons:commons-pool2': '2.4.2',
   'org.apache.commons:commons-dbcp2': '2.1.1',
   'org.apache.commons:commons-compress' : '1.9',
