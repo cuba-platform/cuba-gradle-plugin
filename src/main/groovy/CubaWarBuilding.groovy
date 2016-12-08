@@ -26,35 +26,35 @@ class CubaWarBuilding extends DefaultTask {
     Project webProject;
     Project portalProject;
 
-    def String appHome
-    def String appName
-    def boolean singleWar = true
+    String appHome
+    String appName
+    boolean singleWar = true
     @Deprecated
-    def Object webXml
-    def String webXmlPath
+    Object webXml
+    String webXmlPath
 
-    def boolean projectAll
-    def List<String> webContentExclude = []
+    boolean projectAll
+    List<String> webContentExclude = []
     Closure doAfter
-    def  Map<String, Object> appProperties
+    Map<String, Object> appProperties
 
     def coreJarNames
     def webJarNames
     def portalJarNames
 
-    def String coreTmpWarDir
-    def String webTmpWarDir
-    def String portalTmpWarDir
+    String coreTmpWarDir
+    String webTmpWarDir
+    String portalTmpWarDir
 
-    def boolean includeJdbcDriver = false
-    def boolean includeContextXml = false
+    boolean includeJdbcDriver = false
+    boolean includeContextXml = false
     @Deprecated
-    def String coreContextXml
-    def String coreContextXmlPath
+    String coreContextXml
+    String coreContextXmlPath
 
-    def Boolean hsqlInProcess = false
+    Boolean hsqlInProcess = false
 
-    def String distrDir = "${project.buildDir}/distributions/war"
+    String distrDir = "${project.buildDir}/distributions/war"
 
     CubaWarBuilding() {
         project.afterEvaluate {
@@ -203,7 +203,7 @@ class CubaWarBuilding extends DefaultTask {
         project.delete("${project.buildDir}/tmp")
     }
 
-    private void init() {
+    protected void init() {
         webXmlPath = webXmlPath ? "$project.rootDir/$webXmlPath" : webXml
         coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
 
@@ -273,7 +273,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private Map<String, Object> collectProperties(Project theProject) {
+    protected Map<String, Object> collectProperties(Project theProject) {
         def properties = [
                 'cuba.logDir' : "$appHome/logs",
                 'cuba.confDir': "$appHome/\${cuba.webContextName}/conf",
@@ -309,7 +309,7 @@ class CubaWarBuilding extends DefaultTask {
         properties
     }
 
-    private void copyLibs(Project theProject) {
+    protected void copyLibs(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
         theProject.copy {
             from theProject.configurations.runtime
@@ -341,12 +341,12 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void writeDependencies(Project theProject, String applicationType, def jarNames) {
+    protected void writeDependencies(Project theProject, String applicationType, def jarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
 
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
-                def libraryName = getLibraryDefinition(name).name
+                def libraryName = CubaDeployment.getLibraryDefinition(lib.name).name
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
@@ -356,7 +356,7 @@ class CubaWarBuilding extends DefaultTask {
             }
 
             new File("$theProject.libsDir").listFiles().each { File lib ->
-                def libraryName = getLibraryDefinition(name).name
+                def libraryName = CubaDeployment.getLibraryDefinition(lib.name).name
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
@@ -367,14 +367,14 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void copyDbScripts(Project theProject) {
+    protected void copyDbScripts(Project theProject) {
         theProject.copy {
             from "${theProject.buildDir}/db"
             into "${warDir(theProject)}/WEB-INF/db"
         }
     }
 
-    private void copyWebContent(Project theProject) {
+    protected void copyWebContent(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
 
         if (webXmlPath) {
@@ -408,7 +408,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void copyWebContext(Project theProject) {
+    protected void copyWebContext(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
         if (theProject == coreProject && coreContextXmlPath) {
             def coreContextXml = new File(coreContextXmlPath)
@@ -425,7 +425,7 @@ class CubaWarBuilding extends DefaultTask {
                     "context.xml"
                 }
             }
-            if (!'context.xml'.equals(coreContextXmlFileName)) {
+            if ('context.xml' != coreContextXmlFileName) {
                 theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
             }
         } else if (theProject == coreProject && hsqlInProcess) {
@@ -456,7 +456,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void copySpecificWebContent(Project theProject) {
+    protected void copySpecificWebContent(Project theProject) {
         if (!projectAll) {
             def excludePatterns = ['**/web.xml', '**/context.xml'] + webContentExclude
             if (theProject.configurations.findByName('webcontent')) {
@@ -509,7 +509,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void writeLocalAppProperties(Project theProject, def properties) {
+    protected void writeLocalAppProperties(Project theProject, def properties) {
         File appPropFile = new File("${warDir(theProject)}/WEB-INF/local.app.properties")
 
         project.logger.info("[CubaWarBuilding] writing $appPropFile")
@@ -520,14 +520,14 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    private void processDoAfter() {
+    protected void processDoAfter() {
         if (doAfter) {
             project.logger.info("[CubaWarBuilding] calling doAfter")
             doAfter.call()
         }
     }
 
-    private void touchWebXml(Project theProject) {
+    protected void touchWebXml(Project theProject) {
         def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
         if (!webXml.exists()) {
             throw new GradleException("[CubaWarBuilding] Can't find web.xml for the ${theProject}")
@@ -549,7 +549,7 @@ class CubaWarBuilding extends DefaultTask {
         webXml.setLastModified(new Date().getTime())
     }
 
-    private void packWarFile(Project project, File destFile) {
+    protected void packWarFile(Project project, File destFile) {
         ant.jar(destfile: destFile, basedir: warDir(project))
     }
 }
