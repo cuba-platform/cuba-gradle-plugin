@@ -170,7 +170,7 @@ class CubaDeployment extends DefaultTask {
 
         if (sharedlibResolve) {
             DependencyResolver resolver = new DependencyResolver(
-                    libraryRoot: new File("${tomcatRootDir}"),
+                    libraryRoot: new File(tomcatRootDir),
                     logger: { String message -> project.logger.info(message) })
             if (!copiedToSharedLib.isEmpty()) {
                 resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)

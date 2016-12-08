@@ -134,9 +134,16 @@ class CubaWarBuilding extends DefaultTask {
     def build() {
         init()
 
-        copyLibs(coreProject)
-        copyLibs(webProject)
+        List<String> copied = copyLibs(coreProject)
+        copied.addAll(copyLibs(webProject))
         if (portalProject) copyLibs(portalProject)
+
+        if (singleWar) {
+            CubaDeployment.DependencyResolver resolver = new CubaDeployment.DependencyResolver(
+                    libraryRoot: new File(coreTmpWarDir),
+                    logger: { String message -> project.logger.info(message) })
+            resolver.resolveDependencies(new File(coreTmpWarDir, 'WEB-INF/lib'), copied)
+        }
 
         def coreProperties = collectProperties(coreProject)
         def webProperties = collectProperties(webProject)
@@ -309,15 +316,22 @@ class CubaWarBuilding extends DefaultTask {
         properties
     }
 
-    protected void copyLibs(Project theProject) {
+    protected List<String> copyLibs(Project theProject) {
         theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
+
+        List<String> copied = []
+
         theProject.copy {
             from theProject.configurations.runtime
             from theProject.libsDir
             into "${warDir(theProject)}/WEB-INF/lib"
             include { details ->
                 def name = details.file.name
-                return !(name.endsWith('-sources.jar'))
+                if (!(name.endsWith('-sources.jar'))) {
+                    copied.add(name)
+                    return true
+                }
+                return false
             }
         }
 
@@ -339,6 +353,8 @@ class CubaWarBuilding extends DefaultTask {
                 into libsDir
             }
         }
+
+        return copied
     }
 
     protected void writeDependencies(Project theProject, String applicationType, def jarNames) {
