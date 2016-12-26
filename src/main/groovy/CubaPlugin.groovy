@@ -136,13 +136,6 @@ class CubaPlugin implements Plugin<Project> {
         importCubaBOM(cubaExtension.bom)
         enableBOMVersionResolver(project, cubaExtension.bom)
 
-        project.configurations {
-            tomcat
-        }
-        project.dependencies {
-            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: '8.5.9', ext: 'zip')
-        }
-
         project.task([type: CubaSetupTomcat], 'setupTomcat')
         project.task([type: CubaStartTomcat], 'start')
         project.task([type: Exec], 'tomcat')
@@ -170,6 +163,13 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
+        project.configurations {
+            tomcat
+        }
+        project.dependencies {
+            tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: project.cuba.tomcat.version, ext: 'zip')
+        }
+
         CubaSetupTomcat setupTomcat = project.getTasksByName('setupTomcat', false).iterator().next()
         setupTomcat.tomcatRootDir = project.cuba.tomcat.dir
 

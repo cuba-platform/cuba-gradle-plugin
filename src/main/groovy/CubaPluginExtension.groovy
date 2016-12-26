@@ -42,6 +42,7 @@ class CubaPluginExtension {
         uploadRepository = new UploadRepositoryConfiguration(project)
         bom = new BOMVersions(project.logger)
 
+        tomcat.version = '8.5.9'
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
         ide.copyright = DEFAULT_COPYRIGHT
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
@@ -81,6 +82,7 @@ class CubaPluginExtension {
         String debugPort
         String shutdownPort
         String ajpPort
+        String version
 
         TomcatConfiguration(Project project) {
             this.project = project
