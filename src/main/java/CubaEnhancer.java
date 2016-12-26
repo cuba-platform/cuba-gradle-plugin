@@ -130,7 +130,7 @@ public class CubaEnhancer {
             );
 
             ctMethod.insertAfter(
-                    "if (!java.util.Objects.equals(__prev, $1)) {" +
+                    "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, $1)) {" +
                     "  this.propertyChanged(\"" + fieldName + "\", __prev, $1);" +
                     "}"
             );
