@@ -151,9 +151,9 @@ def yargVersion = '1.1.1'
   'org.apache.lucene:lucene-analyzers-common' : luceneVersion,
   'org.apache.lucene:lucene-backward-codecs' : luceneVersion,
 
-  'com.haulmont.thirdparty.lucene.morphology:morphology-ru' : morphologyVersion,
-  'com.haulmont.thirdparty.lucene.morphology:morphology-en' : morphologyVersion,
-  'com.haulmont.thirdparty.lucene.morphology:morph' : morphologyVersion,
+  'org.apache.lucene.morphology:russian' : morphologyVersion,
+  'org.apache.lucene.morphology:english' : morphologyVersion,
+  'org.apache.lucene.morphology:morph' : morphologyVersion,
 
   'org.apache.tika:tika-parsers' : '1.9',
 
