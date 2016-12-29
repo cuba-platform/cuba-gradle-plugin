@@ -29,9 +29,12 @@ class CubaWarBuilding extends DefaultTask {
     String appHome
     String appName
     boolean singleWar = true
-    @Deprecated
-    Object webXml
+
     String webXmlPath
+
+    String coreWebXmlPath
+    String webWebXmlPath
+    String portalWebXmlPath
 
     boolean projectAll
     List<String> webContentExclude = []
@@ -48,13 +51,17 @@ class CubaWarBuilding extends DefaultTask {
 
     boolean includeJdbcDriver = false
     boolean includeContextXml = false
-    @Deprecated
-    String coreContextXml
+
     String coreContextXmlPath
 
     Boolean hsqlInProcess = false
 
     String distrDir = "${project.buildDir}/distributions/war"
+
+    @Deprecated
+    Object webXml
+    @Deprecated
+    String coreContextXml
 
     CubaWarBuilding() {
         project.afterEvaluate {
@@ -215,21 +222,21 @@ class CubaWarBuilding extends DefaultTask {
         coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
 
         if (!singleWar && webXmlPath) {
-            throw new GradleException("[CubaWarBuilding] 'webXmlPath' property should be used only in single WAR building. " +
+            throw new GradleException("'webXmlPath' property should be used only in single WAR building. " +
                     "Please set 'singleWar = true' or remove 'webXmlPath' property.")
         }
 
         if (singleWar) {
             if (!webXmlPath)
-                throw new GradleException("[CubaWarBuilding] To build single WAR, you should set the 'webXmlPath' property")
+                throw new GradleException("To build single WAR, you should set the 'webXmlPath' property")
 
             def webXmlFile = new File(webXmlPath)
             if (!webXmlFile.exists()) {
-                throw new GradleException("[CubaWarBuilding] File '$webXmlPath' does not exist")
+                throw new GradleException("File '$webXmlPath' does not exist")
             }
 
             if (portalProject) {
-                throw new GradleException("[CubaWarBuilding] 'portalProject' property is not supported in single WAR building. " +
+                throw new GradleException("'portalProject' property is not supported in single WAR building. " +
                         "Please remove the 'portalProject' property.")
             }
         }
@@ -238,19 +245,19 @@ class CubaWarBuilding extends DefaultTask {
 
         Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
         if (coreDeployTasks.isEmpty())
-            throw new GradleException("[CubaWarBuilding] 'core' module has no 'deploy' task")
+            throw new GradleException("'core' module has no 'deploy' task")
         def deployCore = coreDeployTasks.first()
 
         Set webDeployTasks = webProject.getTasksByName('deploy', false)
         if (webDeployTasks.isEmpty())
-            throw new GradleException("[CubaWarBuilding] 'web' module has no 'deploy' task")
+            throw new GradleException("'web' module has no 'deploy' task")
         def deployWeb = webDeployTasks.first()
 
         def deployPortal = null
         if (portalProject) {
             Set portalDeployTasks = webProject.getTasksByName('deploy', false)
             if (portalDeployTasks.isEmpty())
-                throw new GradleException("[CubaWarBuilding] 'portal' module has no 'deploy' task")
+                throw new GradleException("'portal' module has no 'deploy' task")
             deployPortal = portalDeployTasks.first()
         }
 
@@ -396,7 +403,7 @@ class CubaWarBuilding extends DefaultTask {
         if (webXmlPath) {
             def webXml = new File(webXmlPath)
             if (!webXml.exists()) {
-                throw new GradleException("[CubaWarBuilding] Can't find web.xml.")
+                throw new GradleException("$webXmlPath doesn't exists")
             }
 
             def webXmlFileName = webXml.name
@@ -416,10 +423,41 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
         } else {
-            theProject.copy {
-                from 'web'
-                into warDir(theProject)
-                exclude '**/context.xml'
+            String path
+            if (coreWebXmlPath && theProject == coreProject)
+                path = coreWebXmlPath
+            if (webWebXmlPath && theProject == webProject)
+                path = webWebXmlPath
+            if (portalWebXmlPath && theProject == portalProject)
+                path = portalWebXmlPath
+
+            if (path) {
+                File file = new File(path)
+                if (!file.exists()) {
+                    throw new GradleException("$path doesn't exists")
+                }
+
+                theProject.copy {
+                    from 'web'
+                    into warDir(theProject)
+                    exclude '**/META-INF/context.xml'
+                    exclude { it.file == file }
+                }
+
+                theProject.copy {
+                    from path
+                    into "${warDir(theProject)}/WEB-INF/"
+                    rename { String fileName ->
+                        "web.xml"
+                    }
+                }
+
+            } else {
+                theProject.copy {
+                    from 'web'
+                    into warDir(theProject)
+                    exclude '**/META-INF/context.xml'
+                }
             }
         }
     }
@@ -429,7 +467,7 @@ class CubaWarBuilding extends DefaultTask {
         if (theProject == coreProject && coreContextXmlPath) {
             def coreContextXml = new File(coreContextXmlPath)
             if (!coreContextXml.exists()) {
-                throw new GradleException("[CubaWarBuilding] Can't find core context.xml.")
+                throw new GradleException("$coreContextXmlPath doesn't exists")
             }
 
             def coreContextXmlFileName = coreContextXml.name
@@ -447,14 +485,14 @@ class CubaWarBuilding extends DefaultTask {
         } else if (theProject == coreProject && hsqlInProcess) {
             def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
             if (!contextFile.exists()) {
-                throw new GradleException("[CubaWarBuilding] Can't find core context.xml.")
+                throw new GradleException("$contextFile doesn't exists")
             }
 
             def context
             try {
                 context = new XmlParser().parse(contextFile)
             } catch (Exception ignored) {
-                throw new GradleException("[CubaWarBuilding] Core context.xml parsing error.")
+                throw new GradleException("Core context.xml parsing error")
             }
 
             String url = context.Resource.@url.get(0)
@@ -546,7 +584,7 @@ class CubaWarBuilding extends DefaultTask {
     protected void touchWebXml(Project theProject) {
         def webXml = new File("${warDir(theProject)}/WEB-INF/web.xml")
         if (!webXml.exists()) {
-            throw new GradleException("[CubaWarBuilding] Can't find web.xml for the ${theProject}")
+            throw new GradleException("$webXml doesn't exists")
         }
 
         if (theProject.ext.has('webResourcesTs')) {
