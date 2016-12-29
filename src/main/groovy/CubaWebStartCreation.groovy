@@ -20,6 +20,7 @@ import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.internal.project.DefaultAntBuilder
+import org.gradle.api.internal.project.ant.AntLoggingAdapter
 import org.gradle.api.tasks.TaskAction
 
 /**
@@ -160,7 +161,7 @@ class CubaWebStartCreation extends DefaultTask {
             if (threadLocalAnt.get())
                 sharedAnt = threadLocalAnt.get()
             else {
-                sharedAnt = new DefaultAntBuilder(project)
+                sharedAnt = new DefaultAntBuilder(project, new AntLoggingAdapter())
                 threadLocalAnt.set(sharedAnt)
             }
 
