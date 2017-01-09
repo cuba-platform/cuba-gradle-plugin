@@ -254,6 +254,12 @@ class CubaPlugin implements Plugin<Project> {
                     projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
                 }
             }
+            project.idea.module.iml.withXml { provider ->
+                Node componentNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
+                Node contentNode = componentNode.content.find { it.@url == 'file://$MODULE_DIR$/'}
+                if (contentNode)
+                    contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
+            }
         }
 
         if (project.hasProperty('eclipse')) {
