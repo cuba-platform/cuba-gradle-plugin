@@ -19,7 +19,6 @@ import com.haulmont.gradle.utils.BOMVersions
 import org.gradle.api.Project
 
 class CubaPluginExtension {
-    final static String DEFAULT_COPYRIGHT = 'TODO Copyright'
 
     Project project
 
@@ -44,7 +43,6 @@ class CubaPluginExtension {
 
         tomcat.version = '8.5.9'
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
-        ide.copyright = DEFAULT_COPYRIGHT
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
         uploadRepository.password = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
         artifact.group = 'com.company'

@@ -202,16 +202,18 @@ class CubaPlugin implements Plugin<Project> {
                     node.@languageLevel = 'JDK_1_8'
                     node.@'project-jdk-name' = '1.8'
 
-                    node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                    node.@default = 'default'
+                    if (project.cuba.ide.copyright) {
+                        node = provider.node.component.find { it.@name == 'CopyrightManager' }
+                        node.@default = 'default'
 
-                    node = node.appendNode('copyright')
-                    node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
+                        node = node.appendNode('copyright')
+                        node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
 
-                    node.appendNode('option', [name: 'keyword', value: 'Copyright'])
-                    node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                    node.appendNode('option', [name: 'myName', value: 'default'])
-                    node.appendNode('option', [name: 'myLocal', value: 'true'])
+                        node.appendNode('option', [name: 'keyword', value: 'Copyright'])
+                        node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
+                        node.appendNode('option', [name: 'myName', value: 'default'])
+                        node.appendNode('option', [name: 'myLocal', value: 'true'])
+                    }
 
                     if (project.cuba.ide.vcs)
                         provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.cuba.ide.vcs //'svn'
