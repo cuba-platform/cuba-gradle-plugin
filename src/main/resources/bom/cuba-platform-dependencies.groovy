@@ -62,7 +62,7 @@ def yargVersion = '1.1.1'
   'org.apache.poi:poi' : '3.15',
   'com.haulmont.thirdparty:popupbutton' : '2.5.2.cuba.3',
   'org.vaadin.addons:aceeditor' : '0.8.14',
-  'org.vaadin.addons:contextmenu' : '4.5',
+  'com.vaadin.addon:vaadin-context-menu' : '0.7.4',
   'org.vaadin.addons:dragdroplayouts' : '1.3.2.cuba.1',
   'com.haulmont.thirdparty:jbpm' : '4.4.20130109',
   'com.haulmont.thirdparty:yui' : '2.8.1',
