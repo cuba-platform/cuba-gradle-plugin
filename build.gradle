@@ -56,12 +56,10 @@ def dependenciesFile = file('src/main/resources/bom/cuba-platform-dependencies.g
 Map<String, String> versions = new GroovyShell().evaluate(dependenciesFile)
 
 dependencies {
-    compile('com.haulmont.thirdparty:eclipselink:' + versions.get('com.haulmont.thirdparty:eclipselink'))
-
     compile 'org.apache.httpcomponents:httpmime:4.5.2'
     compile 'org.apache.httpcomponents:httpcore:4.4.5'
     compile('org.javassist:javassist:3.20.0-GA')
-    compile(group: 'dom4j', name: 'dom4j', version: '1.6.1')
+    compile('dom4j:dom4j:1.6.1')
     compile('commons-lang:commons-lang:2.6')
     compile('commons-io:commons-io:2.4')
     compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')

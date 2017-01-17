@@ -14,9 +14,9 @@
  * limitations under the License.
  *
  */
+
 /**
  * Enhances entity classes specified in persistence xml
- *
  */
 class CubaEnhancing extends CubaEnhancingTask {
 
@@ -31,13 +31,5 @@ class CubaEnhancing extends CubaEnhancingTask {
         // set default task dependsOn
         setDependsOn(project.getTasksByName('compileJava', false))
         project.getTasksByName('classes', false).each { it.dependsOn(this) }
-        // add default assist dependency on cuba-plugin
-        def enhanceConfiguration = project.configurations.findByName("enhance")
-        if (!enhanceConfiguration)
-            project.configurations.create("enhance").extendsFrom(project.configurations.getByName("provided"))
-
-        project.dependencies {
-            enhance(CubaPlugin.getArtifactDefinition())
-        }
     }
 }
