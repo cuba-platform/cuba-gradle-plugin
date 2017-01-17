@@ -229,8 +229,7 @@ class CubaEnhancingTask extends DefaultTask {
                     main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
                     classpath(
                             sourceSet.compileClasspath,
-                            sourceSet.output.classesDir,
-                            project.configurations.enhance
+                            sourceSet.output.classesDir
                     )
                     args "-loglevel"
                     args "INFO"
