@@ -14,31 +14,29 @@
  * limitations under the License.
  *
  */
-
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.tasks.TaskAction
 
 import java.awt.*
-import java.util.List
 
-/**
- */
 class CubaHsqlStart extends CubaHsqlTask {
 
-    def File dbDataDir
+    File dbDataDir
 
     @Override
     protected void init() {
         super.init()
-        if (!dbDataDir)
+
+        if (!dbDataDir) {
             dbDataDir = new File("$project.rootProject.buildDir/hsqldb")
+        }
     }
 
     @TaskAction
-    def startDb() {
+    void startDb() {
         init();
 
-        dbDataDir.mkdirs();
+        dbDataDir.mkdirs()
+
         if (GraphicsEnvironment.isHeadless()) {
             if ('linux'.equalsIgnoreCase(System.getProperty('os.name'))) {
                 ant.exec(dir: dbDataDir.absolutePath, executable: 'java', spawn: true) {
@@ -50,20 +48,13 @@ class CubaHsqlStart extends CubaHsqlTask {
                 }
             }
         } else {
-            // Stub configuration.
-            Configuration configuration = project.configurations.findByName("hsqlStart")
-            if (!configuration) {
-                project.configurations.create("hsqlStart").extendsFrom(project.configurations.getByName("provided"))
-            }
-            configuration = project.configurations.getByName("hsqlStart");
-            project.dependencies {
-                hsqlStart(CubaPlugin.getArtifactDefinition())
-            }
-            List<String> paths = [];
-            configuration.resolve().each { paths.add(it.absolutePath) }
-            String classpath = driverClasspath + File.pathSeparator + paths.join(File.pathSeparator);
+            def classPathUrls = ((URLClassLoader) CubaHSQLDBServer.class.classLoader).getURLs()
+            def classpath = driverClasspath + File.pathSeparator + classPathUrls.collect({
+                new File(it.toURI()).absolutePath
+            }).join(File.pathSeparator)
 
-            ant.java(classname: CubaHSQLDBServer.class.name, classpath: classpath, fork: true, spawn: true, dir: dbDataDir.absolutePath) {
+            ant.java(classname: CubaHSQLDBServer.class.name, classpath: classpath,
+                    fork: true, spawn: true, dir: dbDataDir.absolutePath) {
                 arg(line: "$dbPort \"${dbDataDir.absolutePath}\" \"${dbName}\"")
             }
         }

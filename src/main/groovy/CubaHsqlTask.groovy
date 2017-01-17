@@ -18,13 +18,11 @@
 
 import org.gradle.api.DefaultTask
 
-/**
- */
 abstract class CubaHsqlTask extends DefaultTask {
 
-    def String driverClasspath
-    def String dbName
-    def int dbPort
+    String driverClasspath
+    String dbName
+    int dbPort
 
     protected void init() {
         if (!dbName)

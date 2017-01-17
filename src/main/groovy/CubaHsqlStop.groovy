@@ -17,12 +17,9 @@
 
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaHsqlStop extends CubaHsqlTask {
-
     @TaskAction
-    def stopDb() {
+    void stopDb() {
         init()
 
         try {
@@ -33,6 +30,7 @@ class CubaHsqlStop extends CubaHsqlTask {
                     autocommit: true,
                     'shutdown'
             )
+
             Thread.sleep(1000)
         } catch (Exception e) {
             logger.warn("[CubaHsqlStop] error stopping local HSQLDB server: $e")

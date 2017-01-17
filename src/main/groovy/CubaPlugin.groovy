@@ -36,8 +36,6 @@ import java.util.jar.Manifest
 
 class CubaPlugin implements Plugin<Project> {
 
-    public static final String VERSION_RESOURCE = "cuba-plugin.version"
-
     public static final String APP_COMPONENT_ID_MANIFEST_ATTRIBUTE = 'App-Component-Id'
     public static final String APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE = 'App-Component-Version'
 
@@ -158,7 +156,7 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private def doAfterEvaluateForModuleProject(Project project) {
+    private void doAfterEvaluateForModuleProject(Project project) {
         addDependenciesFromAppComponents(project)
     }
 
@@ -684,7 +682,7 @@ class CubaPlugin implements Plugin<Project> {
         moduleName
     }
 
-    private def addJarNamesFromModule(Set jarNames, def xml, def module) {
+    private void addJarNamesFromModule(Set jarNames, def xml, def module) {
         module.artifact.each { art ->
             if (art.@appJar == "true") {
                 jarNames.add(art.@name.text())
@@ -709,14 +707,6 @@ class CubaPlugin implements Plugin<Project> {
         return Files.exists(enhPath)
     }
 
-    public static String getArtifactDefinition() {
-        def stream = CubaPlugin.class.getResourceAsStream(VERSION_RESOURCE)
-        if (!stream) {
-            throw new IllegalStateException("Resource $VERSION_RESOURCE not found. If you use Gradle daemon, try to restart it")
-        }
-        return new InputStreamReader(stream).text
-    }
-
     private static class AppComponent {
         String id
         List<String> dependencies = []
@@ -728,7 +718,7 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        public boolean dependsOn(AppComponent other) {
+        boolean dependsOn(AppComponent other) {
             return dependencies.contains(other.id)
         }
     }
