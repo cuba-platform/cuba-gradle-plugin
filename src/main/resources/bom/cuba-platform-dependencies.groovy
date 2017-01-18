@@ -74,7 +74,7 @@ def yargVersion = '1.1.1'
   'dom4j:dom4j' : '1.6.1',
   'org.freemarker:freemarker' : '2.3.23',
   'org.jsoup:jsoup' : '1.8.3',
-  'com.google.code.gson:gson' : '2.5',
+  'com.google.code.gson:gson' : '2.8.0',
   'aopalliance:aopalliance' : '1.0',
   'org.codehaus.groovy:groovy-all' : '2.4.4',
   'ch.qos.logback:logback-classic' : '1.1.3',
