@@ -39,6 +39,7 @@ class CubaZipProject extends DefaultTask {
 
         def excludeFromZip = [
                 'build',
+                'deploy',
                 '.iml',
                 '.ipr',
                 '.iws'
@@ -67,8 +68,8 @@ class CubaZipProject extends DefaultTask {
             }
         }
         project.copy {
-            from 'build/hsqldb'
-            into "$tmpRootDir/build/hsqldb"
+            from 'deploy/hsqldb'
+            into "$tmpRootDir/deploy/hsqldb"
         }
 
         ant.zip(destfile: zipFilePath, basedir: tmpDir)
