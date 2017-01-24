@@ -162,7 +162,7 @@ def yargVersion = '1.1.1'
   'org.activiti:activiti-json-converter' : modelerVersion,
   'com.haulmont.bpm:cuba-modeler' : modelerVersion,
 
-  'com.haulmont.thirdparty:googlemaps' : '1.0.2.CUBA.9',
+  'com.haulmont.thirdparty:googlemaps' : '1.0.2.CUBA.10',
 
   'com.haulmont.yarg:yarg' : yargVersion,
   'com.haulmont.yarg:yarg-api' : yargVersion
