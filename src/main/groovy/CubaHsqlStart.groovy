@@ -27,7 +27,7 @@ class CubaHsqlStart extends CubaHsqlTask {
         super.init()
 
         if (!dbDataDir) {
-            dbDataDir = new File("$project.rootProject.buildDir/hsqldb")
+            dbDataDir = new File("$project.rootProject.rootDir/deploy/hsqldb")
         }
     }
 
