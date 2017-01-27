@@ -25,6 +25,7 @@ class CubaWarBuilding extends DefaultTask {
     Project coreProject;
     Project webProject;
     Project portalProject;
+    Project polymerProject;
 
     String appHome
     String appName
@@ -48,6 +49,7 @@ class CubaWarBuilding extends DefaultTask {
     String coreTmpWarDir
     String webTmpWarDir
     String portalTmpWarDir
+    String polymerTmpWarDir
 
     boolean includeJdbcDriver = false
     boolean includeContextXml = false
@@ -100,6 +102,17 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
 
+            if (!polymerProject && !singleWar) {
+                project.logger.info("[CubaWarBuilding] Polymer client project is not set, trying to find it automatically")
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-polymer-client")) {
+                        polymerProject = entry.getValue()
+                        project.logger.info("[CubaWarBuilding] $polymerProject is set as Polymer client project")
+                        break;
+                    }
+                }
+            }
+
             // look for web toolkit module
             for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
                 if (entry.getKey().endsWith("-web-toolkit")) {
@@ -130,10 +143,17 @@ class CubaWarBuilding extends DefaultTask {
         this.dependsOn(assembleWeb)
     }
 
+    void setPolymerProject(Project polymerProject) {
+        this.polymerProject = polymerProject
+        def assemblePolymer = polymerProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assemblePolymer)
+    }
+
     String warDir(Project project) {
         if (project == coreProject) return coreTmpWarDir
         else if (project == webProject) return webTmpWarDir
         else if (project == portalProject) return portalTmpWarDir
+        else if (project == polymerProject) return polymerTmpWarDir
         else return null
     }
 
@@ -170,6 +190,13 @@ class CubaWarBuilding extends DefaultTask {
             }
         }
 
+        if (polymerProject) {
+            polymerProject.copy {
+                from polymerProject.file('build/bundled')
+                into "${warDir(polymerProject)}"
+            }
+        }
+
         copySpecificWebContent(webProject)
 
         processDoAfter()
@@ -199,6 +226,7 @@ class CubaWarBuilding extends DefaultTask {
             packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
             packWarFile(coreProject, coreProject.file("${warDir(coreProject)}/${appName}-core.war"))
             if (portalProject) packWarFile(portalProject, portalProject.file("${warDir(portalProject)}/${appName}-portal.war"))
+            if (polymerProject) packWarFile(polymerProject, polymerProject.file("${warDir(polymerProject)}/${appName}-front.war"))
 
             webProject.copy {
                 from webProject.file("${warDir(webProject)}/${appName}.war")
@@ -209,6 +237,13 @@ class CubaWarBuilding extends DefaultTask {
             if (portalProject) {
                 portalProject.copy {
                     from portalProject.file("${warDir(portalProject)}/${appName}-portal.war")
+                    into distrDir
+                }
+            }
+
+            if (polymerProject) {
+                polymerProject.copy {
+                    from polymerProject.file("${warDir(polymerProject)}/${appName}-front.war")
                     into distrDir
                 }
             }
@@ -238,6 +273,11 @@ class CubaWarBuilding extends DefaultTask {
             if (portalProject) {
                 throw new GradleException("'portalProject' property is not supported in single WAR building. " +
                         "Please remove the 'portalProject' property.")
+            }
+
+            if (polymerProject) {
+                throw new GradleException("[CubaWarBuilding] 'polymerProject' property is not supported in single WAR building. " +
+                        "Please remove the 'polymerProject' property.")
             }
         }
 
@@ -280,6 +320,7 @@ class CubaWarBuilding extends DefaultTask {
             coreTmpWarDir = "${project.buildDir}/tmp/core/war"
             webTmpWarDir = "${project.buildDir}/tmp/web/war"
             portalTmpWarDir = "${project.buildDir}/tmp/portal/war"
+            polymerTmpWarDir = "${project.buildDir}/tmp/polymer/war"
         }
 
         if (!appName) {
