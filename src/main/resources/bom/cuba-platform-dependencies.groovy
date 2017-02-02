@@ -28,7 +28,7 @@ def morphologyVersion = '1.1'
 def activitiVersion = '5.20.0'
 def modelerVersion = '5.20.0.cuba.18'
 
-def yargVersion = '1.1.1'
+def yargVersion = '1.1.3'
 
 [
   'org.apache.tomcat:tomcat' : '8.0.35',
