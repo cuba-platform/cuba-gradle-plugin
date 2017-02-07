@@ -14,11 +14,15 @@
  * limitations under the License.
  *
  */
-
 import groovy.sql.Sql
+import org.apache.commons.dbcp2.BasicDataSource
+import org.apache.commons.io.FileUtils
 import org.apache.commons.lang.StringUtils
+import org.codehaus.groovy.control.CompilerConfiguration
 import org.gradle.api.tasks.TaskAction
+import org.slf4j.LoggerFactory
 
+import java.nio.charset.StandardCharsets
 import java.sql.Connection
 import java.sql.DatabaseMetaData
 import java.sql.ResultSet
@@ -29,6 +33,8 @@ import java.util.logging.Logger
 /**
  */
 class CubaDbUpdate extends CubaDbTask {
+
+    boolean executeGroovy = true
 
     CubaDbUpdate() {
         setGroup('Database')
@@ -41,7 +47,7 @@ class CubaDbUpdate extends CubaDbTask {
         try {
             runRequiredInitScripts()
 
-            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, executeGroovy ? ['sql', 'upgrade.groovy'] : ['sql'])
             List<File> files = scriptFinder.getUpdateScripts()
 
             List<String> scripts = getExecutedScripts()
@@ -160,8 +166,50 @@ class CubaDbUpdate extends CubaDbTask {
 
     protected void executeScript(File file) {
         project.logger.warn("Executing script " + file.getPath())
-        if (file.name.endsWith('.sql'))
+        if (file.name.endsWith('.sql')) {
             executeSqlScript(file)
+        } else if (file.name.endsWith(".upgrade.groovy")) {
+            if (!executeGroovy) {
+                project.logger.warn("Skip execution of groovy script " + file.getPath());
+            } else {
+                executeGroovyScript(file)
+            }
+        }
+    }
+
+    protected void executeGroovyScript(File file) {
+        def dataSource = null;
+        try {
+            dataSource = new BasicDataSource()
+            dataSource.setUrl(dbUrl)
+            dataSource.setUsername(dbUser)
+            dataSource.setPassword(dbPassword)
+            dataSource.setDriverClassName(driver)
+            dataSource.setDriverClassLoader(GroovyObject.class.classLoader)
+            dataSource.setMaxTotal(5)
+
+            def cc = new CompilerConfiguration()
+            cc.setRecompileGroovySource(true)
+
+            def bind = new Binding();
+            bind.setProperty("ds", dataSource)
+            bind.setProperty("log", LoggerFactory.getLogger(file.getName()))
+
+            def shell = new GroovyShell(getClass().getClassLoader(), bind, cc)
+            def content = FileUtils.readFileToString(file, StandardCharsets.UTF_8)
+            def script = shell.parse(content)
+            script.run()
+        } catch (Exception e) {
+            throw new RuntimeException(e)
+        } finally {
+            if (dataSource != null) {
+                try {
+                    dataSource.close()
+                } catch (Exception e) {
+                    //Do nothing
+                }
+            }
+        }
     }
 
 
