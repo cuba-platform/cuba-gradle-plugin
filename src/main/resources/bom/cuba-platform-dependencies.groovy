@@ -155,7 +155,7 @@ def yargVersion = '1.1.3'
   'org.apache.lucene.morphology:english' : morphologyVersion,
   'org.apache.lucene.morphology:morph' : morphologyVersion,
 
-  'org.apache.tika:tika-parsers' : '1.9',
+  'org.apache.tika:tika-parsers' : '1.14',
 
   'org.activiti:activiti-engine' : activitiVersion,
   'org.activiti:activiti-spring' : activitiVersion,
