@@ -63,6 +63,8 @@ class CubaWarBuilding extends DefaultTask {
     @Deprecated
     String coreContextXml
 
+    private String coreAppName
+
     CubaWarBuilding() {
         project.afterEvaluate {
             def childProjects = project.getChildProjects()
@@ -285,6 +287,8 @@ class CubaWarBuilding extends DefaultTask {
         if (!appName) {
             appName = deployWeb.appName
         }
+
+        coreAppName = singleWar ? deployCore.appName : appName + '-core'
     }
 
     protected Map<String, Object> collectProperties(Project theProject) {
@@ -305,14 +309,14 @@ class CubaWarBuilding extends DefaultTask {
 
         if (theProject == webProject) {
             properties += [
-                    'cuba.connectionUrlList'        : "http://localhost:8080/${appName}-core",
+                    'cuba.connectionUrlList'        : "http://localhost:8080/${coreAppName}",
                     'cuba.useLocalServiceInvocation': singleWar ? "true" : "false"
             ]
         }
 
         if (theProject == portalProject) {
             properties += [
-                    'cuba.connectionUrlList'        : "http://localhost:8080/${appName}-core",
+                    'cuba.connectionUrlList'        : "http://localhost:8080/${coreAppName}",
                     'cuba.useLocalServiceInvocation': "false"
             ]
         }
