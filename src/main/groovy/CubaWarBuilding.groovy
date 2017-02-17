@@ -479,7 +479,11 @@ class CubaWarBuilding extends DefaultTask {
             if (path) {
                 File file = new File(path)
                 if (!file.exists()) {
-                    throw new GradleException("$path doesn't exists")
+                    file = new File("$project.rootDir/$path")
+                    if (!file.exists())
+                        throw new GradleException("File $path or $project.rootDir/$path not found")
+                    else
+                        path = "$project.rootDir/$path"
                 }
 
                 theProject.copy {
