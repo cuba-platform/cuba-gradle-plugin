@@ -30,6 +30,8 @@ import org.carrot2.labs.smartsprites.message.MessageSink
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.Input
@@ -40,11 +42,14 @@ import org.kohsuke.args4j.CmdLineParser
 import org.w3c.css.sac.CSSException
 import org.w3c.css.sac.CSSParseException
 
+import java.util.function.Consumer
+import java.util.jar.JarFile
 import java.util.jar.JarInputStream
 import java.util.jar.Manifest
 import java.util.zip.GZIPOutputStream
 
 import static org.apache.commons.io.FileUtils.deleteQuietly
+import static org.apache.commons.io.IOUtils.closeQuietly
 
 class CubaWebScssThemeCreation extends DefaultTask {
 
@@ -406,7 +411,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         errorHandler.setWarningsAreErrors(false)
 
         try {
-            def scss = ScssStylesheet.get(scssFile.absolutePath, null, new SCSSDocumentHandlerImpl(), errorHandler);
+            def scss = ScssStylesheet.get(scssFile.absolutePath, null, new SCSSDocumentHandlerImpl(), errorHandler)
 
             if (scss == null) {
                 throw new GradleException("Unable to find SCSS file " + scssFile.absolutePath)
@@ -467,11 +472,11 @@ class CubaWebScssThemeCreation extends DefaultTask {
             stringBuilder.append(m.getFormattedMessage())
 
             if (m.cssPath != null) {
-                stringBuilder.append(" (");
-                stringBuilder.append(m.cssPath);
-                stringBuilder.append(", line: ");
-                stringBuilder.append(m.line + 1);
-                stringBuilder.append(")");
+                stringBuilder.append(" (")
+                stringBuilder.append(m.cssPath)
+                stringBuilder.append(", line: ")
+                stringBuilder.append(m.line + 1)
+                stringBuilder.append(")")
             }
 
             return stringBuilder.toString()
@@ -514,7 +519,134 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     void prepareAppComponentsInclude(File themeBuildDir) {
-        project.logger.info("[CubaWebScssThemeCreation] include styles from app components")
+        def appComponentConf = project.rootProject.configurations.appComponent
+        if (appComponentConf.dependencies.size() > 0) {
+            prepareAppComponentsIncludeConfiguration(themeBuildDir)
+        } else {
+            prepareAppComponentsIncludeClasspath(themeBuildDir)
+        }
+    }
+
+    void prepareAppComponentsIncludeConfiguration(File themeBuildDir) {
+        project.logger.info("[CubaWebScssThemeCreation] include styles from app components using Gradle configuration")
+
+        def appComponentsIncludeFile = new File(themeBuildDir, 'app-components.scss')
+        if (appComponentsIncludeFile.exists()) {
+            // can be completely overridden in project
+            return
+        }
+
+        def appComponentsIncludeBuilder = new StringBuilder()
+        appComponentsIncludeBuilder.append('/* This file is automatically managed and will be overwritten */\n\n')
+
+        def appComponentConf = project.rootProject.configurations.appComponent
+        def resolvedConfiguration = appComponentConf.resolvedConfiguration
+        def dependencies = resolvedConfiguration.firstLevelModuleDependencies
+
+        def addedArtifacts = new HashSet<ResolvedArtifact>()
+        def includeMixins = new ArrayList<String>()
+        def includedAddonsPaths = new HashSet<String>()
+        def scannedJars = new HashSet<File>()
+
+        walkDependenciesFromAppComponentsConfiguration(dependencies, addedArtifacts, { artifact ->
+            def jarFile = new JarFile(artifact.file)
+            try {
+                def manifest = jarFile.manifest
+                if (manifest == null) {
+                    return
+                }
+
+                def compId = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
+                def compVersion = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
+                if (compId == null || compVersion == null) {
+                    return
+                }
+
+                project.logger.info("[CubaWebScssThemeCreation] include styles from app component {}", compId)
+
+                def componentThemeDir = new File(themeBuildDir, compId)
+                def addonsIncludeFile = new File(componentThemeDir, 'vaadin-addons.scss')
+
+                List<File> dependentJarFiles = findDependentJarsByAppComponent(compId) - scannedJars
+                scannedJars.addAll(dependentJarFiles)
+
+                // ignore automatic lookup if defined file vaadin-addons.scss
+                if (!addonsIncludeFile.exists()) {
+                    findAndIncludeVaadinStyles(dependentJarFiles, includedAddonsPaths, includeMixins, appComponentsIncludeBuilder)
+                } else {
+                    project.logger.info("[CubaWebScssThemeCreation] ignore vaadin addon styles for {}", compId)
+                }
+
+                includeComponentScss(themeBuildDir, compId, appComponentsIncludeBuilder, includeMixins)
+            } finally {
+                closeQuietly(jarFile)
+            }
+        })
+
+        for (includeAppComponentId in includedAppComponentIds) {
+            project.logger.info("[CubaWebScssThemeCreation] include styles from app component {}", includeAppComponentId)
+
+            // autowiring of vaadin addons from includes is not supported
+            includeComponentScss(themeBuildDir, includeAppComponentId, appComponentsIncludeBuilder, includeMixins)
+        }
+
+        appComponentsIncludeBuilder.append('\n')
+
+        // include project includes and vaadin addons
+        project.logger.info("[CubaWebScssThemeCreation] include styles from project and addons")
+
+        def currentProjectId = project.group.toString()
+        def componentThemeDir = new File(themeBuildDir, currentProjectId)
+        def addonsIncludeFile = new File(componentThemeDir, 'vaadin-addons.scss')
+
+        if (!addonsIncludeFile.exists()) {
+            def compileConfiguration = project.configurations.compile
+            def resolvedArtifacts = compileConfiguration.resolvedConfiguration.resolvedArtifacts
+            def resolvedFiles = resolvedArtifacts.collect({ it.file })
+            def currentProjectDependencies = resolvedFiles.findAll({
+                it.exists() && it.name.endsWith(".jar")
+            }) - scannedJars
+
+            findAndIncludeVaadinStyles(currentProjectDependencies, includedAddonsPaths, includeMixins,
+                    appComponentsIncludeBuilder)
+        } else {
+            project.logger.info("[CubaWebScssThemeCreation] ignore vaadin addon styles for $currentProjectId")
+        }
+
+        // print mixins
+        appComponentsIncludeBuilder.append('\n@mixin app_components {\n')
+        for (mixin in includeMixins) {
+            appComponentsIncludeBuilder.append('  @include ').append(mixin).append(';\n')
+        }
+        appComponentsIncludeBuilder.append('}')
+
+        appComponentsIncludeFile.write(appComponentsIncludeBuilder.toString())
+
+        project.logger.info("[CubaWebScssThemeCreation] app-components.scss initialized")
+    }
+
+    void walkDependenciesFromAppComponentsConfiguration(Set<ResolvedDependency> dependencies,
+                                                        Set<ResolvedArtifact> addedArtifacts,
+                                                        Consumer<ResolvedArtifact> artifactAction) {
+        for (dependency in dependencies) {
+            walkDependenciesFromAppComponentsConfiguration(dependency.children, addedArtifacts, artifactAction)
+
+            for (artifact in dependency.moduleArtifacts) {
+                if (addedArtifacts.contains(artifact)) {
+                    continue
+                }
+
+                addedArtifacts.add(artifact)
+
+                if (artifact.file != null && artifact.file.name.endsWith('.jar')) {
+                    artifactAction.accept(artifact)
+                }
+            }
+        }
+    }
+
+    void prepareAppComponentsIncludeClasspath(File themeBuildDir) {
+        project.logger.info("[CubaWebScssThemeCreation] include styles from app components using classpath")
 
         def appComponentsIncludeFile = new File(themeBuildDir, 'app-components.scss')
         if (appComponentsIncludeFile.exists()) {
@@ -532,7 +664,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         def classLoader = CubaWebScssThemeCreation.class.getClassLoader()
         def manifests = classLoader.getResources("META-INF/MANIFEST.MF")
         while (manifests.hasMoreElements()) {
-            def manifest = new Manifest(manifests.nextElement().openStream());
+            def manifest = new Manifest(manifests.nextElement().openStream())
 
             def compId = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
             def compVersion = manifest.mainAttributes.getValue(CubaPlugin.APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
@@ -579,7 +711,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
             def compileConfiguration = project.configurations.compile
             def resolvedArtifacts = compileConfiguration.resolvedConfiguration.resolvedArtifacts
             def resolvedFiles = resolvedArtifacts.collect({ it.file })
-            def currentProjectDependencies = resolvedFiles.findAll({it.exists() && it.name.endsWith(".jar")}) - scannedJars
+            def currentProjectDependencies = resolvedFiles.findAll({
+                it.exists() && it.name.endsWith(".jar")
+            }) - scannedJars
 
             findAndIncludeVaadinStyles(currentProjectDependencies, includedAddonsPaths, includeMixins,
                     appComponentsIncludeBuilder)

@@ -18,21 +18,28 @@
 import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
+import groovy.util.slurpersupport.GPathResult
 import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
+import java.util.function.Consumer
+import java.util.jar.JarFile
 import java.util.jar.Manifest
+
+import static org.apache.commons.io.IOUtils.closeQuietly
 
 class CubaPlugin implements Plugin<Project> {
 
@@ -131,6 +138,10 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void applyToRootProject(Project project, CubaPluginExtension cubaExtension) {
+        project.configurations {
+            appComponent
+        }
+
         importCubaBOM(cubaExtension.bom)
         enableBOMVersionResolver(project, cubaExtension.bom)
 
@@ -232,7 +243,7 @@ class CubaPlugin implements Plugin<Project> {
                     confNode.appendNode('option', [name: 'PORT', value: '8787'])
                     confNode.appendNode('method')
                     listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
-                    listNode.@size = 1;
+                    listNode.@size = 1
                     runManagerNode.@selected = 'Remote.localhost:8787'
                 }
 
@@ -276,17 +287,17 @@ class CubaPlugin implements Plugin<Project> {
                 filteredResources.append(nestedProjectsFilter())
             }
             project.eclipse.classpath.file.withXml{ provider ->
-                def classpath = provider.asNode();
+                def classpath = provider.asNode()
                 for (String projectName : project.childProjects.keySet()) {
                     Node entry = classpath.appendNode('classpathentry')
                     entry.@kind = 'src'
                     if (projectName.startsWith("app")) {
-                        projectName = projectName.replace("app", project.name);
+                        projectName = projectName.replace("app", project.name)
                     }
-                    entry.@path = '/' + projectName;
+                    entry.@path = '/' + projectName
                     entry.@exported = 'true'
 
-                    classpath.children().remove(entry);
+                    classpath.children().remove(entry)
                     classpath.children().add(0, entry)
                 }
             }
@@ -303,7 +314,6 @@ class CubaPlugin implements Plugin<Project> {
      * be executed only after 'deploy' is completed
      */
     private void defineTasksExecutionOrder(Project project) {
-
         def deploymentTasks = findAllTasksByType(project, CubaDeployment.class)
         def dbCreationTasks = findAllTasksByType(project, CubaDbCreation.class)
         def dbUpdateTasks = findAllTasksByType(project, CubaDbUpdate.class)
@@ -342,7 +352,7 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     /**
-     * Finds tasks by type in the given project and in its subprojects
+     * Finds tasks by type in the given project and in its sub projects
      */
     private Collection<Task> findAllTasksByType(Project project, Class type) {
         def result = []
@@ -352,7 +362,7 @@ class CubaPlugin implements Plugin<Project> {
         return result
     }
 
-    private static Node nestedProjectsFilter() {
+    private Node nestedProjectsFilter() {
         def filter = new Node(null, 'filter')
         filter.appendNode('id', new Date().getTime())   // Eclipse does the same
         filter.appendNode('name', )
@@ -425,7 +435,7 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         if (project.name.endsWith('-core')) {
-            File dbDir = new File(project.projectDir, "db");
+            File dbDir = new File(project.projectDir, "db")
             project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
             project.assemble.dependsOn(project.assembleDbScripts)
 
@@ -454,7 +464,7 @@ class CubaPlugin implements Plugin<Project> {
         // add web resources version for correct caching
         if (project.name.endsWith('-web')) {
             def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
-            project.logger.info("[CubaPlugin] set web resources timestamp for project " + project.name)
+            project.logger.info("[CubaPlugin] set web resources timestamp for project ${project.name}")
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
         }
@@ -462,7 +472,7 @@ class CubaPlugin implements Plugin<Project> {
         if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
             project.logger.info "[CubaPlugin] configuring IDEA module $project.name"
 
-            List<Configuration> providedConfs = new ArrayList<>()
+            def providedConfs = new ArrayList<Configuration>()
             providedConfs.add(project.configurations.provided)
             providedConfs.add(project.configurations.jdbc)
 
@@ -476,13 +486,13 @@ class CubaPlugin implements Plugin<Project> {
 
             // Enhanced classes library entry must go before source folder
             project.idea.module.iml.withXml { provider ->
-                Node rootNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
+                Node rootNode = (Node) provider.node.component.find { it.@name == 'NewModuleRootManager' }
 
                 int srcIdx = rootNode.children().findIndexOf {
                     it instanceof Node && it.name() == 'orderEntry' && it.@type == 'sourceFolder'
                 }
 
-                Closure moveBeforeSources = { String dir ->
+                def moveBeforeSources = { String dir ->
                     Node enhNode = (Node) rootNode.children().find {
                         it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
                                 it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/' + dir)
@@ -549,7 +559,7 @@ class CubaPlugin implements Plugin<Project> {
 
     private void applyToPolymerClientProject(Project project) {
         project.plugins.apply(NodePlugin)
-        NodeExtension nodeExtension = project.extensions.getByType(NodeExtension)
+        def nodeExtension = project.extensions.getByType(NodeExtension)
         nodeExtension.version = '6.9.1'
         nodeExtension.download = true
     }
@@ -559,12 +569,23 @@ class CubaPlugin implements Plugin<Project> {
 
         project.logger.info("[CubaPlugin] Setting up dependencies for module $moduleName")
 
-        def jarNames = new HashSet()
-        List<SkippedDep> skippedDeps = []
+        def appComponentConf = project.rootProject.configurations.appComponent
+        if (appComponentConf.dependencies.size() > 0) {
+            addDependenciesFromAppComponentsConfiguration(project, moduleName)
+        } else {
+            addDependenciesFromAppComponentsClassPath(project, moduleName)
+        }
+    }
 
-        Enumeration<URL> manifests = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF")
+    private void addDependenciesFromAppComponentsClassPath(Project project, String moduleName) {
+        project.logger.info("[CubaPlugin] Import app-components to ${project.name} from classpath")
+
+        def jarNames = new HashSet<String>()
+        def skippedDeps = new ArrayList<SkippedDep>()
+
+        def manifests = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF")
         while (manifests.hasMoreElements()) {
-            Manifest manifest = new Manifest(manifests.nextElement().openStream());
+            def manifest = new Manifest(manifests.nextElement().openStream())
 
             def compId = manifest.mainAttributes.getValue(APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
             def compVersion = manifest.mainAttributes.getValue(APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
@@ -577,39 +598,8 @@ class CubaPlugin implements Plugin<Project> {
                 if (url) {
                     project.logger.info("[CubaPlugin] Found app-component info in $url")
                     def xml = new XmlSlurper().parseText(url.openStream().getText('UTF-8'))
-                    def module = xml.module.find { it.@name == moduleName }
-                    if (module.size() > 0) {
-                        module.artifact.each { art ->
-                            def dep = "$compGroup:${art.@name}:$compVersion"
-                            if (art.@classifier != "" || art.@ext != "") {
-                                dep += ':'
-                                if (art.@classifier != "") {
-                                    dep += art.@classifier
-                                }
-                                if (art.@ext != "") {
-                                    dep += "@${art.@ext}"
-                                }
-                            }
-                            if (art.@skipIfExists != "") {
-                                if (!project.rootProject.allprojects.find { art.@skipIfExists == getModuleName(it) }) {
-                                    skippedDeps.add(new SkippedDep(new AppComponent(compId, xml), dep, art.@configuration))
-                                }
-                            } else {
-                                addDependencyToConfiguration(project, dep, art.@configuration)
-                            }
-                        }
 
-                        addJarNamesFromModule(jarNames, xml, module)
-                    }
-
-                    // Adding appJars from modules that work in all blocks. For example, not all components have
-                    // portal module, so they don't export appJars for a portal module in the project. But
-                    // project's global module depends from components' global modules and hence they should be added
-                    // to appJars.
-                    def globalModules = xml.module.findAll { it.@blocks.text().contains('*') }
-                    globalModules.each {
-                        addJarNamesFromModule(jarNames, xml, it)
-                    }
+                    applyAppComponentXml(xml, moduleName, compGroup, compVersion, project, skippedDeps, compId, jarNames)
                 }
             }
         }
@@ -626,84 +616,200 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private void addDependencyToConfiguration(Project project, String dep, def conf) {
-        project.logger.info("[CubaPlugin] Adding dependency '$dep' to configuration '$conf'")
+    private void addDependenciesFromAppComponentsConfiguration(Project project, String moduleName) {
+        project.logger.info("[CubaPlugin] Import app-components to ${project.name} from appComponent configuration")
+
+        def addedArtifacts = new HashSet<ResolvedArtifact>()
+        def jarNames = new HashSet<String>()
+        def skippedDeps = new ArrayList<SkippedDep>()
+
+        def appComponentConf = project.rootProject.configurations.appComponent
+        def resolvedConfiguration = appComponentConf.resolvedConfiguration
+        def dependencies = resolvedConfiguration.firstLevelModuleDependencies
+
+        walkDependenciesFromAppComponentsConfiguration(dependencies, addedArtifacts, { artifact ->
+            def jarFile = new JarFile(artifact.file)
+            try {
+                def manifest = jarFile.manifest
+                if (manifest == null) {
+                    return
+                }
+
+                def compId = manifest.mainAttributes.getValue(APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
+                def compVersion = manifest.mainAttributes.getValue(APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
+                if (compId == null || compVersion == null) {
+                    return
+                }
+
+                project.logger.info("[CubaPlugin] Inspect app-component dependency ${artifact.name}")
+
+                def compDescriptorPath = compId.replace('.', '/') + '/app-component.xml'
+                def compGroup = compId
+
+                def descriptorEntry = jarFile.getEntry(compDescriptorPath)
+                if (descriptorEntry != null) {
+                    def descriptorInputStream = jarFile.getInputStream(descriptorEntry)
+                    try {
+                        project.logger.info("[CubaPlugin] Found app-component info in ${artifact.file.absolutePath}")
+                        def xml = new XmlSlurper().parseText(descriptorInputStream.getText(StandardCharsets.UTF_8.name()))
+
+                        applyAppComponentXml(xml, moduleName, compGroup, compVersion, project, skippedDeps, compId, jarNames)
+                    } finally {
+                        closeQuietly(descriptorInputStream)
+                    }
+                }
+            } finally {
+                closeQuietly(jarFile)
+            }
+        })
+
+        if (!jarNames.isEmpty()) {
+            project.logger.info("[CubaPlugin] Inherited app JAR names for deploy task: $jarNames")
+            project.ext.inheritedDeployJarNames = jarNames
+        }
+
+        if (!skippedDeps.isEmpty()) {
+            skippedDeps.sort()
+            def last = skippedDeps.last()
+            addDependencyToConfiguration(project, last.dep, last.conf)
+        }
+    }
+
+    private void walkDependenciesFromAppComponentsConfiguration(Set<ResolvedDependency> dependencies,
+                                                                Set<ResolvedArtifact> addedArtifacts,
+                                                                Consumer<ResolvedArtifact> artifactAction) {
+        for (dependency in dependencies) {
+            walkDependenciesFromAppComponentsConfiguration(dependency.children, addedArtifacts, artifactAction)
+
+            for (artifact in dependency.moduleArtifacts) {
+                if (addedArtifacts.contains(artifact)) {
+                    continue
+                }
+
+                addedArtifacts.add(artifact)
+
+                if (artifact.file != null && artifact.file.name.endsWith('.jar')) {
+                    artifactAction.accept(artifact)
+                }
+            }
+        }
+    }
+
+    private void applyAppComponentXml(GPathResult xml, String moduleName, String compGroup, String compVersion,
+                                      Project project, List<SkippedDep> skippedDeps, String compId, Set<String> jarNames) {
+        GPathResult module = (GPathResult) xml.module.find { it.@name == moduleName }
+        if (module.size() > 0) {
+            module.artifact.each { art ->
+                String dep = "$compGroup:${art.@name}:$compVersion"
+                if (art.@classifier != "" || art.@ext != "") {
+                    dep += ':'
+                    if (art.@classifier != "") {
+                        dep += art.@classifier
+                    }
+                    if (art.@ext != "") {
+                        dep += "@${art.@ext}"
+                    }
+                }
+                if (art.@skipIfExists != "") {
+                    if (!project.rootProject.allprojects.find { art.@skipIfExists == getModuleName(it) }) {
+                        skippedDeps.add(new SkippedDep(new AppComponent(compId, xml), dep, art.@configuration.text()))
+                    }
+                } else {
+                    addDependencyToConfiguration(project, dep, art.@configuration.text())
+                }
+            }
+
+            addJarNamesFromModule(jarNames, xml, module)
+        }
+
+        // Adding appJars from modules that work in all blocks. For example, not all components have
+        // portal module, so they don't export appJars for a portal module in the project. But
+        // project's global module depends from components' global modules and hence they should be added
+        // to appJars.
+        def globalModules = xml.module.findAll { it.@blocks.text().contains('*') }
+        globalModules.each { GPathResult child ->
+            addJarNamesFromModule(jarNames, xml, child)
+        }
+    }
+
+    private void addDependencyToConfiguration(Project project, String dependency, String conf) {
+        project.logger.info("[CubaPlugin] Adding dependency '$dependency' to configuration '$conf'")
         switch (conf) {
             case 'testCompile':
                 project.dependencies {
-                    testCompile(dep)
+                    testCompile(dependency)
                 }
-                break;
+                break
             case 'dbscripts':
                 project.configurations {
                     dbscripts
                 }
                 project.dependencies {
-                    dbscripts(dep)
+                    dbscripts(dependency)
                 }
-                break;
+                break
             case 'webcontent':
                 project.configurations {
                     webcontent
                 }
                 project.dependencies {
-                    webcontent(dep)
+                    webcontent(dependency)
                 }
-                break;
+                break
             case 'themes':
                 project.configurations {
                     themes
                 }
                 project.dependencies {
-                    themes(dep)
+                    themes(dependency)
                 }
-                break;
+                break
             case 'provided':
                 project.configurations {
                     provided
                 }
                 project.dependencies {
-                    provided(dep)
+                    provided(dependency)
                 }
-                break;
+                break
             default:
                 project.dependencies {
-                    compile(dep)
+                    compile(dependency)
                 }
         }
     }
 
-    private Object getModuleName(Project project) {
-        def moduleName
+    private String getModuleName(Project project) {
+        String moduleName
         if (project.hasProperty('appModuleType') && project['appModuleType'] != null)
             moduleName = project['appModuleType']
         else
             moduleName = project.projectDir.name
-        moduleName
+        return moduleName
     }
 
-    private void addJarNamesFromModule(Set jarNames, def xml, def module) {
+    private void addJarNamesFromModule(Set jarNames, GPathResult xml, GPathResult module) {
         module.artifact.each { art ->
             if (art.@appJar == "true") {
                 jarNames.add(art.@name.text())
             }
             module.@dependsOn.text().tokenize(' ,').each { depName ->
-                def depModule = xml.module.find { it.@name == depName }
+                GPathResult depModule = (GPathResult) xml.module.find { it.@name == depName }
                 addJarNamesFromModule(jarNames, xml, depModule)
             }
         }
     }
 
-    protected static isEnhanced(File file, File buildDir) {
-        Path path = file.toPath()
-        Path classesPath = Paths.get(buildDir.toString(), 'classes/main')
+    private static boolean isEnhanced(File file, File buildDir) {
+        def path = file.toPath()
+        def classesPath = Paths.get(buildDir.toString(), 'classes/main')
         if (!path.startsWith(classesPath))
             return false
 
-        Path enhClassesPath = Paths.get(buildDir.toString(), 'enhanced-classes/main')
+        def enhClassesPath = Paths.get(buildDir.toString(), 'enhanced-classes/main')
 
-        Path relPath = classesPath.relativize(path)
-        Path enhPath = enhClassesPath.resolve(relPath)
+        def relPath = classesPath.relativize(path)
+        def enhPath = enhClassesPath.resolve(relPath)
         return Files.exists(enhPath)
     }
 
@@ -711,7 +817,7 @@ class CubaPlugin implements Plugin<Project> {
         String id
         List<String> dependencies = []
 
-        AppComponent(String id, def xml) {
+        AppComponent(String id, GPathResult xml) {
             this.id = id
             if (xml.@dependsOn) {
                 dependencies = xml.@dependsOn.text().tokenize(' ,')
@@ -726,9 +832,9 @@ class CubaPlugin implements Plugin<Project> {
     private static class SkippedDep implements Comparable<SkippedDep> {
         AppComponent appComponent
         String dep
-        def conf
+        String conf
 
-        SkippedDep(AppComponent appComponent, String dep, def conf) {
+        SkippedDep(AppComponent appComponent, String dep, String conf) {
             this.appComponent = appComponent
             this.dep = dep
             this.conf = conf
