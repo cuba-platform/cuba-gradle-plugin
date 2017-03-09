@@ -40,6 +40,8 @@ class CubaZipProject extends DefaultTask {
         def excludeFromZip = [
                 'build',
                 'deploy',
+                'bower_components',
+                'node_modules',
                 '.iml',
                 '.ipr',
                 '.iws'
