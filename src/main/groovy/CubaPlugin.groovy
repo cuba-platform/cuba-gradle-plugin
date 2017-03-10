@@ -19,7 +19,6 @@ import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
-import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -142,7 +141,6 @@ class CubaPlugin implements Plugin<Project> {
             appComponent
         }
 
-        importCubaBOM(cubaExtension.bom)
         enableBOMVersionResolver(project, cubaExtension.bom)
 
         project.task([type: CubaSetupTomcat], 'setupTomcat')
@@ -151,20 +149,12 @@ class CubaPlugin implements Plugin<Project> {
         project.task([type: CubaStopTomcat], 'stop')
         project.task([type: CubaDropTomcat], 'dropTomcat')
         project.task([type: CubaZipProject], 'zipProject')
+
+        importBomFromDependencies(project, cubaExtension)
     }
 
     private void enableBOMVersionResolver(Project project, BOMVersions bomStore) {
         project.ext.bom = bomStore
-    }
-
-    private void importCubaBOM(BOMVersions bomStore) {
-        def inputStream = CubaPlugin.class.getResourceAsStream("/bom/cuba-platform-dependencies.groovy")
-        inputStream.withCloseable {
-            Map dependencies = (Map)Eval.me(IOUtils.toString(it))
-            for (libEntry in dependencies.entrySet()) {
-                bomStore.putBOMRule((String)libEntry.key, (String)libEntry.value)
-            }
-        }
     }
 
     private void doAfterEvaluateForModuleProject(Project project) {
@@ -349,6 +339,51 @@ class CubaPlugin implements Plugin<Project> {
         dbUpdateTasks.each {
             it.mustRunAfter hsqlStartTasks
         }
+    }
+
+    private void importBomFromDependencies(Project project, CubaPluginExtension cubaExtension) {
+        def bomComponentConf = project.rootProject.configurations.findByName('bom')
+        if (bomComponentConf == null) {
+            return
+        }
+
+        project.logger.info("[CubaPlugin] Import BOM from dependencies")
+
+        def resolvedConfiguration = bomComponentConf.resolvedConfiguration
+
+        def dependencies = resolvedConfiguration.firstLevelModuleDependencies
+        def addedArtifacts = new HashSet<ResolvedArtifact>()
+
+        walkJarDependencies(dependencies, addedArtifacts, { artifact ->
+            def jarFile = new JarFile(artifact.file)
+            try {
+                def manifest = jarFile.manifest
+                if (manifest == null) {
+                    return
+                }
+
+                def compId = manifest.mainAttributes.getValue(APP_COMPONENT_ID_MANIFEST_ATTRIBUTE)
+                def compVersion = manifest.mainAttributes.getValue(APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE)
+                if (compId == null || compVersion == null) {
+                    return
+                }
+
+                def bomPath = compId.replace('.', '/') + '/bom.properties'
+                def bomEntry = jarFile.getEntry(bomPath)
+                if (bomEntry != null) {
+                    def bomInputStream = jarFile.getInputStream(bomEntry)
+                    try {
+                        project.logger.info("[CubaPlugin] Found BOM info in ${artifact.file.absolutePath}")
+
+                        cubaExtension.bom.load(bomInputStream)
+                    } finally {
+                        closeQuietly(bomInputStream)
+                    }
+                }
+            } finally {
+                closeQuietly(jarFile)
+            }
+        })
     }
 
     /**
@@ -627,7 +662,7 @@ class CubaPlugin implements Plugin<Project> {
         def resolvedConfiguration = appComponentConf.resolvedConfiguration
         def dependencies = resolvedConfiguration.firstLevelModuleDependencies
 
-        walkDependenciesFromAppComponentsConfiguration(dependencies, addedArtifacts, { artifact ->
+        walkJarDependencies(dependencies, addedArtifacts, { artifact ->
             def jarFile = new JarFile(artifact.file)
             try {
                 def manifest = jarFile.manifest
@@ -675,18 +710,18 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private void walkDependenciesFromAppComponentsConfiguration(Set<ResolvedDependency> dependencies,
-                                                                Set<ResolvedArtifact> addedArtifacts,
-                                                                Consumer<ResolvedArtifact> artifactAction) {
+    private void walkJarDependencies(Set<ResolvedDependency> dependencies,
+                                     Set<ResolvedArtifact> passedArtifacts,
+                                     Consumer<ResolvedArtifact> artifactAction) {
         for (dependency in dependencies) {
-            walkDependenciesFromAppComponentsConfiguration(dependency.children, addedArtifacts, artifactAction)
+            walkJarDependencies(dependency.children, passedArtifacts, artifactAction)
 
             for (artifact in dependency.moduleArtifacts) {
-                if (addedArtifacts.contains(artifact)) {
+                if (passedArtifacts.contains(artifact)) {
                     continue
                 }
 
-                addedArtifacts.add(artifact)
+                passedArtifacts.add(artifact)
 
                 if (artifact.file != null && artifact.file.name.endsWith('.jar')) {
                     artifactAction.accept(artifact)

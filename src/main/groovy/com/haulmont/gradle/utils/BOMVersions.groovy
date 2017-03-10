@@ -19,8 +19,10 @@ package com.haulmont.gradle.utils
 import org.gradle.api.IllegalDependencyNotation
 import org.gradle.api.logging.Logger
 
+import java.nio.charset.StandardCharsets
+
 class BOMVersions {
-    protected Map<String, String> rules = new HashMap<>()
+    protected Map<String, String> rules = new LinkedHashMap<>()
     protected Set<String> unusedRules = new HashSet<>()
 
     protected Logger logger
@@ -37,10 +39,45 @@ class BOMVersions {
         return putBOMRule(moduleSpec, version)
     }
 
-    void rules(Map<String, String> map) {
+    void define(Map<String, String> map) {
         for (e in map) {
             putBOMRule(e.key, e.value)
         }
+    }
+
+    void load(File rulesFile) {
+        logger.info("[CubaPlugin] Import BOM rules file $rulesFile")
+
+        rulesFile.withInputStream {
+            load(it)
+        }
+    }
+
+    void load(InputStream bomInputStream) {
+        def configReader = new InputStreamReader(bomInputStream, StandardCharsets.UTF_8)
+        def properties = new Properties()
+        properties.load(configReader)
+
+        for (entry in properties.entrySet()) {
+            def bomKey = String.valueOf(entry.key).replace("/", ":")
+            def bomValue = String.valueOf(entry.value ?: "").trim()
+
+            rules.put(bomKey, bomValue)
+        }
+
+        for (entry in properties.entrySet()) {
+            def bomValue = String.valueOf(entry.value ?: "").trim()
+
+            if (bomValue.startsWith('${') && bomValue.endsWith('}')) {
+                def bomKey = String.valueOf(entry.key).replace("/", ":")
+                def bomValueKey = bomValue.substring(2, bomValue.length() - 1).replace("/", ":")
+                bomValue = rules.get(bomValueKey)
+
+                rules.put(bomKey, bomValue)
+            }
+        }
+
+        unusedRules.addAll(properties.keySet() as Set<String>)
     }
 
     String putBOMRule(String moduleSpec, String version) {
