@@ -508,6 +508,7 @@ class CubaPlugin implements Plugin<Project> {
             project.logger.info "[CubaPlugin] configuring IDEA module $project.name"
 
             def providedConfs = new ArrayList<Configuration>()
+            providedConfs.add(project.configurations.compile)
             providedConfs.add(project.configurations.provided)
             providedConfs.add(project.configurations.jdbc)
 
