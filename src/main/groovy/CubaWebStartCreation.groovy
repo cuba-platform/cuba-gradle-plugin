@@ -15,7 +15,6 @@
  *
  */
 
-import groovyx.gpars.GParsPool
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
 import org.gradle.api.DefaultTask
@@ -23,8 +22,6 @@ import org.gradle.api.internal.project.DefaultAntBuilder
 import org.gradle.api.internal.project.ant.AntLoggingAdapter
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaWebStartCreation extends DefaultTask {
 
     def jnlpTemplateName = "${project.projectDir}/webstart/template.jnlp"
@@ -69,7 +66,7 @@ class CubaWebStartCreation extends DefaultTask {
 
         project.logger.info("[CubaWebStartCreation] signing jars in ${libDir}")
 
-		Date startStamp = new Date()
+		long startTs = System.currentTimeMillis()
 
         if (useSignerCache && applicationSignJars.empty) {
             if (project.parent) {
@@ -84,20 +81,24 @@ class CubaWebStartCreation extends DefaultTask {
             project.logger.info("[CubaWebStartCreation] do not cache jars: ${applicationSignJars}")
         }
 
-		GParsPool.withPool(jarSignerThreadCount) {
-			libDir.listFiles().eachParallel { File jarFile ->
+        def libFiles = libDir.listFiles()
+        if (libFiles != null) {
+            libFiles.toList().stream()
+                    .parallel()
+                    .forEach({ File jarFile ->
                 try {
                     project.logger.info("[CubaWebStartCreation] started sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
+
                     doSignFile(jarFile, signerCacheDir)
+
                     project.logger.info("[CubaWebStartCreation] finished sign jar ${jarFile.name} in thread ${Thread.currentThread().id}")
                 } catch (Exception e) {
                     project.logger.error("failed to sign jar file $jarFile.name", e)
                 }
-			}
-		}
+            })
+        }
 
-		Date endStamp = new Date()
-		long processTime = endStamp.getTime() - startStamp.getTime()
+		long processTime = System.currentTimeMillis() - startTs
 
 		project.logger.info("[CubaWebStartCreation] signing time: ${processTime}")
 

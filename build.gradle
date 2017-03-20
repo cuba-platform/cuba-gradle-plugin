@@ -55,10 +55,8 @@ dependencies {
     compile('org.apache.httpcomponents:httpmime:4.5.2')
     compile('org.apache.httpcomponents:httpcore:4.4.5')
     compile('org.javassist:javassist:3.20.0-GA')
-    compile('dom4j:dom4j:1.6.1')
     compile('commons-lang:commons-lang:2.6')
     compile('commons-io:commons-io:2.4')
-    compile(group: 'org.codehaus.gpars', name: 'gpars', version: '1.0.0')
     compile(group: 'com.yahoo.platform.yui', name: 'yuicompressor', version: '2.4.6')
     compile(group: 'com.carrotsearch', name: 'smartsprites', version: '0.2.11')
     compile(group: 'com.vaadin', name: 'vaadin-sass-compiler', version: '0.9.13') {
