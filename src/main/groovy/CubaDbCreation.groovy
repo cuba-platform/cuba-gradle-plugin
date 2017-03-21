@@ -57,7 +57,7 @@ class CubaDbCreation extends CubaDbTask {
 
         } else if (dbms == 'mssql') {
             if (!masterUrl)
-                masterUrl = "jdbc:jtds:sqlserver://$host/master$connectionParams"
+                masterUrl = "jdbc:sqlserver://$host;databaseName=master$connectionParams"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)

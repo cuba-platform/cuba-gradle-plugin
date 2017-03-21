@@ -58,8 +58,8 @@ public abstract class CubaDbTask extends DefaultTask {
                     timeStampType = 'timestamp'
 
             } else if (dbms == 'mssql') {
-                driver = 'net.sourceforge.jtds.jdbc.Driver'
-                dbUrl = "jdbc:jtds:sqlserver://$host/$dbName$connectionParams"
+                driver = 'com.microsoft.sqlserver.jdbc.SQLServerDriver'
+                dbUrl = "jdbc:sqlserver://$host;databaseName=$dbName$connectionParams"
                 if (!timeStampType)
                     timeStampType = 'datetime'
 
