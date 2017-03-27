@@ -2,7 +2,7 @@
 
 <configuration debug="false">
 
-    <property name="logDir" value="${catalina.home}/logs"/>
+    <property name="logDir" value="${catalina.base}/logs"/>
 
     <appender name="File" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${logDir}/app.log</file>
