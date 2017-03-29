@@ -43,9 +43,9 @@ class CubaDbCreation extends CubaDbTask {
             if (!masterUrl)
                 masterUrl = "jdbc:postgresql://$host/postgres$connectionParams"
             if (!dropDbSql)
-                dropDbSql = "drop database if exists $dbName;"
+                dropDbSql = "drop database if exists \"$dbName\";"
             if (!createDbSql) {
-                createDbSql = "create database $dbName with template=template0 encoding='UTF8';"
+                createDbSql = "create database \"$dbName\" with template=template0 encoding='UTF8';"
                 if (connectionParams) {
                     Map<String, Object> paramsMap = parseDatabaseParams(connectionParams);
                     String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
