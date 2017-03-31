@@ -68,7 +68,7 @@ class CubaDbUpdate extends CubaDbTask {
         if (!tableExists('SYS_DB_CHANGELOG')) {
             project.logger.warn("Table SYS_DB_CHANGELOG does not exist, running all init scripts")
             try {
-                def pkLength = dbms == 'mysql' ? 255 : 300;
+                def pkLength = dbms == 'mysql' ? 190 : 300;
                 getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                         "SCRIPT_NAME varchar($pkLength) not null primary key, " +
                         "CREATE_TS $timeStampType default current_timestamp, " +

@@ -150,7 +150,7 @@ grant create session,
 
         project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
         try {
-            def pkLength = dbms == 'mysql' ? 255 : 300;
+            def pkLength = dbms == 'mysql' ? 190 : 300;
             getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                     "SCRIPT_NAME varchar($pkLength) not null primary key, " +
                     "CREATE_TS $timeStampType default current_timestamp, " +
