@@ -27,16 +27,14 @@ class MergeResourceTransformer implements UnpackTransformer {
     protected final WildcardFileFilter wildcardsFilter
 
     MergeResourceTransformer() {
-        this(null)
+        this(Collections.emptyList())
     }
 
     MergeResourceTransformer(List<String> wildcards) {
         def newWildcards = new ArrayList<String>()
         newWildcards.add("META-INF/spring.schemas")
         newWildcards.add("META-INF/spring.handlers")
-        if (wildcards != null) {
-            newWildcards.addAll(wildcards)
-        }
+        newWildcards.addAll(wildcards)
         this.wildcardsFilter = new WildcardFileFilter(newWildcards)
     }
 

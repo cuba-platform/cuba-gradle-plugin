@@ -18,6 +18,7 @@ package com.haulmont.gradle.uberjar
 
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
+import org.apache.commons.io.IOUtils
 import org.apache.commons.io.filefilter.FileFilterUtils
 
 import java.util.zip.ZipEntry
@@ -42,29 +43,22 @@ class Unpack {
     }
 
     public void runAction() {
-        def listFiles = FileUtils.listFiles(fromDir, FileFilterUtils.trueFileFilter(), FileFilterUtils.trueFileFilter());
-        listFiles.each {
-            file ->
-                if (isJar(file)) {
-                    def zipFile = new ZipFile(file)
-                    try {
-                        zipFile.entries().each {
-                            zipEntry ->
-                                if (zipEntry.directory) {
-                                    visitDirectory(zipFile, zipEntry)
-                                } else {
-                                    visitFile(zipFile, zipEntry)
-                                }
-                        }
-                    } finally {
-                        try {
-                            zipFile.close()
-                        } catch (Exception e) {
-                            //Do nothing
+        def listFiles = FileUtils.listFiles(fromDir, FileFilterUtils.trueFileFilter(), FileFilterUtils.trueFileFilter())
+        for (file in listFiles) {
+            if (isJar(file)) {
+                def zipFile = new ZipFile(file)
+                try {
+                    for (zipEntry in zipFile.entries()) {
+                        if (zipEntry.directory) {
+                            visitDirectory(zipFile, zipEntry)
+                        } else {
+                            visitFile(zipFile, zipEntry)
                         }
                     }
-
+                } finally {
+                    IOUtils.closeQuietly(zipFile)
                 }
+            }
         }
     }
 
@@ -83,26 +77,25 @@ class Unpack {
     protected void visitFile(ZipFile zipFile, ZipEntry zipEntry) {
         def paths = zipEntry.name.split('/')
         def currentDir = toDir
-        paths.eachWithIndex {
-            it, idx ->
-                if (idx == paths.length - 1) {
-                    def file = new File(currentDir, it)
-                    if (!file.exists()) {
-                        if (isClassEntry(zipEntry) || !canTransformEntry(zipEntry)) {
-                            FileUtils.copyInputStreamToFile(zipFile.getInputStream(zipEntry), file)
-                        } else {
-                            transformEntry(file, zipFile, zipEntry)
-                        }
-                    } else if (canTransformEntry(zipEntry)) {
+        paths.eachWithIndex { it, idx ->
+            if (idx == paths.length - 1) {
+                def file = new File(currentDir, it)
+                if (!file.exists()) {
+                    if (isClassEntry(zipEntry) || !canTransformEntry(zipEntry)) {
+                        FileUtils.copyInputStreamToFile(zipFile.getInputStream(zipEntry), file)
+                    } else {
                         transformEntry(file, zipFile, zipEntry)
                     }
-                } else {
-                    def file = new File(currentDir, it);
-                    if (!file.exists()) {
-                        FileUtils.forceMkdir(file)
-                    }
-                    currentDir = file
+                } else if (canTransformEntry(zipEntry)) {
+                    transformEntry(file, zipFile, zipEntry)
                 }
+            } else {
+                def file = new File(currentDir, it);
+                if (!file.exists()) {
+                    FileUtils.forceMkdir(file)
+                }
+                currentDir = file
+            }
         }
     }
 
@@ -116,7 +109,9 @@ class Unpack {
     }
 
     protected boolean canTransformEntry(ZipEntry zipEntry) {
-        transformers.any { it.canTransformEntry(zipEntry.name) }
+        return transformers.any {
+            it.canTransformEntry(zipEntry.name)
+        }
     }
 
     protected void transformEntry(File destFile, ZipFile zipFile, ZipEntry zipEntry) {

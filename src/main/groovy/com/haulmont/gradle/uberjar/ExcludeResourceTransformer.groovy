@@ -25,7 +25,7 @@ class ExcludeResourceTransformer implements UnpackTransformer {
     protected final WildcardFileFilter wildcardsFilter
 
     ExcludeResourceTransformer() {
-        this(null)
+        this(Collections.emptyList())
     }
 
     ExcludeResourceTransformer(List<String> wildcards) {
@@ -37,9 +37,7 @@ class ExcludeResourceTransformer implements UnpackTransformer {
         newWildcards.add('META-INF/*.SF')
         newWildcards.add('META-INF/*.DSA')
         newWildcards.add('META-INF/*.RSA')
-        if (wildcards != null) {
-            newWildcards.addAll(wildcards)
-        }
+        newWildcards.addAll(wildcards)
         this.wildcardsFilter = new WildcardFileFilter(newWildcards)
     }
 
