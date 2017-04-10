@@ -39,6 +39,10 @@ class CubaUberJar extends DefaultTask {
     String webWebXmlPath
     String portalWebXmlPath
 
+    int corePort = 8079
+    int webPort = 8080
+    int portalPort = 8081
+
     String coreJettyEnvPath
     List<String> webContentExclude = []
     List<String> excludeResources = []
@@ -381,21 +385,25 @@ class CubaUberJar extends DefaultTask {
                     'cuba.dataSourceJndiName'  : 'jdbc/CubaDS',
                     'cuba.download.directories': '${cuba.tempDir};${cuba.logDir}',
                     'cuba.dbDir'               : 'web-inf:db',
-                    'cuba.uberJar'             : 'true'
+                    'cuba.uberJar'             : 'true',
+                    'cuba.webPort'             : corePort
             ]
         }
 
         if (theProject == webProject) {
             properties += [
-                    'cuba.connectionUrlList'        : "http://localhost:8080/${coreAppName}",
-                    'cuba.useLocalServiceInvocation': 'false'
+                    'cuba.connectionUrlList'        : "http://localhost:${corePort}/${coreAppName}",
+                    'cuba.useLocalServiceInvocation': 'false',
+                    'cuba.webPort'                  : webPort
             ]
         }
 
         if (theProject == portalProject) {
             properties += [
-                    'cuba.connectionUrlList'        : "http://localhost:8080/${coreAppName}",
-                    'cuba.useLocalServiceInvocation': "false"
+                    'cuba.connectionUrlList'        : "http://localhost:${corePort}/${coreAppName}",
+                    'cuba.useLocalServiceInvocation': 'false',
+                    'cuba.webPort'                  : portalPort
+
             ]
         }
 
