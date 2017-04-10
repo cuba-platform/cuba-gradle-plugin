@@ -482,19 +482,17 @@ class CubaWarBuilding extends DefaultTask {
                     file = new File("$project.rootDir/$path")
                     if (!file.exists())
                         throw new GradleException("File $path or $project.rootDir/$path not found")
-                    else
-                        path = "$project.rootDir/$path"
                 }
 
                 theProject.copy {
                     from 'web'
                     into warDir(theProject)
                     exclude '**/META-INF/context.xml'
-                    exclude { it.file == file }
+                    exclude { it.file.absolutePath == file.absolutePath }
                 }
 
                 theProject.copy {
-                    from path
+                    from file.absolutePath
                     into "${warDir(theProject)}/WEB-INF/"
                     rename { String fileName ->
                         "web.xml"
