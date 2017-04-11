@@ -26,7 +26,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.TaskAction
 
-class CubaUberJar extends DefaultTask {
+class CubaUberJarBuilding extends DefaultTask {
 
     String appName
 
@@ -61,7 +61,7 @@ class CubaUberJar extends DefaultTask {
     protected String coreAppName
     protected String portalAppName
 
-    CubaUberJar() {
+    CubaUberJarBuilding() {
         project.afterEvaluate {
             def childProjects = project.getChildProjects()
 
