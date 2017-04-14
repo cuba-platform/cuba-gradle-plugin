@@ -71,9 +71,13 @@ class CubaWebStartCreation extends DefaultTask {
         if (useSignerCache && applicationSignJars.empty) {
             if (project.parent) {
                 project.parent.subprojects.each { subProject ->
-                    subProject.configurations.archives.allArtifacts.each {
-                        if (''.equals(it.classifier))
-                            applicationSignJars.add(it.name + '-' + subProject.version)
+                    def archivesConf = subProject.configurations.findByName('archives')
+                    if (archivesConf) {
+                        archivesConf.allArtifacts.each {
+                            if ('' == it.classifier) {
+                                applicationSignJars.add(it.name + '-' + subProject.version)
+                            }
+                        }
                     }
                 }
             }
