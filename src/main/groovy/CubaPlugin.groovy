@@ -218,7 +218,9 @@ class CubaPlugin implements Plugin<Project> {
                     if (project.cuba.ide.vcs)
                         provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.cuba.ide.vcs //'svn'
 
-                    provider.node.component.find { it.@name == 'Encoding' }.@defaultCharsetForPropertiesFiles = 'UTF-8'
+                    def encodingNode = provider.node.component.find { it.@name == 'Encoding' }
+                    encodingNode.@defaultCharsetForPropertiesFiles = 'UTF-8'
+                    encodingNode.appendNode('file', [url: 'PROJECT', charset: 'UTF-8'])
                 }
             }
             project.idea.workspace.iws.withXml { provider ->
@@ -442,6 +444,7 @@ class CubaPlugin implements Plugin<Project> {
 
         project.tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:-options"
+            options.encoding = 'UTF-8'
         }
 
         project.jar {
