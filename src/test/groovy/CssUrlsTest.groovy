@@ -16,11 +16,36 @@
  */
 
 import com.haulmont.gradle.utils.CssUrlInspector
-import org.apache.commons.io.IOUtils
 
 class CssUrlsTest extends GroovyTestCase {
     void testUrlMatcher() {
-        String cssContent = IOUtils.toString(getClass().getResourceAsStream('css-version-test.css'))
+        String cssContent = '''
+/*
+ * Copyright (c) 2008-2013 Haulmont. All rights reserved.
+ * Use is subject to license terms, see http://www.cuba-platform.com/license for details.
+ */
+
+@import url(http://fonts.googleapis.com/css?family=Roboto);
+
+.someClass1 {
+    background: url('picture1.png');
+}
+
+.someClass2 {
+    background: url("url/path/picture2.png");
+}
+
+.someClass3 {
+    background: transparent url(    picture3.png);
+}
+
+.someClass4 {
+    background: transparent url(    picture4.png      );
+}
+
+/* comment url(someClass.png) */
+
+'''
 
         def urls = ['picture1.png', 'url/path/picture2.png', 'picture3.png', 'picture4.png']
         def foundUrls = []
