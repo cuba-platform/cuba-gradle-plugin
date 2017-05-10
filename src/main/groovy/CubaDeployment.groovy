@@ -15,28 +15,21 @@
  *
  */
 
-import groovy.io.FileType
+import com.haulmont.gradle.libs.DependencyResolver
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-import java.util.regex.Pattern
+import static com.haulmont.gradle.libs.DependencyResolver.getLibraryDefinition
 
 class CubaDeployment extends DefaultTask {
-
-    private static final Pattern LIBRARY_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$')
-    private static final Pattern LIBRARY_SNAPSHOT_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)-(?:SNAPSHOT)\\.jar$')
-    private static final Pattern LIBRARY_WITHOUT_VERSION_PATTERN = Pattern.compile('((?:(?!-\\d)\\S)+)\\.jar$')
-    private static final Pattern DIGITAL_PATTERN = Pattern.compile('\\d+')
-    private static final String VERSION_SPLIT_PATTERN = "[\\.\\-]"
-
     public static final String INHERITED_JAR_NAMES = 'inheritedDeployJarNames'
 
     // split version string by '.' and '-' chars
 
     def jarNames = new HashSet()
     def appName
-    def Closure doAfter
+    Closure doAfter
     def tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
     def webcontentExclude = []
     def dbScriptsExcludes = []
@@ -48,7 +41,7 @@ class CubaDeployment extends DefaultTask {
         setGroup('Deployment')
     }
 
-    public Set getAllJarNames() {
+    Set getAllJarNames() {
         Set res = new HashSet()
         res.addAll(jarNames)
         if (project.hasProperty(INHERITED_JAR_NAMES)) {
@@ -68,11 +61,15 @@ class CubaDeployment extends DefaultTask {
 
         if (!tomcatRootDir)
             tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
+
         project.logger.info("[CubaDeployment] copying from configurations.jdbc to ${tomcatRootDir}/lib")
         project.copy {
             from project.configurations.jdbc {
                 exclude {f ->
-                    if (new File("${tomcatRootDir}/lib".toString(), f.file.name).exists()) {
+                    def libsPath = "${tomcatRootDir}/lib".toString()
+                    String fileName = f.file.name
+
+                    if (new File(libsPath, fileName).exists()) {
                         return true
                     }
 
@@ -170,8 +167,9 @@ class CubaDeployment extends DefaultTask {
 
         if (sharedlibResolve) {
             DependencyResolver resolver = new DependencyResolver(
-                    libraryRoot: new File(tomcatRootDir),
-                    logger: { String message -> project.logger.info(message) })
+                    new File(tomcatRootDir),
+                    { String message -> project.logger.info(message) }
+            )
             if (!copiedToSharedLib.isEmpty()) {
                 resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)
             }
@@ -207,196 +205,5 @@ class CubaDeployment extends DefaultTask {
 
     def appJar(String name) {
         jarNames.add(name)
-    }
-
-    public static class LibraryDefinition {
-        String name
-        String version
-    }
-
-    public static LibraryDefinition getLibraryDefinition(String libraryName) {
-        def m = LIBRARY_PATTERN.matcher(libraryName)
-        if (m.matches()) {
-            def currentLibName = m.group(1)
-            def currentLibVersion = m.group(2)
-
-            if (currentLibName != null && currentLibVersion != null) {
-                return new LibraryDefinition(name: currentLibName, version: currentLibVersion)
-            }
-        }
-
-        def sm = LIBRARY_SNAPSHOT_PATTERN.matcher(libraryName)
-        if (sm.matches()) {
-            def currentLibName = sm.group(1)
-
-            if (currentLibName != null) {
-                return new LibraryDefinition(name: currentLibName, version: 'SNAPSHOT')
-            }
-        }
-
-        def nvm = LIBRARY_WITHOUT_VERSION_PATTERN.matcher(libraryName)
-        if (nvm.matches()) {
-            def currentLibName = nvm.group(1)
-
-            if (currentLibName != null) {
-                return new LibraryDefinition(name: currentLibName)
-            }
-        }
-
-        return null
-    }
-
-    /**
-     * @param aLibraryVersion
-     * @param bLibraryVersion
-     * @return lowest version from aLibraryVersion and bLibraryVersion
-     */
-    public static String getLowestVersion(String aLibraryVersion, String bLibraryVersion) {
-        String[] labelAVersionArray = aLibraryVersion.split(VERSION_SPLIT_PATTERN)
-        String[] labelBVersionArray = bLibraryVersion.split(VERSION_SPLIT_PATTERN)
-
-        def maxLengthOfBothArrays
-        if (labelAVersionArray.size() >= labelBVersionArray.size()) {
-            maxLengthOfBothArrays = labelAVersionArray.size()
-        } else {
-            maxLengthOfBothArrays = labelBVersionArray.size()
-
-            def temp = aLibraryVersion
-            aLibraryVersion = bLibraryVersion
-            bLibraryVersion = temp
-
-            def tempArr = labelAVersionArray
-            labelAVersionArray = labelBVersionArray
-            labelBVersionArray = tempArr
-        }
-
-        for (def i = 0; i < maxLengthOfBothArrays; i++) {
-            if (i < labelBVersionArray.size()) {
-                String aVersionPart = labelAVersionArray[i]
-                String bVersionPart = labelBVersionArray[i]
-
-                if (aVersionPart == "SNAPSHOT") {
-                    return bLibraryVersion
-                } else if (bVersionPart == "SNAPSHOT") {
-                    return aLibraryVersion
-                }
-
-                if (aVersionPart.startsWith("RC") && bVersionPart.startsWith("RC")) {
-                    aVersionPart = aVersionPart.substring(2)
-                    bVersionPart = bVersionPart.substring(2)
-                }
-
-                def matcherA = DIGITAL_PATTERN.matcher(aVersionPart)
-                def matcherB = DIGITAL_PATTERN.matcher(bVersionPart)
-
-                if (matcherA.matches() && !matcherB.matches()) return bLibraryVersion //labelA = number, labelB = string
-                if (!matcherA.matches() && matcherB.matches()) return aLibraryVersion
-                //labelA = string, labelB = number
-
-                if (matcherA.matches()) {
-                    // convert parts to integer
-                    int libAVersionNumber = Integer.parseInt(aVersionPart)
-                    int libBVersionNumber = Integer.parseInt(bVersionPart)
-
-                    if (libAVersionNumber > libBVersionNumber) {
-                        return bLibraryVersion
-                    }
-
-                    if (libAVersionNumber < libBVersionNumber) {
-                        return aLibraryVersion
-                    }
-                } else {
-                    // both labels are numbers or strings
-                    if (aVersionPart > bVersionPart)
-                        return bLibraryVersion
-                    if (aVersionPart < bVersionPart)
-                        return aLibraryVersion
-                }
-
-                if (i == maxLengthOfBothArrays - 1) { //equals
-                    return aLibraryVersion
-                }
-            } else {
-                if (i < labelAVersionArray.size()) {
-                    def part = labelAVersionArray[i]
-                    if (part.startsWith("RC")) {
-                        return aLibraryVersion
-                    }
-                }
-
-                return bLibraryVersion // labelAVersionArray.length > labelBVersionArray.length
-            }
-        }
-
-        return aLibraryVersion
-    }
-
-    public static class DependencyResolver {
-
-        Closure logger
-        File libraryRoot
-
-        void resolveDependencies(File libDir, List<String> copied) {
-            def libraryNames = []
-            def copiedLibNames = copied.collect { getLibraryDefinition(it).name }
-
-            libDir.eachFile(FileType.FILES) { file ->
-                libraryNames << file.name
-            }
-            libraryNames = copiedLibNames.collectNested { String copiedLibName ->
-                libraryNames.findAll { it.startsWith(copiedLibName) }
-            }.flatten().toSet().toList()
-
-            if (logger) {
-                logger("[CubaDeployment] check libraries: " + libraryNames.join(','))
-            }
-
-            // file names to remove
-            def removeSet = new HashSet<String>()
-            // key - nameOfLib , value = list of matched versions
-            def versionsMap = new HashMap<String, List<String>>()
-
-            for (String libraryName in libraryNames) {
-                LibraryDefinition curLibDef = getLibraryDefinition(libraryName)
-                if (curLibDef != null) {
-                    def currentLibName = curLibDef.name
-                    def currentLibVersion = curLibDef.version
-                    //fill versionsMap
-                    List<String> tempList = versionsMap.get(currentLibName)
-                    if (tempList != null)
-                        tempList.add(currentLibVersion)
-                    else {
-                        tempList = new LinkedList<String>()
-                        tempList.add(currentLibVersion)
-                        versionsMap.put(currentLibName, tempList)
-                    }
-                }
-            }
-
-            def path = libDir.absolutePath
-            def relativePath = libraryRoot != null ? path.substring(libraryRoot.absolutePath.length()) : path
-            for (key in versionsMap.keySet()) {
-                def versionsList = versionsMap.get(key)
-                for (int i = 0; i < versionsList.size(); i++) {
-                    for (int j = i + 1; j < versionsList.size(); j++) {
-                        def versionToDelete = getLowestVersion(versionsList.get(i), versionsList.get(j))
-                        if (versionToDelete != null) {
-                            versionToDelete = key + "-" + versionToDelete + ".jar"
-                            removeSet.add(versionToDelete)
-                            def aNameLibrary = key + "-" + versionsList.get(i) + ".jar"
-                            def bNameLibrary = key + "-" + versionsList.get(j) + ".jar"
-                            if (logger)
-                                logger("[CubaDeployment] library ${relativePath}/${aNameLibrary} conflicts with ${bNameLibrary}")
-                        }
-                    }
-                }
-            }
-
-            removeSet.each { String fileName ->
-                new File(path, fileName).delete()
-                if (logger)
-                    logger("[CubaDeployment] remove library ${relativePath }/${fileName}")
-            }
-        }
     }
 }

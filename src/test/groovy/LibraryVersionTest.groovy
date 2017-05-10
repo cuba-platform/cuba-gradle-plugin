@@ -15,39 +15,84 @@
  *
  */
 
-import static CubaDeployment.getLibraryDefinition
-import static CubaDeployment.getLowestVersion
+import static com.haulmont.gradle.libs.DependencyResolver.getLibraryDefinition
+import static com.haulmont.gradle.libs.DependencyResolver.getLibraryPlatform
+import static com.haulmont.gradle.libs.DependencyResolver.getLowestVersion
 
-/**
- */
 class LibraryVersionTest extends GroovyTestCase {
 
     void testLibraryVersionMatcher() {
         def testData = [
-            "charts-global-4.0-SNAPSHOT.jar": ["charts-global", "4.0-SNAPSHOT"],
-            "asm-3.2-RELEASE.jar": ["asm", "3.2-RELEASE"],
-            "tika-core-0.9.jar": ["tika-core", "0.9"],
-            "spring-context-support-3.1.3.RELEASE.jar": ["spring-context-support", "3.1.3.RELEASE"],
-            "slf4j-api-1.5.6.jar": ["slf4j-api", "1.5.6"],
-            "core-renderer-1.1.3-SNAPSHOT.jar": ["core-renderer", "1.1.3-SNAPSHOT"],
-            "javassist-3.4.GA.jar": ["javassist", "3.4.GA"],
-            "antlr-runtime-3.2.haulmont.jar": ["antlr-runtime", "3.2.haulmont"],
-            "core-renderer-R8-SNAPSHOT.jar": ["core-renderer", "R8-SNAPSHOT"],
-            "core-renderer-1.1.3.RELEASE.jar": ["core-renderer", "1.1.3.RELEASE"],
-            "core-lib-renderer2-3.1.haulmont-SNAPSHOT.jar": ["core-lib-renderer2", "3.1.haulmont-SNAPSHOT"],
-            "xpp3_min-1.1.4c.jar": ["xpp3_min", "1.1.4c"],
-            "some-lib-.jar": ["some-lib-", null],
-            "some-lib-without-version.jar": ["some-lib-without-version", null],
-            "some-test-SNAPSHOT.jar" : ["some-test", "SNAPSHOT"],
-            "taxi-core-21.jar" : ["taxi-core", "21"]
+                "charts-global-4.0-SNAPSHOT.jar"              : ["charts-global", "4.0-SNAPSHOT"],
+                "asm-3.2-RELEASE.jar"                         : ["asm", "3.2-RELEASE"],
+                "tika-core-0.9.jar"                           : ["tika-core", "0.9"],
+                "spring-context-support-3.1.3.RELEASE.jar"    : ["spring-context-support", "3.1.3.RELEASE"],
+                "slf4j-api-1.5.6.jar"                         : ["slf4j-api", "1.5.6"],
+                "core-renderer-1.1.3-SNAPSHOT.jar"            : ["core-renderer", "1.1.3-SNAPSHOT"],
+                "javassist-3.4.GA.jar"                        : ["javassist", "3.4.GA"],
+                "antlr-runtime-3.2.haulmont.jar"              : ["antlr-runtime", "3.2.haulmont"],
+                "core-renderer-R8-SNAPSHOT.jar"               : ["core-renderer", "R8-SNAPSHOT"],
+                "core-renderer-1.1.3.RELEASE.jar"             : ["core-renderer", "1.1.3.RELEASE"],
+                "core-lib-renderer2-3.1.haulmont-SNAPSHOT.jar": ["core-lib-renderer2", "3.1.haulmont-SNAPSHOT"],
+                "xpp3_min-1.1.4c.jar"                         : ["xpp3_min", "1.1.4c"],
+                "some-lib-.jar"                               : ["some-lib-", null],
+                "some-lib-without-version.jar"                : ["some-lib-without-version", null],
+                "some-test-SNAPSHOT.jar"                      : ["some-test", "SNAPSHOT"],
+                "taxi-core-21.jar"                            : ["taxi-core", "21"],
+                // versions with platform suffix
+                "opencv-3.1.0-1.3-macosx-x86_64.jar"          : ["opencv", "3.1.0-1.3-macosx-x86_64"],
+                "opencv-3.1.0-1.3-windows-x86.jar"            : ["opencv", "3.1.0-1.3-windows-x86"],
+                "opencv-3.1.0-1.3-linux-armhf.jar"            : ["opencv", "3.1.0-1.3-linux-armhf"],
+                "opencv-3.1.0-1.3-SNAPSHOT-linux-armhf.jar"   : ["opencv", "3.1.0-1.3-SNAPSHOT-linux-armhf"]
         ]
 
         for (pair in testData) {
             def libraryName = pair.key
             def libraryDefinition = getLibraryDefinition(libraryName)
-            assertNotNull(libraryDefinition);
-            assertEquals(libraryDefinition.name, pair.getValue().get(0))
-            assertEquals(libraryDefinition.version, pair.getValue().get(1))
+
+            assertNotNull(libraryDefinition)
+            assertEquals(pair.value[0], libraryDefinition.name)
+            assertEquals(pair.value[1], libraryDefinition.version)
+        }
+    }
+
+    void testLibraryPlatformMatcher() {
+        def testData = [
+                "charts-global-4.0-SNAPSHOT.jar"              : ["charts-global", "4.0-SNAPSHOT"],
+                "asm-3.2-RELEASE.jar"                         : ["asm", "3.2-RELEASE"],
+                "tika-core-0.9.jar"                           : ["tika-core", "0.9"],
+                "spring-context-support-3.1.3.RELEASE.jar"    : ["spring-context-support", "3.1.3.RELEASE"],
+                "slf4j-api-1.5.6.jar"                         : ["slf4j-api", "1.5.6"],
+                "core-renderer-1.1.3-SNAPSHOT.jar"            : ["core-renderer", "1.1.3-SNAPSHOT"],
+                "javassist-3.4.GA.jar"                        : ["javassist", "3.4.GA"],
+                "antlr-runtime-3.2.haulmont.jar"              : ["antlr-runtime", "3.2.haulmont"],
+                "core-renderer-R8-SNAPSHOT.jar"               : ["core-renderer", "R8-SNAPSHOT"],
+                "core-renderer-1.1.3.RELEASE.jar"             : ["core-renderer", "1.1.3.RELEASE"],
+                "core-lib-renderer2-3.1.haulmont-SNAPSHOT.jar": ["core-lib-renderer2", "3.1.haulmont-SNAPSHOT"],
+                "xpp3_min-1.1.4c.jar"                         : ["xpp3_min", "1.1.4c"],
+                "some-lib-.jar"                               : ["some-lib-", null],
+                "some-lib-without-version.jar"                : ["some-lib-without-version", null],
+                "some-test-SNAPSHOT.jar"                      : ["some-test", "SNAPSHOT"],
+                "taxi-core-21.jar"                            : ["taxi-core", "21"],
+                // versions with platform suffix
+                "opencv-3.1.0-1.3-macosx-x86_64.jar"          : ["opencv", "3.1.0-1.3-macosx-x86_64", "macosx-x86_64"],
+                "opencv-3.1.0-1.3-windows-x86.jar"            : ["opencv", "3.1.0-1.3-windows-x86", "windows-x86"],
+                "opencv-3.1.0-1.3-linux-armhf.jar"            : ["opencv", "3.1.0-1.3-linux-armhf", "linux-armhf"],
+                "opencv-3.1.0-1.3-SNAPSHOT-linux-armhf.jar"   : ["opencv", "3.1.0-1.3-SNAPSHOT-linux-armhf", "linux-armhf"]
+        ]
+
+        for (pair in testData) {
+            def libraryName = pair.key
+            def libraryDefinition = getLibraryDefinition(libraryName)
+            assertNotNull(libraryDefinition)
+            assertEquals(pair.value[0], libraryDefinition.name)
+            assertEquals(pair.value[1], libraryDefinition.version)
+
+            if (pair.value.size() == 3) {
+                assertEquals(pair.value[2], getLibraryPlatform(libraryDefinition.version))
+            } else {
+                assertNull(getLibraryPlatform(libraryDefinition.version))
+            }
         }
     }
 
