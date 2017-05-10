@@ -16,11 +16,13 @@
 
 package com.haulmont.gradle.utils
 
+import groovy.transform.CompileStatic
 import org.gradle.api.IllegalDependencyNotation
 import org.gradle.api.logging.Logger
 
 import java.nio.charset.StandardCharsets
 
+@CompileStatic
 class BOMVersions {
     protected Map<String, String> rules = new LinkedHashMap<>()
     protected Set<String> unusedRules = new HashSet<>()
@@ -40,8 +42,8 @@ class BOMVersions {
     }
 
     void define(Map<String, String> map) {
-        for (e in map) {
-            putBOMRule(e.key, e.value)
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            putBOMRule(entry.key, entry.value)
         }
     }
 

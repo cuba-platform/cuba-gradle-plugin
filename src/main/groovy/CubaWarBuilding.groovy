@@ -15,6 +15,7 @@
  *
  */
 
+import com.haulmont.gradle.libs.DependencyResolver
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -22,10 +23,10 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.TaskAction
 
 class CubaWarBuilding extends DefaultTask {
-    Project coreProject;
-    Project webProject;
-    Project portalProject;
-    Project polymerProject;
+    Project coreProject
+    Project webProject
+    Project portalProject
+    Project polymerProject
 
     String appHome
     String appName
@@ -77,7 +78,7 @@ class CubaWarBuilding extends DefaultTask {
                     if (entry.getKey().endsWith("-core")) {
                         coreProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $coreProject is set as core project")
-                        break;
+                        break
                     }
                 }
             }
@@ -88,7 +89,7 @@ class CubaWarBuilding extends DefaultTask {
                     if (entry.getKey().endsWith("-web")) {
                         webProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $webProject is set as web project")
-                        break;
+                        break
                     }
                 }
             }
@@ -99,7 +100,7 @@ class CubaWarBuilding extends DefaultTask {
                     if (entry.getKey().endsWith("-portal")) {
                         portalProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $portalProject is set as portal project")
-                        break;
+                        break
                     }
                 }
             }
@@ -121,7 +122,7 @@ class CubaWarBuilding extends DefaultTask {
                     def webToolkit = entry.getValue()
                     def assembleWebToolkit = webToolkit.getTasksByName("assemble", false).iterator().next()
                     this.dependsOn(assembleWebToolkit)
-                    break;
+                    break
                 }
             }
         }
@@ -168,9 +169,9 @@ class CubaWarBuilding extends DefaultTask {
         if (portalProject) copyLibs(portalProject)
 
         if (singleWar) {
-            CubaDeployment.DependencyResolver resolver = new CubaDeployment.DependencyResolver(
-                    libraryRoot: new File(coreTmpWarDir),
-                    logger: { String message -> project.logger.info(message) })
+            DependencyResolver resolver = new DependencyResolver(
+                    new File(coreTmpWarDir),
+                    { String message -> project.logger.info(message) })
             resolver.resolveDependencies(new File(coreTmpWarDir, 'WEB-INF/lib'), copied)
         }
 
@@ -378,7 +379,7 @@ class CubaWarBuilding extends DefaultTask {
             from theProject.libsDir
             into "${warDir(theProject)}/WEB-INF/lib"
             include { details ->
-                def name = details.file.name
+                String name = details.file.name
                 if (!(name.endsWith('-sources.jar'))) {
                     copied.add(name)
                     return true
