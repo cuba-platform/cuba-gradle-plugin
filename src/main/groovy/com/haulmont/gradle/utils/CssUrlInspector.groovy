@@ -23,7 +23,7 @@ import java.util.regex.Pattern
 @CompileStatic
 class CssUrlInspector {
     private static final Pattern CSS_URL_PATTERN =
-            Pattern.compile('url\\([\\s]*[\'|\"]?([^\\)\\ \'\"]*)[\'|\"]?[\\s]*\\)')
+            Pattern.compile('url\\((?!((//)|(http://)|(https://)))[\\s]*[\'|\"]?([^) \'\"]*)[\'|\"]?[\\s]*\\)')
 
     Set<String> getUrls(String cssContent) {
         // replace comments
@@ -32,7 +32,7 @@ class CssUrlInspector {
         def matcher = CSS_URL_PATTERN.matcher(cssContent)
         def urls = new HashSet<String>()
         while (matcher.find()) {
-            urls.add(matcher.group(1))
+            urls.add(matcher.group(5))
         }
         return urls
     }
