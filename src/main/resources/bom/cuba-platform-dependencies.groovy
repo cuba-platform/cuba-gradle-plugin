@@ -20,7 +20,7 @@ def springSecurityVersion = '4.1.3.RELEASE'
 def thymeleafVersion = '3.0.2.RELEASE'
 def jacksonVersion = '2.8.0'
 def vaadinVersion = '7.7.6.cuba.6'
-def googleGwtVersion='2.8.0'
+def googleGwtVersion='2.8.1'
 
 def luceneVersion = '5.3.0'
 def morphologyVersion = '1.1'
