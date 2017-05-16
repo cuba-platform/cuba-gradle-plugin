@@ -195,110 +195,154 @@ class CubaPlugin implements Plugin<Project> {
         dropTomcat.listeningPort = '8787'
 
         if (project.hasProperty('idea')) {
-            project.logger.info "[CubaPlugin] configuring IDEA project"
-            project.idea.project.ipr {
-                withXml { provider ->
-                    def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                    node.@languageLevel = 'JDK_1_8'
-                    node.@'project-jdk-name' = '1.8'
-
-                    if (project.cuba.ide.copyright) {
-                        node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                        node.@default = 'default'
-
-                        node = node.appendNode('copyright')
-                        node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
-
-                        node.appendNode('option', [name: 'keyword', value: 'Copyright'])
-                        node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                        node.appendNode('option', [name: 'myName', value: 'default'])
-                        node.appendNode('option', [name: 'myLocal', value: 'true'])
-                    }
-
-                    if (project.cuba.ide.vcs)
-                        provider.node.component.find { it.@name == 'VcsDirectoryMappings' }.mapping.@vcs = project.cuba.ide.vcs //'svn'
-
-                    def encodingNode = provider.node.component.find { it.@name == 'Encoding' }
-                    encodingNode.@defaultCharsetForPropertiesFiles = 'UTF-8'
-                    encodingNode.appendNode('file', [url: 'PROJECT', charset: 'UTF-8'])
-                }
-            }
-            project.idea.workspace.iws.withXml { provider ->
-                def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
-                def listNode = runManagerNode.list.find { it }
-                if (listNode.@size == '0') {
-                    project.logger.info("[CubaPlugin] Creating remote configuration ")
-                    def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
-                    confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
-                    confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
-                    confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
-                    confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
-                    confNode.appendNode('option', [name: 'PORT', value: '8787'])
-                    confNode.appendNode('method')
-                    listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
-                    listNode.@size = 1
-                    runManagerNode.@selected = 'Remote.localhost:8787'
-                }
-
-                def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
-                def ignored = changeListManagerNode.ignored.find { it }
-                if (ignored == null) {
-                    project.logger.info("[CubaPlugin] Configure ignored files")
-                    changeListManagerNode.appendNode('ignored', [mask: '*.ipr'])
-                    changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
-                    changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
-                }
-
-                def projectViewNode = provider.asNode().component.find { it.@name == 'ProjectView' }
-                if (!projectViewNode) {
-                    projectViewNode = provider.asNode().appendNode('component', [name: 'ProjectView'])
-
-                    def projectViewPanesNode = projectViewNode.appendNode('panes')
-                    def projectPaneNode = projectViewPanesNode.appendNode('pane', [id: 'ProjectPane'])
-                    projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
-                }
-            }
-            project.idea.module.iml.withXml { provider ->
-                Node componentNode = provider.node.component.find { it.@name == 'NewModuleRootManager' }
-                Node contentNode = componentNode.content.find { it.@url == 'file://$MODULE_DIR$/'}
-                if (contentNode)
-                    contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
-            }
+            applyIdeaConfigRootProject(project)
         }
 
         if (project.hasProperty('eclipse')) {
-            project.logger.info "[CubaPlugin] configuring Eclipse project"
-            project.eclipse.project.file.withXml { provider ->
-                def projectDescription = provider.asNode()
-
-                def filteredResources = projectDescription.children().find { it.name() == 'filteredResources'}
-                if (filteredResources != null) {
-                    filteredResources.children().clear()
-                } else {
-                    filteredResources = projectDescription.appendNode('filteredResources')
-                }
-                filteredResources.append(nestedProjectsFilter())
-            }
-            project.eclipse.classpath.file.withXml{ provider ->
-                def classpath = provider.asNode()
-                for (String projectName : project.childProjects.keySet()) {
-                    Node entry = classpath.appendNode('classpathentry')
-                    entry.@kind = 'src'
-                    if (projectName.startsWith("app")) {
-                        projectName = projectName.replace("app", project.name)
-                    }
-                    entry.@path = '/' + projectName
-                    entry.@exported = 'true'
-
-                    classpath.children().remove(entry)
-                    classpath.children().add(0, entry)
-                }
-            }
-            def cleanTask = project.getTasksByName("clean", false).iterator().next()
-            cleanTask.delete = ['build/libs', 'build/tmp']
+            applyEclipseConfigRootProject(project)
         }
 
         defineTasksExecutionOrder(project)
+    }
+
+    private void applyEclipseConfigRootProject(Project project) {
+        project.logger.info "[CubaPlugin] configuring Eclipse project"
+        project.eclipse.project.file.withXml { provider ->
+            def projectDescription = provider.asNode()
+
+            def filteredResources = projectDescription.children().find { it.name() == 'filteredResources' }
+            if (filteredResources != null) {
+                filteredResources.children().clear()
+            } else {
+                filteredResources = projectDescription.appendNode('filteredResources')
+            }
+            filteredResources.append(nestedProjectsFilter())
+        }
+        project.eclipse.classpath.file.withXml { provider ->
+            def classpath = provider.asNode()
+            for (String projectName : project.childProjects.keySet()) {
+                Node entry = classpath.appendNode('classpathentry')
+                entry.@kind = 'src'
+                if (projectName.startsWith("app")) {
+                    projectName = projectName.replace("app", project.name)
+                }
+                entry.@path = '/' + projectName
+                entry.@exported = 'true'
+
+                classpath.children().remove(entry)
+                classpath.children().add(0, entry)
+            }
+        }
+        def cleanTask = project.getTasksByName("clean", false).iterator().next()
+        cleanTask.delete = ['build/libs', 'build/tmp']
+    }
+
+    private void applyIdeaConfigRootProject(Project project) {
+        project.logger.info "[CubaPlugin] configuring IDEA project"
+        project.idea.project.ipr {
+            withXml { provider ->
+                def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
+                node.@languageLevel = 'JDK_1_8'
+                node.@'project-jdk-name' = '1.8'
+
+                if (project.cuba.ide.copyright) {
+                    node = provider.node.component.find { it.@name == 'CopyrightManager' }
+                    node.@default = 'default'
+
+                    node = node.appendNode('copyright')
+                    node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
+
+                    node.appendNode('option', [name: 'keyword', value: 'Copyright'])
+                    node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
+                    node.appendNode('option', [name: 'myName', value: 'default'])
+                    node.appendNode('option', [name: 'myLocal', value: 'true'])
+                }
+
+                if (project.cuba.ide.vcs)
+                    provider.node.component.find {
+                        it.@name == 'VcsDirectoryMappings'
+                    }.mapping.@vcs = project.cuba.ide.vcs //'svn'
+
+                def encodingNode = provider.node.component.find { it.@name == 'Encoding' }
+                encodingNode.@defaultCharsetForPropertiesFiles = 'UTF-8'
+                encodingNode.appendNode('file', [url: 'PROJECT', charset: 'UTF-8'])
+            }
+        }
+
+        project.idea.workspace.iws.withXml { provider ->
+            def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
+            def listNode = runManagerNode.list.find { it }
+            if (listNode.@size == '0') {
+                project.logger.info("[CubaPlugin] Creating remote configuration ")
+                def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
+                confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
+                confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
+                confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
+                confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
+                confNode.appendNode('option', [name: 'PORT', value: '8787'])
+                confNode.appendNode('method')
+                listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
+                listNode.@size = 1
+                runManagerNode.@selected = 'Remote.localhost:8787'
+            }
+
+            def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
+            def ignored = changeListManagerNode.ignored.find { it }
+            if (ignored == null) {
+                project.logger.info("[CubaPlugin] Configure ignored files")
+                changeListManagerNode.appendNode('ignored', [mask: '*.ipr'])
+                changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
+                changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
+            }
+
+            def projectViewNode = provider.asNode().component.find { it.@name == 'ProjectView' }
+            if (!projectViewNode) {
+                projectViewNode = provider.asNode().appendNode('component', [name: 'ProjectView'])
+
+                def projectViewPanesNode = projectViewNode.appendNode('panes')
+                def projectPaneNode = projectViewPanesNode.appendNode('pane', [id: 'ProjectPane'])
+                projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
+            }
+
+            // Set Hilighting level to Syntax only for files
+            List<String> disabledHintsPaths = project.cuba.ide.ideaOptions.disabledHintsPaths
+            if (!disabledHintsPaths.isEmpty()) {
+                project.logger.info("[CubaPlugin] Configure disabled hints for files")
+                Node daemonCodeAnalyzerNode = provider.asNode().component.find { it.@name == 'DaemonCodeAnalyzer' } as Node
+                Node disableHintsNode = daemonCodeAnalyzerNode.disable_hints[0] as Node
+                if (disableHintsNode == null) {
+                    disableHintsNode = daemonCodeAnalyzerNode.appendNode('disable_hints')
+                }
+
+                Node highlightSettingsPerFileNode = provider.asNode().component.find { it.@name == 'HighlightingSettingsPerFile' } as Node
+                if (highlightSettingsPerFileNode == null) {
+                    highlightSettingsPerFileNode = provider.asNode().appendNode('component', [name: 'HighlightingSettingsPerFile'])
+                }
+
+                for (String disabledHintsFile : disabledHintsPaths) {
+                    disableHintsNode.appendNode('file', [url: 'file://$PROJECT_DIR$/' + disabledHintsFile])
+
+                    highlightSettingsPerFileNode.appendNode('setting', [
+                            file: 'file://$PROJECT_DIR$/' + disabledHintsFile,
+                            root0: 'SKIP_INSPECTION',
+                    ])
+                }
+            }
+
+            // disable Gradle import popup
+            Node propertiesComponentNode = provider.asNode().component.find { it.@name == 'PropertiesComponent' } as Node
+            if (propertiesComponentNode == null) {
+                propertiesComponentNode = provider.asNode().appendNode('component', [name: 'PropertiesComponent'])
+            }
+            propertiesComponentNode.appendNode('property', [name: 'show.inlinked.gradle.project.popup', value: 'false'])
+        }
+
+        project.idea.module.iml.withXml { provider ->
+            Node componentNode = provider.node.component.find { it.@name == 'NewModuleRootManager' } as Node
+            Node contentNode = componentNode.content.find { it.@url == 'file://$MODULE_DIR$/' } as Node
+            if (contentNode)
+                contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
+        }
     }
 
     /**

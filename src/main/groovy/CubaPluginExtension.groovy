@@ -93,7 +93,27 @@ class CubaPluginExtension {
         String vcs
         String classComment
 
+        IdeaProjectConfiguration ideaOptions
+
         IdeConfiguration(Project project) {
+            this.project = project
+            this.ideaOptions = new IdeaProjectConfiguration(project)
+        }
+
+        void ideaOptions(Closure closure) {
+            project.configure(ideaOptions, closure)
+        }
+    }
+
+    class IdeaProjectConfiguration {
+        Project project
+        List<String> disabledHintsPaths = [
+                'build.gradle',
+                'settings.gradle',
+                'extra.gradle'
+        ]
+
+        IdeaProjectConfiguration(Project project) {
             this.project = project
         }
     }
