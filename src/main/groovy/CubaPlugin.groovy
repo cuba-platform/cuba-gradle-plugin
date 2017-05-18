@@ -309,6 +309,9 @@ class CubaPlugin implements Plugin<Project> {
             if (!disabledHintsPaths.isEmpty()) {
                 project.logger.info("[CubaPlugin] Configure disabled hints for files")
                 Node daemonCodeAnalyzerNode = provider.asNode().component.find { it.@name == 'DaemonCodeAnalyzer' } as Node
+                if (daemonCodeAnalyzerNode == null) {
+                    daemonCodeAnalyzerNode = provider.asNode().appendNode('component', [name: 'DaemonCodeAnalyzer'])
+                }
                 Node disableHintsNode = daemonCodeAnalyzerNode.disable_hints[0] as Node
                 if (disableHintsNode == null) {
                     disableHintsNode = daemonCodeAnalyzerNode.appendNode('disable_hints')
