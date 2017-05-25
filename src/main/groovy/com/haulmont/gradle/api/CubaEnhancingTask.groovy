@@ -1,3 +1,4 @@
+package com.haulmont.gradle.api
 /*
  * Copyright (c) 2008-2016 Haulmont.
  *
