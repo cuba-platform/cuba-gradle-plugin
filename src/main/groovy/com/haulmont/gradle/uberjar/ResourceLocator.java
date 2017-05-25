@@ -16,13 +16,9 @@
 
 package com.haulmont.gradle.uberjar;
 
-import java.io.File;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.nio.file.Path;
 
-public interface UnpackTransformer {
-
-    boolean canTransformEntry(String path);
-
-    void transform(File destFile, ZipFile zipFile, ZipEntry zipEntry);
+public interface ResourceLocator {
+    boolean canRelocateEntry(String path);
+    Path relocate(Path toRootPath, Path fromPath);
 }

@@ -18,10 +18,9 @@ package com.haulmont.gradle.uberjar
 
 import org.apache.commons.io.filefilter.WildcardFileFilter
 
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
+import java.nio.file.Path
 
-class ExcludeResourceTransformer implements UnpackTransformer {
+class ExcludeResourceTransformer implements ResourceTransformer {
     protected final WildcardFileFilter wildcardsFilter
 
     ExcludeResourceTransformer() {
@@ -43,11 +42,11 @@ class ExcludeResourceTransformer implements UnpackTransformer {
 
     @Override
     boolean canTransformEntry(String path) {
-        return wildcardsFilter.accept(null, path)
+        return wildcardsFilter.accept(null, path.startsWith("/") ? path.substring(1) : path)
     }
 
     @Override
-    void transform(File destFile, ZipFile zipFile, ZipEntry zipEntry) {
+    void transform(Path toPath, Path fromPath) {
         //Do nothing
     }
 }

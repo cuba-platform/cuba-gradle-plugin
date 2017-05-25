@@ -16,14 +16,13 @@
 
 package com.haulmont.gradle.uberjar
 
-import org.apache.commons.io.FileUtils
-import org.apache.commons.io.IOUtils
 import org.apache.commons.io.filefilter.WildcardFileFilter
 
-import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 
-class MergeResourceTransformer implements UnpackTransformer {
+class MergeResourceTransformer implements ResourceTransformer {
     protected final WildcardFileFilter wildcardsFilter
 
     MergeResourceTransformer() {
@@ -40,19 +39,19 @@ class MergeResourceTransformer implements UnpackTransformer {
 
     @Override
     boolean canTransformEntry(String path) {
-        return wildcardsFilter.accept(null, path)
+        return wildcardsFilter.accept(null, path.startsWith("/") ? path.substring(1) : path)
     }
 
     @Override
-    void transform(File destFile, ZipFile zipFile, ZipEntry zipEntry) {
-        if (destFile.exists()) {
-            def destLines = FileUtils.readLines(destFile)
-            def sourceLines = IOUtils.readLines(zipFile.getInputStream(zipEntry))
+    void transform(Path toPath, Path fromPath) {
+        if (Files.exists(toPath)) {
+            def destLines = Files.readAllLines(toPath)
+            def sourceLines = Files.readAllLines(fromPath)
             def resultLines = new ArrayList<>(destLines)
             resultLines.addAll(sourceLines)
-            FileUtils.writeLines(destFile, resultLines, false)
+            Files.write(toPath, resultLines, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
         } else {
-            FileUtils.copyInputStreamToFile(zipFile.getInputStream(zipEntry), destFile)
+            Files.copy(fromPath, toPath)
         }
     }
 }
