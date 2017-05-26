@@ -1,3 +1,5 @@
+import com.haulmont.gradle.api.CubaEnhancingTask
+
 /*
  * Copyright (c) 2008-2016 Haulmont.
  *
