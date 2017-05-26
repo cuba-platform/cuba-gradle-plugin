@@ -415,7 +415,7 @@ class CubaWarBuilding extends DefaultTask {
 
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
-                def libraryName = CubaDeployment.getLibraryDefinition(lib.name).name
+                def libraryName = DependencyResolver.getLibraryDefinition(lib.name).name
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
@@ -425,7 +425,7 @@ class CubaWarBuilding extends DefaultTask {
             }
 
             new File("$theProject.libsDir").listFiles().each { File lib ->
-                def libraryName = CubaDeployment.getLibraryDefinition(lib.name).name
+                def libraryName = DependencyResolver.getLibraryDefinition(lib.name).name
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
