@@ -69,6 +69,8 @@ class CubaWarBuilding extends DefaultTask {
     private String coreAppName
 
     CubaWarBuilding() {
+        setGroup('Deployment')
+        setDescription('Task builds a WAR file from the application code and its dependencies')
         project.afterEvaluate {
             def childProjects = project.getChildProjects()
 
