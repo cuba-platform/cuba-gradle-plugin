@@ -73,23 +73,34 @@ class UberJar {
     public void copyFiles(Path fromPath, ResourceLocator locator) {
         execute({
             def toRootPath = toJarRoot()
-            for (path in Files.walk(fromPath)) {
-                def relativePath = fromPath.relativize(path)
+            if (Files.isDirectory(fromPath)) {
+                for (path in Files.walk(fromPath)) {
+                    def relativePath = fromPath.relativize(path)
+                    def toPath
+                    if (locator != null && locator.canRelocateEntry(relativePath.toString())) {
+                        toPath = locator.relocate(toRootPath, relativePath)
+                    } else {
+                        toPath = toRootPath.resolve(relativePath.toString())
+                    }
+                    if (Files.isDirectory(path)) {
+                        Files.createDirectories(toPath)
+                    } else {
+                        Path parentPath = toPath.getParent()
+                        if (parentPath != null && Files.notExists(parentPath)) {
+                            Files.createDirectories(parentPath)
+                        }
+                        Files.copy(path, toPath, StandardCopyOption.REPLACE_EXISTING)
+                    }
+                }
+            } else {
+                def relativePath = fromPath.getName(fromPath.getNameCount() - 1)
                 def toPath
                 if (locator != null && locator.canRelocateEntry(relativePath.toString())) {
                     toPath = locator.relocate(toRootPath, relativePath)
                 } else {
                     toPath = toRootPath.resolve(relativePath.toString())
                 }
-                if (Files.isDirectory(path)) {
-                    Files.createDirectories(toPath)
-                } else {
-                    Path parentPath = toPath.getParent()
-                    if (parentPath != null && Files.notExists(parentPath)) {
-                        Files.createDirectories(parentPath)
-                    }
-                    Files.copy(path, toPath, StandardCopyOption.REPLACE_EXISTING)
-                }
+                Files.copy(fromPath, toPath, StandardCopyOption.REPLACE_EXISTING)
             }
         })
     }

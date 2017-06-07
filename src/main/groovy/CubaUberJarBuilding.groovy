@@ -40,6 +40,8 @@ class CubaUberJarBuilding extends DefaultTask {
     String webWebXmlPath
     String portalWebXmlPath
 
+    String logbackConfigurationFile
+
     int corePort = 8079
     int webPort = 8080
     int portalPort = 8081
@@ -192,6 +194,7 @@ class CubaUberJarBuilding extends DefaultTask {
             if (portalProject) {
                 packLibsAndContent(portalProject, jar, false)
             }
+            packLogbackConfigurationFile(jar)
             jar.createManifest(MAIN_CLASS)
 
             //copy jar to distribution dir
@@ -203,6 +206,7 @@ class CubaUberJarBuilding extends DefaultTask {
             UberJar coreJar = createJarTask(coreAppName)
             packServerLibs(coreJar)
             packLibsAndContent(coreProject, coreJar, true)
+            packLogbackConfigurationFile(coreJar)
             coreJar.createManifest(MAIN_CLASS)
 
             UberJar webJar = createJarTask(appName)
@@ -211,6 +215,7 @@ class CubaUberJarBuilding extends DefaultTask {
             if (polymerProject) {
                 packFrontContent(polymerProject, webJar)
             }
+            packLogbackConfigurationFile(webJar)
             webJar.createManifest(MAIN_CLASS)
 
             //copy jars to distribution dir
@@ -224,6 +229,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 UberJar portalJar = createJarTask(portalAppName)
                 packServerLibs(portalJar)
                 packLibsAndContent(portalProject, portalJar, true)
+                packLogbackConfigurationFile(portalJar)
                 portalJar.createManifest(MAIN_CLASS)
 
                 //copy jar to distribution dir
@@ -250,6 +256,9 @@ class CubaUberJarBuilding extends DefaultTask {
         }
         if (portalWebXmlPath) {
             portalWebXmlPath = "$project.rootDir/$portalWebXmlPath"
+        }
+        if (logbackConfigurationFile) {
+            logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
         }
 
         Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
@@ -354,6 +363,13 @@ class CubaUberJarBuilding extends DefaultTask {
 
     protected void packFrontContent(Project theProject, UberJar jar) {
         jar.copyFiles(project.file(getContentDir(theProject)).toPath(), new AllResourceLocator(getPackDir(theProject)))
+    }
+
+    protected void packLogbackConfigurationFile(UberJar jar) {
+        if (!new File(logbackConfigurationFile).exists()) {
+            throw new GradleException("$logbackConfigurationFile doesn't exists")
+        }
+        jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
     }
 
     protected void copyServerLibs(Set<String> resolvedLibs) {
