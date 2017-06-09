@@ -107,13 +107,13 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
 
-            if (!polymerProject && !singleWar) {
+            if (!polymerProject) {
                 project.logger.info("[CubaWarBuilding] Polymer client project is not set, trying to find it automatically")
                 for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
                     if (entry.getKey().endsWith("-polymer-client")) {
                         polymerProject = entry.getValue()
                         project.logger.info("[CubaWarBuilding] $polymerProject is set as Polymer client project")
-                        break;
+                        break
                     }
                 }
             }
@@ -279,11 +279,6 @@ class CubaWarBuilding extends DefaultTask {
                 throw new GradleException("'portalProject' property is not supported in single WAR building. " +
                         "Please remove the 'portalProject' property.")
             }
-
-            if (polymerProject) {
-                throw new GradleException("[CubaWarBuilding] 'polymerProject' property is not supported in single WAR building. " +
-                        "Please remove the 'polymerProject' property.")
-            }
         }
 
         project.delete(distrDir)
@@ -321,6 +316,7 @@ class CubaWarBuilding extends DefaultTask {
         if (singleWar) {
             coreTmpWarDir = "${project.buildDir}/tmp/war"
             webTmpWarDir = coreTmpWarDir
+            polymerTmpWarDir = "$coreTmpWarDir/front"
         } else {
             coreTmpWarDir = "${project.buildDir}/tmp/core/war"
             webTmpWarDir = "${project.buildDir}/tmp/web/war"
