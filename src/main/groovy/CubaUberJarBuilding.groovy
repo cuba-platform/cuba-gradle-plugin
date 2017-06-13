@@ -40,13 +40,18 @@ class CubaUberJarBuilding extends DefaultTask {
     String webWebXmlPath
     String portalWebXmlPath
 
+    String coreJettyConfPath
+    String webJettyConfPath
+    String portalJettyConfPath
+
+    String coreJettyEnvPath
+
     String logbackConfigurationFile
 
     int corePort = 8079
     int webPort = 8080
     int portalPort = 8081
 
-    String coreJettyEnvPath
     List<String> webContentExclude = []
     List<String> excludeResources = []
     List<String> mergeResources = []
@@ -195,6 +200,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 packLibsAndContent(portalProject, jar, false)
             }
             packLogbackConfigurationFile(jar)
+            packJettyFile(null, jar)
             jar.createManifest(MAIN_CLASS)
 
             //copy jar to distribution dir
@@ -207,6 +213,7 @@ class CubaUberJarBuilding extends DefaultTask {
             packServerLibs(coreJar)
             packLibsAndContent(coreProject, coreJar, true)
             packLogbackConfigurationFile(coreJar)
+            packJettyFile(coreProject, coreJar)
             coreJar.createManifest(MAIN_CLASS)
 
             UberJar webJar = createJarTask(appName)
@@ -215,6 +222,7 @@ class CubaUberJarBuilding extends DefaultTask {
             if (polymerProject) {
                 packFrontContent(polymerProject, webJar)
             }
+            packJettyFile(webProject, webJar)
             packLogbackConfigurationFile(webJar)
             webJar.createManifest(MAIN_CLASS)
 
@@ -230,6 +238,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 packServerLibs(portalJar)
                 packLibsAndContent(portalProject, portalJar, true)
                 packLogbackConfigurationFile(portalJar)
+                packJettyFile(portalProject, portalJar)
                 portalJar.createManifest(MAIN_CLASS)
 
                 //copy jar to distribution dir
@@ -256,6 +265,15 @@ class CubaUberJarBuilding extends DefaultTask {
         }
         if (portalWebXmlPath) {
             portalWebXmlPath = "$project.rootDir/$portalWebXmlPath"
+        }
+        if (coreJettyConfPath) {
+            coreJettyConfPath = "$project.rootDir/$coreJettyConfPath"
+        }
+        if (webJettyConfPath) {
+            webJettyConfPath = "$project.rootDir/$webJettyConfPath"
+        }
+        if (portalJettyConfPath) {
+            portalJettyConfPath = "$project.rootDir/$portalJettyConfPath"
         }
         if (logbackConfigurationFile) {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
@@ -370,6 +388,23 @@ class CubaUberJarBuilding extends DefaultTask {
             throw new GradleException("$logbackConfigurationFile doesn't exists")
         }
         jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
+    }
+
+    protected void packJettyFile(Project theProject, UberJar jar) {
+        String jettyPath
+        if (webJettyConfPath && singleJar) {
+            jettyPath = webJettyConfPath
+        } else if (coreJettyConfPath && theProject == coreProject) {
+            jettyPath = coreJettyConfPath
+        } else if (webJettyConfPath && theProject == webProject) {
+            jettyPath = webJettyConfPath
+        } else if (portalWebXmlPath && theProject == portalProject) {
+            jettyPath = portalJettyConfPath
+        }
+        if (!new File(jettyPath).exists()) {
+            throw new GradleException("$jettyPath doesn't exists")
+        }
+        jar.copyFiles(project.file(jettyPath).toPath(), new JettyXmlResourceLocator())
     }
 
     protected void copyServerLibs(Set<String> resolvedLibs) {
