@@ -401,10 +401,12 @@ class CubaUberJarBuilding extends DefaultTask {
         } else if (portalWebXmlPath && theProject == portalProject) {
             jettyPath = portalJettyConfPath
         }
-        if (!new File(jettyPath).exists()) {
-            throw new GradleException("$jettyPath doesn't exists")
+        if (jettyPath != null) {
+            if (!new File(jettyPath).exists()) {
+                throw new GradleException("$jettyPath doesn't exists")
+            }
+            jar.copyFiles(project.file(jettyPath).toPath(), new JettyXmlResourceLocator())
         }
-        jar.copyFiles(project.file(jettyPath).toPath(), new JettyXmlResourceLocator())
     }
 
     protected void copyServerLibs(Set<String> resolvedLibs) {
