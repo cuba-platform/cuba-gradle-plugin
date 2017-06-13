@@ -398,7 +398,7 @@ class CubaUberJarBuilding extends DefaultTask {
             jettyPath = coreJettyConfPath
         } else if (webJettyConfPath && theProject == webProject) {
             jettyPath = webJettyConfPath
-        } else if (portalWebXmlPath && theProject == portalProject) {
+        } else if (portalJettyConfPath && theProject == portalProject) {
             jettyPath = portalJettyConfPath
         }
         if (jettyPath != null) {
