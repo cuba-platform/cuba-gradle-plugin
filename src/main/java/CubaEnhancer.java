@@ -124,14 +124,16 @@ public class CubaEnhancer {
             }
 
             ctMethod.addLocalVariable("__prev", setterParamType);
+            ctMethod.addLocalVariable("__new", setterParamType);
 
             ctMethod.insertBefore(
                     "__prev = this.get" + StringUtils.capitalize(fieldName) + "();"
             );
 
             ctMethod.insertAfter(
-                    "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, $1)) {" +
-                    "  this.propertyChanged(\"" + fieldName + "\", __prev, $1);" +
+                    "__new = this.get" + StringUtils.capitalize(fieldName) + "();" +
+                    "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, __new)) {" +
+                    "  this.propertyChanged(\"" + fieldName + "\", __prev, __new);" +
                     "}"
             );
         }
