@@ -63,7 +63,7 @@ dependencies {
         exclude group: 'com.yahoo.platform.yui', module: 'yuicompressor'
     }
     compile(group: 'com.jelastic', name: 'jelastic-public-j2se', version: '4.0')
-    compile(group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: '0.13')
+    compile(group: 'com.moowork.gradle', name: 'gradle-node-plugin', version: '1.1.0')
     compile(group: 'org.apache.commons', name : 'commons-dbcp2', version: '2.1.1')
 
     compile(gradleApi())

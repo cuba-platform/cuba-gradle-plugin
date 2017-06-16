@@ -647,7 +647,7 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToPolymerClientProject(Project project) {
         project.plugins.apply(NodePlugin)
         def nodeExtension = project.extensions.getByType(NodeExtension)
-        nodeExtension.version = '6.9.1'
+        nodeExtension.version = '8.1.2'
         nodeExtension.download = true
     }
 
