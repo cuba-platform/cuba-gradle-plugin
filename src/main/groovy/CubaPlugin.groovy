@@ -159,6 +159,11 @@ class CubaPlugin implements Plugin<Project> {
 
     private void doAfterEvaluateForModuleProject(Project project) {
         addDependenciesFromAppComponents(project)
+
+        if (project.name.endsWith('-global')) {
+            project.buildInfo.setDependsOn(project.getTasksByName('processResources', false))
+            project.getTasksByName('classes', false).each { it.dependsOn(project.buildInfo) }
+        }
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
@@ -520,6 +525,10 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
+        if (project.name.endsWith('-global')) {
+            project.task([type: CubaBuildInfo], 'buildInfo')
+        }
+
         if (project.name.endsWith('-core')) {
             File dbDir = new File(project.projectDir, "db")
             project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
@@ -714,6 +723,8 @@ class CubaPlugin implements Plugin<Project> {
         def resolvedConfiguration = appComponentConf.resolvedConfiguration
         def dependencies = resolvedConfiguration.firstLevelModuleDependencies
 
+        project.ext.resolvedAppComponents = []
+
         walkJarDependencies(dependencies, addedArtifacts, { artifact ->
             def jarFile = new JarFile(artifact.file)
             try {
@@ -735,6 +746,8 @@ class CubaPlugin implements Plugin<Project> {
 
                 def descriptorEntry = jarFile.getEntry(compDescriptorPath)
                 if (descriptorEntry != null) {
+                    project.ext.resolvedAppComponents.add(compId + ':' + compVersion)
+
                     def descriptorInputStream = jarFile.getInputStream(descriptorEntry)
                     try {
                         project.logger.info("[CubaPlugin] Found app-component info in ${artifact.file.absolutePath}")
