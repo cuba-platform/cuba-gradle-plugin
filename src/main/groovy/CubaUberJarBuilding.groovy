@@ -384,10 +384,12 @@ class CubaUberJarBuilding extends DefaultTask {
     }
 
     protected void packLogbackConfigurationFile(UberJar jar) {
-        if (!new File(logbackConfigurationFile).exists()) {
-            throw new GradleException("$logbackConfigurationFile doesn't exists")
+        if (logbackConfigurationFile) {
+            if (!new File(logbackConfigurationFile).exists()) {
+                throw new GradleException("$logbackConfigurationFile doesn't exists")
+            }
+            jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
         }
-        jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
     }
 
     protected void packJettyFile(Project theProject, UberJar jar) {
