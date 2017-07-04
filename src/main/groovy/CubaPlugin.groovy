@@ -593,6 +593,14 @@ class CubaPlugin implements Plugin<Project> {
                         it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
                                 it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/' + dir)
                     }
+                    if (!enhNode && project.name.endsWith('-global')) {
+                        enhNode = new Node(rootNode, 'orderEntry', [type: 'module-library', scope: 'RUNTIME'])
+                        Node libraryNode = new Node(enhNode, 'library')
+                        Node classesNode = new Node(libraryNode, 'CLASSES')
+                        new Node(classesNode, 'root', ['url': 'file://$MODULE_DIR$/build/enhanced-classes/' + dir])
+                        new Node(libraryNode, 'JAVADOC')
+                        new Node(libraryNode, 'SOURCES')
+                    }
                     if (enhNode) {
                         rootNode.children().remove(enhNode)
                         rootNode.children().add(srcIdx, enhNode)
