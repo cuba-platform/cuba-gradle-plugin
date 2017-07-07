@@ -15,11 +15,15 @@
  *
  */
 
+
 import com.haulmont.gradle.libs.DependencyResolver
+import com.haulmont.gradle.utils.FrontUtils
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
+import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.TaskAction
 
 class CubaWarBuilding extends DefaultTask {
@@ -217,6 +221,10 @@ class CubaWarBuilding extends DefaultTask {
             writeLocalAppProperties(webProject, summaryProperties)
             writeDependencies(coreProject, 'core', coreJarNames)
             writeDependencies(webProject, 'web', webJarNames)
+            if (polymerProject) {
+                copyFrontLibs()
+                writeIndexHtmlTemplate()
+            }
 
             packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
             project.copy {
@@ -329,6 +337,13 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         coreAppName = singleWar ? deployCore.appName : appName + '-core'
+
+        String platformVersion = resolvePlatformVersion(coreProject)
+        if (polymerProject && singleWar) {
+            project.dependencies {
+                front(group: 'com.haulmont.cuba', name: 'cuba-front', version: platformVersion)
+            }
+        }
     }
 
     protected Map<String, Object> collectProperties(Project theProject) {
@@ -406,6 +421,16 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         return copied
+    }
+
+    protected void copyFrontLibs() {
+        webProject.copy {
+            from project.configurations.front
+            into "${warDir(webProject)}//WEB-INF/lib"
+            include { details ->
+                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
+            }
+        }
     }
 
     protected void writeDependencies(Project theProject, String applicationType, def jarNames) {
@@ -620,6 +645,15 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
+    protected void writeIndexHtmlTemplate() {
+        File indexTemplate = new File("${warDir(polymerProject)}/index.ftl")
+        File indexHtml = new File("${warDir(polymerProject)}/index.html")
+        def text = FrontUtils.rewriteBaseUrl(indexHtml.text, "/$appName/front/")
+        text = FrontUtils.rewriteApiUrl(text, null)
+        indexTemplate.write(text)
+        indexHtml.delete()
+    }
+
     protected void processDoAfter() {
         if (doAfter) {
             project.logger.info("[CubaWarBuilding] calling doAfter")
@@ -651,5 +685,19 @@ class CubaWarBuilding extends DefaultTask {
 
     protected void packWarFile(Project project, File destFile) {
         ant.jar(destfile: destFile, basedir: warDir(project))
+    }
+
+    protected String resolvePlatformVersion(Project project) {
+        Configuration dependencyCompile = project.configurations.findByName('compile')
+        if (dependencyCompile) {
+            def artifacts = dependencyCompile.resolvedConfiguration.getResolvedArtifacts()
+            def cubaGlobalArtifact = artifacts.find { ResolvedArtifact artifact ->
+                artifact.name == 'cuba-global'
+            }
+            if (cubaGlobalArtifact) {
+                return cubaGlobalArtifact.moduleVersion.id.version
+            }
+        }
+        throw new GradleException("[CubaWarBuilding] Platform version is undefined")
     }
 }

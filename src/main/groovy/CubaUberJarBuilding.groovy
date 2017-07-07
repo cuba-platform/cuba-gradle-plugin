@@ -17,6 +17,7 @@
 
 import com.haulmont.gradle.libs.DependencyResolver
 import com.haulmont.gradle.uberjar.*
+import com.haulmont.gradle.utils.FrontUtils
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -181,7 +182,7 @@ class CubaUberJarBuilding extends DefaultTask {
         copyLibsAndContent(coreProject, coreJarNames, coreLibs)
         copyLibsAndContent(webProject, webJarNames, webLibs)
         if (polymerProject) {
-            copyFrontContent(polymerProject)
+            copyFrontLibsAndContent(polymerProject)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
@@ -318,6 +319,11 @@ class CubaUberJarBuilding extends DefaultTask {
         project.dependencies {
             uberJar(group: 'com.haulmont.cuba', name: 'cuba-uberjar', version: platformVersion)
         }
+        if (polymerProject) {
+            project.dependencies {
+                front(group: 'com.haulmont.cuba', name: 'cuba-front', version: platformVersion)
+            }
+        }
     }
 
     protected boolean initTransformers() {
@@ -357,8 +363,22 @@ class CubaUberJarBuilding extends DefaultTask {
         touchWebXml(theProject)
     }
 
-    protected void copyFrontContent(Project theProject) {
+    protected void copyFrontLibsAndContent(Project theProject) {
+        theProject.copy {
+            from project.configurations.front
+            into "${getAppLibsDir(theProject)}"
+            include { details ->
+                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
+            }
+        }
         copySpecificWebContent(theProject)
+        File webInf = new File("${getContentDir(polymerProject)}/WEB-INF/")
+        if (!webInf.exists()) {
+            webInf.mkdir()
+        }
+        File webXml = new File(webInf, "web.xml")
+        webXml.write(FrontUtils.getFrontWebXml())
+        writeIndexHtmlTemplate()
     }
 
     protected void packServerLibs(UberJar jar) {
@@ -380,6 +400,7 @@ class CubaUberJarBuilding extends DefaultTask {
     }
 
     protected void packFrontContent(Project theProject, UberJar jar) {
+        jar.copyJars(project.file(getAppLibsDir(theProject)).toPath(), new AllResourceLocator("${getPackDir(theProject)}/WEB-INF/classes"))
         jar.copyFiles(project.file(getContentDir(theProject)).toPath(), new AllResourceLocator(getPackDir(theProject)))
     }
 
@@ -652,8 +673,10 @@ class CubaUberJarBuilding extends DefaultTask {
             return "$rootJarTmpDir/${LIBS_DIR}_web"
         } else if (theProject == portalProject) {
             return "$rootJarTmpDir/${LIBS_DIR}_portal"
+        } else if (theProject == polymerProject) {
+            return "$rootJarTmpDir/${LIBS_DIR}_front"
         }
-        return null;
+        return null
     }
 
     protected String getContentDir(Project theProject) {
@@ -709,6 +732,17 @@ class CubaUberJarBuilding extends DefaultTask {
                 writer << value << '\n'
             }
         }
+    }
+
+    protected void writeIndexHtmlTemplate() {
+        File templateDir = new File("${getContentDir(polymerProject)}/front")
+        templateDir.mkdir()
+        File indexTemplate = new File(templateDir, "index.ftl")
+        File indexHtml = new File("${getContentDir(polymerProject)}/index.html")
+        String text = FrontUtils.rewriteBaseUrl(indexHtml.text, null)
+        text = FrontUtils.rewriteApiUrl(text, null)
+        indexTemplate.write(text)
+        indexHtml.delete()
     }
 
     protected String resolvePlatformVersion(Project project) {
