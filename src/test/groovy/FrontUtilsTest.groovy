@@ -35,17 +35,17 @@ class FrontUtilsTest extends GroovyTestCase {
 
     void testRewriteBaseUrl() {
         def result = FrontUtils.rewriteBaseUrl(html, "/app/front/")
-        assertEquals(html.replace("/app-front/", "<#if cubaFrontBaseUrl??>cubaFrontBaseUrl<#else>/app/front/</#if>"), result)
+        assertEquals(html.replace("/app-front/", "<#if cubaFrontBaseUrl??>\${cubaFrontBaseUrl}<#else>/app/front/</#if>"), result)
 
         result = FrontUtils.rewriteBaseUrl(html, null)
-        assertEquals(html.replace("/app-front/", "<#if cubaFrontBaseUrl??>cubaFrontBaseUrl<#else>/app-front/</#if>"), result)
+        assertEquals(html.replace("/app-front/", "<#if cubaFrontBaseUrl??>\${cubaFrontBaseUrl}<#else>/app-front/</#if>"), result)
     }
 
     void testRewriteApiUrl() {
         def result = FrontUtils.rewriteApiUrl(html, "/app1/rest/")
-        assertEquals(html.replace("/app/rest/", "<#if cubaFrontAppUrl??>cubaFrontAppUrl<#else>/app1/rest/</#if>"), result)
+        assertEquals(html.replace("/app/rest/", "<#if cubaFrontApiUrl??>\${cubaFrontApiUrl}<#else>/app1/rest/</#if>"), result)
 
         result = FrontUtils.rewriteApiUrl(html, null)
-        assertEquals(html.replace("/app/rest/", "<#if cubaFrontAppUrl??>cubaFrontAppUrl<#else>/app/rest/</#if>"), result)
+        assertEquals(html.replace("/app/rest/", "<#if cubaFrontApiUrl??>\${cubaFrontApiUrl}<#else>/app/rest/</#if>"), result)
     }
 }
