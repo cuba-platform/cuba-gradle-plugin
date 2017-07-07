@@ -25,7 +25,7 @@ class CubaHsqlStop extends CubaHsqlTask {
         try {
             ant.sql(classpath: driverClasspath,
                     driver: 'org.hsqldb.jdbc.JDBCDriver',
-                    url: "jdbc:hsqldb:hsql://localhost/$dbName",
+                    url: "jdbc:hsqldb:hsql://localhost:$dbPort/$dbName",
                     userid: 'sa', password: '',
                     autocommit: true,
                     'shutdown'

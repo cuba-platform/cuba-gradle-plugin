@@ -40,11 +40,11 @@ class CubaHsqlStart extends CubaHsqlTask {
         if (GraphicsEnvironment.isHeadless()) {
             if ('linux'.equalsIgnoreCase(System.getProperty('os.name'))) {
                 ant.exec(dir: dbDataDir.absolutePath, executable: 'java', spawn: true) {
-                    arg(line: "-cp \"$driverClasspath\" org.hsqldb.server.Server --database.0 file:\"$dbName\" --dbname.0 \"$dbName\"")
+                    arg(line: "-cp \"$driverClasspath\" org.hsqldb.server.Server --port $dbPort --database.0 file:\"$dbName\" --dbname.0 \"$dbName\"")
                 }
             } else {
                 ant.exec(dir: dbDataDir.absolutePath, executable: 'cmd.exe', spawn: true) {
-                    arg(line: "/C java.exe -cp $driverClasspath org.hsqldb.server.Server --database.0 file:$dbName --dbname.0 $dbName")
+                    arg(line: "/C java.exe -cp $driverClasspath org.hsqldb.server.Server --port $dbPort --database.0 file:$dbName --dbname.0 $dbName")
                 }
             }
         } else {
