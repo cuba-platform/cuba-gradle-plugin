@@ -69,10 +69,12 @@ class CubaBuildInfo extends DefaultTask {
             writer.write("buildDate = $buildDate\n")
             writer.write("version = $version\n")
             writer.write("artifactGroup = $artifactGroup\n")
-            try {
-                writer.write("appComponents = ${project.resolvedAppComponents.join(', ')}\n")
-            } catch (e) {
-                logger.error("Cannot get information about app components: $e")
+            if (project.hasProperty('resolvedAppComponents')) {
+                try {
+                    writer.write("appComponents = ${project.resolvedAppComponents.join(', ')}\n")
+                } catch (e) {
+                    logger.error("Cannot get information about app components: $e")
+                }
             }
             this.properties.each { prop ->
                 writer.write("$prop.key = $prop.value\n")
