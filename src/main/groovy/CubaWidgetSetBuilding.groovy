@@ -27,12 +27,11 @@ import org.gradle.api.tasks.*
 
 class CubaWidgetSetBuilding extends DefaultTask {
 
-    @Input
     String widgetSetsDir
     @Input
     String widgetSetClass
     @Input
-    Map compilerArgs
+    Map compilerArgs = [:]
 
     @Input
     boolean strict = true
@@ -109,7 +108,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     @OutputDirectory
-    def File getOutputDirectory() {
+    File getOutputDirectory() {
         if (!widgetSetsDir) {
             return new File(defaultBuildDir)
         }
@@ -122,7 +121,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     @InputFiles @SkipWhenEmpty
-    def FileCollection getSourceFiles() {
+    FileCollection getSourceFiles() {
         project.logger.info("Analyze source projects for widgetset building in ${project.name}")
 
         def sources = []
