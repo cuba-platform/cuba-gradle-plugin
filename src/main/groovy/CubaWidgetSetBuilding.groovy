@@ -27,25 +27,35 @@ import org.gradle.api.tasks.*
 
 class CubaWidgetSetBuilding extends DefaultTask {
 
+    @Input
     String widgetSetsDir
+    @Input
     String widgetSetClass
+    @Input
     Map compilerArgs
-    boolean printCompilerClassPath = false
 
+    @Input
     boolean strict = true
+    @Input
     boolean draft = false
+    @Input
     boolean disableCastChecking = false
-
-    int workers = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
+    @Input
     int optimize = 9
 
+    @Input
     String style = 'OBF'
-    String logLevel = 'INFO'
 
     String xmx = '-Xmx768m'
     String xss = '-Xss8m'
     @Deprecated
     String xxMPS = '-XX:MaxPermSize=256m'
+
+    String logLevel = 'INFO'
+
+    int workers = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
+
+    boolean printCompilerClassPath = false
 
     private def excludes = []
 
