@@ -186,7 +186,8 @@ class UberJar {
     }
 
     protected static FileSystem createZipFileSystem(Path path, boolean create) {
-        URI uri = URI.create("jar:file:${path.toUri().path}")
+        String uriString = path.toUri().path.replace(" ","%20")
+        URI uri = URI.create("jar:file:$uriString")
         Map<String, String> env = new HashMap<>()
         if (create) {
             env.put("create", "true")
