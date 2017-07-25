@@ -19,7 +19,6 @@ import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
-import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
@@ -83,14 +82,7 @@ class CubaPlugin implements Plugin<Project> {
         project.group = project.cuba.artifact.group
         project.version = project.cuba.artifact.version + (project.cuba.artifact.isSnapshot ? '-SNAPSHOT' : '')
 
-        if (project.hasProperty('install')) { // Check if the Maven plugin has been applied
-            project.configurations {
-                deployerJars
-            }
-            project.dependencies {
-                deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '1.0-beta-2')
-            }
-
+        if (project.hasProperty('install')) {
             def uploadUrl = project.cuba.uploadRepository.url
             def haulmontUploadRepo = System.getenv('HAULMONT_REPOSITORY_UPLOAD_URL')
             if (uploadUrl == null && haulmontUploadRepo) {
@@ -115,21 +107,24 @@ class CubaPlugin implements Plugin<Project> {
                 uploadPassword = project['uploadPassword']
             }
 
-            project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
-
-            if (uploadUrl == null) {
-                project.getTasks().getByName('uploadArchives').doFirst {
-                    throw new GradleException("Please specify upload repository using cuba.uploadRepository.url property " +
-                            "or HAULMONT_REPOSITORY_UPLOAD_URL environment variable!")
+            if (uploadUrl != null) {
+                // Check if the Maven plugin has been applied
+                project.configurations {
+                    deployerJars
                 }
-            }
+                project.dependencies {
+                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '2.12')
+                }
 
-            project.uploadArchives.configure {
-                repositories.mavenDeployer {
-                    name = 'httpDeployer'
-                    configuration = project.configurations.deployerJars
-                    repository(url: uploadUrl) {
-                        authentication(userName: uploadUser, password: uploadPassword)
+                project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
+
+                project.uploadArchives.configure {
+                    repositories.mavenDeployer {
+                        name = 'httpDeployer'
+                        configuration = project.configurations.deployerJars
+                        repository(url: uploadUrl) {
+                            authentication(userName: uploadUser, password: uploadPassword)
+                        }
                     }
                 }
             }
