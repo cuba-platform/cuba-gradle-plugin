@@ -282,8 +282,6 @@ class CubaPlugin implements Plugin<Project> {
             if (listNode) {
                 // old IntelliJ Idea
                 if (listNode.@size == '0') {
-                    project.logger.info("[CubaPlugin] Creating remote configuration ")
-
                     createIdeaRunConfigurationNode(project, runManagerNode)
 
                     listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
