@@ -277,19 +277,26 @@ class CubaPlugin implements Plugin<Project> {
 
         project.idea.workspace.iws.withXml { provider ->
             def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
+
             def listNode = runManagerNode.list.find { it }
-            if (listNode.@size == '0') {
-                project.logger.info("[CubaPlugin] Creating remote configuration ")
-                def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
-                confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
-                confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
-                confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
-                confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
-                confNode.appendNode('option', [name: 'PORT', value: '8787'])
-                confNode.appendNode('method')
-                listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
-                listNode.@size = 1
-                runManagerNode.@selected = 'Remote.localhost:8787'
+            if (listNode) {
+                // old IntelliJ Idea
+                if (listNode.@size == '0') {
+                    project.logger.info("[CubaPlugin] Creating remote configuration ")
+
+                    createIdeaRunConfigurationNode(project, runManagerNode)
+
+                    listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
+                    listNode.@size = 1
+                }
+            } else {
+                // Project were opened in IntelliJ idea 2017.2+
+                def remoteConfNode = runManagerNode.configuration.find {
+                    it.@name == 'localhost:8787' && it.@type == 'Remote'
+                }
+                if (remoteConfNode == null) {
+                    createIdeaRunConfigurationNode(project, runManagerNode)
+                }
             }
 
             def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
@@ -310,7 +317,7 @@ class CubaPlugin implements Plugin<Project> {
                 projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
             }
 
-            // Set Hilighting level to Syntax only for files
+            // Set Highlighting level to Syntax only for files
             List<String> disabledHintsPaths = project.cuba.ide.ideaOptions.disabledHintsPaths
             if (!disabledHintsPaths.isEmpty()) {
                 project.logger.info("[CubaPlugin] Configure disabled hints for files")
@@ -352,6 +359,20 @@ class CubaPlugin implements Plugin<Project> {
             if (contentNode)
                 contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
         }
+    }
+
+    private void createIdeaRunConfigurationNode(Project project, Node runManagerNode) {
+        project.logger.info("[CubaPlugin] Creating remote configuration ")
+
+        def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
+        confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
+        confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
+        confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
+        confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
+        confNode.appendNode('option', [name: 'PORT', value: '8787'])
+        confNode.appendNode('method')
+
+        runManagerNode.@selected = 'Remote.localhost:8787'
     }
 
     /**
