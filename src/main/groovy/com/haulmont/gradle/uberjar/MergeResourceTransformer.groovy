@@ -33,6 +33,9 @@ class MergeResourceTransformer implements ResourceTransformer {
         def newWildcards = new ArrayList<String>()
         newWildcards.add("META-INF/spring.schemas")
         newWildcards.add("META-INF/spring.handlers")
+        newWildcards.add("META-INF/services/org.apache.lucene.codecs.PostingsFormat")
+        newWildcards.add("META-INF/services/org.apache.lucene.codecs.DocValuesFormat")
+        newWildcards.add("META-INF/services/org.apache.lucene.codecs.Codec")
         newWildcards.addAll(wildcards)
         this.wildcardsFilter = new WildcardFileFilter(newWildcards)
     }
