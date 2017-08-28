@@ -26,6 +26,7 @@ import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
@@ -159,6 +160,17 @@ class CubaPlugin implements Plugin<Project> {
 
     private void doAfterEvaluateForModuleProject(Project project) {
         addDependenciesFromAppComponents(project)
+
+        project.plugins.withType(JavaPlugin) {
+            def gradleVersion = project.getGradle().getGradleVersion()
+            if (!gradleVersion.startsWith("3.")) {
+                // force old behaviour for Gradle 4+
+                project.logger.info("Switch classesDir for main and test source sets for Gradle 4+")
+
+                project.sourceSets.main.output.classesDir = new File(project.buildDir, "classes/main")
+                project.sourceSets.test.output.classesDir = new File(project.buildDir, "classes/test")
+            }
+        }
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
