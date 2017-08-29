@@ -60,6 +60,16 @@ class CubaPluginExtension {
 
     void artifact(Closure closure) {
         project.configure(artifact, closure)
+        if (project.hasProperty('cuba.artifact.version')) {
+            String versionFromConsole = project['cuba.artifact.version']
+            artifact.isSnapshot = versionFromConsole.endsWith('-SNAPSHOT')
+            if (artifact.isSnapshot) {
+                int index = versionFromConsole.indexOf('-SNAPSHOT')
+                artifact.version = versionFromConsole.substring(0, index)
+            } else {
+                artifact.version = versionFromConsole
+            }
+        }
     }
 
     void uploadRepository(Closure closure) {
