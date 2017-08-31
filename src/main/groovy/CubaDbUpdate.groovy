@@ -100,18 +100,18 @@ class CubaDbUpdate extends CubaDbTask {
                 dirs = dirs.subList(0, dirs.size() - 1)
             }
             dirs.each { String dirName ->
-                def unappliedScript = null
+                def anInitScriptHasBeenExecuted = false
                 List<File> initScripts = scriptFinder.getInitScripts(dirName)
                 if (!initScripts.isEmpty()) {
                     for (File file : initScripts) {
                         String script = getScriptName(file)
-                        if (!containsIgnoringPrefix(executedScripts, script)) {
-                            unappliedScript = script
+                        if (containsIgnoringPrefix(executedScripts, script)) {
+                            anInitScriptHasBeenExecuted = true
                             break
                         }
                     }
-                    if (unappliedScript) {
-                        project.logger.warn("Script $unappliedScript has not been applied, running init scripts")
+                    if (!anInitScriptHasBeenExecuted) {
+                        project.logger.warn("No init scripts from $dirName have been executed, running init scripts")
                         initDatabase(dirName)
                     }
                 }
