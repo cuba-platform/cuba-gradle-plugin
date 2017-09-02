@@ -15,6 +15,7 @@
  *
  */
 
+
 import com.haulmont.gradle.libs.DependencyResolver
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
@@ -24,8 +25,6 @@ import static com.haulmont.gradle.libs.DependencyResolver.getLibraryDefinition
 
 class CubaDeployment extends DefaultTask {
     public static final String INHERITED_JAR_NAMES = 'inheritedDeployJarNames'
-
-    // split version string by '.' and '-' chars
 
     def jarNames = new HashSet()
     def appName
@@ -200,7 +199,10 @@ class CubaDeployment extends DefaultTask {
     }
 
     def appJars(Object... names) {
-        jarNames.addAll(names)
+        if (names) {
+            def namesList = names.collect { String.valueOf(it) }
+            jarNames.addAll(namesList)
+        }
     }
 
     def appJar(String name) {
