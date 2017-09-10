@@ -15,19 +15,16 @@
  *
  */
 
-
 import groovy.sql.Sql
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.FilenameUtils
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.text.StrMatcher
-import org.apache.commons.lang.text.StrTokenizer
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 
 import java.nio.file.Path
 import java.util.regex.Pattern
 
-public abstract class CubaDbTask extends DefaultTask {
+abstract class CubaDbTask extends DefaultTask {
 
     def dbms
     def dbmsVersion
@@ -47,7 +44,6 @@ public abstract class CubaDbTask extends DefaultTask {
 
     private static final String SQL_COMMENT_PREFIX = "--"
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema"
-
 
     protected void init() {
         if (!driver || !dbUrl) {
@@ -276,7 +272,7 @@ public abstract class CubaDbTask extends DefaultTask {
                     File scriptDir = new File(initDir, dbmsType)
                     if (scriptDir.exists()) {
                         FilenameFilter filenameFilter = new FilenameFilter() {
-                            public boolean accept(File dir, String name) {
+                            boolean accept(File dir, String name) {
                                 return name.endsWith("create-db.sql")
                             }
                         }
@@ -342,14 +338,13 @@ public abstract class CubaDbTask extends DefaultTask {
     }
 
     static class ScriptSplitter {
-
         String delimiter
 
         ScriptSplitter(String delimiter) {
             this.delimiter = delimiter
         }
 
-        def List<String> split(String script) {
+        List<String> split(String script) {
             def qd = Pattern.quote(delimiter)
             String[] commands = script.split('(?<!' + qd + ')' + qd + '(?!' + qd + ')') // regex for ^: (?<!\^)\^(?!\^)
             return Arrays.asList(commands).collect { it.replace(delimiter + delimiter, delimiter) }

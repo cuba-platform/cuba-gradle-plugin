@@ -18,6 +18,7 @@ package com.haulmont.gradle.task.db;
 
 import com.haulmont.gradle.hsql.CubaHSQLDBServer;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.tools.ant.taskdefs.Execute;
 import org.apache.tools.ant.taskdefs.Java;
 import org.apache.tools.ant.taskdefs.WaitFor;
@@ -25,7 +26,6 @@ import org.apache.tools.ant.taskdefs.WaitFor.Unit;
 import org.apache.tools.ant.taskdefs.condition.Socket;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
-import org.gradle.internal.impldep.org.apache.commons.lang.SystemUtils;
 
 import java.awt.*;
 import java.io.File;

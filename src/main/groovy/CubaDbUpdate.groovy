@@ -14,10 +14,11 @@
  * limitations under the License.
  *
  */
+
 import groovy.sql.Sql
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.io.FileUtils
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.gradle.api.tasks.TaskAction
 import org.slf4j.LoggerFactory
@@ -30,8 +31,6 @@ import java.sql.SQLException
 import java.util.logging.Level
 import java.util.logging.Logger
 
-/**
- */
 class CubaDbUpdate extends CubaDbTask {
 
     boolean executeGroovy = true
@@ -211,7 +210,6 @@ class CubaDbUpdate extends CubaDbTask {
             }
         }
     }
-
 
     protected List<String> getExecutedScripts() {
         return getSql().rows('select SCRIPT_NAME from SYS_DB_CHANGELOG').collect { row -> row.script_name }

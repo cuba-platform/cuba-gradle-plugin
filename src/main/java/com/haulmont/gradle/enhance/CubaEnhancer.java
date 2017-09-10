@@ -18,7 +18,7 @@ package com.haulmont.gradle.enhance;
 
 import javassist.*;
 import javassist.bytecode.AnnotationsAttribute;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 

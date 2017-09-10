@@ -21,7 +21,7 @@ import com.vaadin.sass.internal.ScssStylesheet
 import com.vaadin.sass.internal.handler.SCSSDocumentHandlerImpl
 import com.vaadin.sass.internal.handler.SCSSErrorHandler
 import com.yahoo.platform.yui.compressor.CssCompressor
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.Message

@@ -17,7 +17,7 @@
 package com.haulmont.gradle.dependency;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 

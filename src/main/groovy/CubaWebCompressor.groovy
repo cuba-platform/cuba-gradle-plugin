@@ -15,20 +15,17 @@
  *
  */
 
-import com.yahoo.platform.yui.compressor.JavaScriptCompressor
 import com.yahoo.platform.yui.compressor.CssCompressor
+import com.yahoo.platform.yui.compressor.JavaScriptCompressor
 import groovy.io.FileType
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.mozilla.javascript.ErrorReporter
 import org.mozilla.javascript.tools.ToolErrorReporter
 
-/**
- *
- */
 class CubaWebCompressor extends DefaultTask {
 
-    public class FileSource {
+    class FileSource {
         def file
         Closure handler
 
@@ -41,7 +38,7 @@ class CubaWebCompressor extends DefaultTask {
         }
     }
 
-    public FileSource from(def file) {
+    FileSource from(def file) {
         def source = new FileSource(file)
         source.handler = { from, to ->
             from = preparePath(from)
@@ -63,7 +60,7 @@ class CubaWebCompressor extends DefaultTask {
         return source
     }
 
-    public void compressFile(String from, String to) {
+    void compressFile(String from, String to) {
         String format = StringUtils.substringAfterLast(from, '.')
         boolean isDirectory = StringUtils.substringAfterLast(to, '.').isEmpty()
         if (isDirectory)
@@ -74,7 +71,7 @@ class CubaWebCompressor extends DefaultTask {
             compressCssFile(from, to)
     }
 
-    public void compressJsFile(String from, String to) {
+    void compressJsFile(String from, String to) {
         FileReader reader = new FileReader(from)
         ErrorReporter reporter = new ToolErrorReporter(true);
         FileWriter writer = new FileWriter(to)
@@ -94,7 +91,7 @@ class CubaWebCompressor extends DefaultTask {
         }
     }
 
-    public void compressCssFile(String from, String to) {
+    void compressCssFile(String from, String to) {
         FileReader reader = new FileReader(from)
         FileWriter writer = new FileWriter(to)
         boolean isCompressed = false;
@@ -113,7 +110,7 @@ class CubaWebCompressor extends DefaultTask {
         }
     }
 
-    public void compressDirectory(String from, String to) {
+    void compressDirectory(String from, String to) {
         boolean isFile = !StringUtils.substringAfterLast(to, '.').isEmpty()
         if (isFile)
             throw new RuntimeException("Result path must be a directory")
@@ -133,7 +130,7 @@ class CubaWebCompressor extends DefaultTask {
         }
     }
 
-    public String preparePath(String path) {
+    String preparePath(String path) {
         path = StringUtils.replace(path, "//", "\\")
         path = StringUtils.replace(path, "/", "\\")
         if (StringUtils.endsWith(path, "\\"))
@@ -141,7 +138,7 @@ class CubaWebCompressor extends DefaultTask {
         return path
     }
 
-    public void checkFile(Boolean isCompressed, String path) {
+    void checkFile(Boolean isCompressed, String path) {
         if (!isCompressed) {
             File file = new File(path)
             file.delete()

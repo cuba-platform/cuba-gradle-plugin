@@ -15,12 +15,9 @@
  *
  */
 
-
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaDbCreation extends CubaDbTask {
 
     def dropDbSql
@@ -47,7 +44,7 @@ class CubaDbCreation extends CubaDbTask {
             if (!createDbSql) {
                 createDbSql = "create database \"$dbName\" with template=template0 encoding='UTF8';"
                 if (connectionParams) {
-                    Map<String, Object> paramsMap = parseDatabaseParams(connectionParams);
+                    def paramsMap = parseDatabaseParams(connectionParams)
                     String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
                     if (StringUtils.isNotEmpty(currentSchema)) {
                         createSchemaSql = "create schema \"$currentSchema\";"
@@ -150,7 +147,7 @@ grant create session,
 
         project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
         try {
-            def pkLength = dbms == 'mysql' ? 190 : 300;
+            def pkLength = dbms == 'mysql' ? 190 : 300
             getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                     "SCRIPT_NAME varchar($pkLength) not null primary key, " +
                     "CREATE_TS $timeStampType default current_timestamp, " +

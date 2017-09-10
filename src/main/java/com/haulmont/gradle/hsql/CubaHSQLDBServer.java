@@ -16,7 +16,7 @@
 
 package com.haulmont.gradle.hsql;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;

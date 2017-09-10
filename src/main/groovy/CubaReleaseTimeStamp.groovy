@@ -15,7 +15,7 @@
  *
  */
 
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFiles
@@ -25,7 +25,6 @@ import java.text.SimpleDateFormat
 
 /**
  * Generates <b>release.timestamp</b> and <b>release.number</b> files by artifact version and optional VCS version
- *
  */
 class CubaReleaseTimeStamp extends DefaultTask {
 

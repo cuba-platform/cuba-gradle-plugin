@@ -15,13 +15,10 @@
  *
  */
 
-
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaStartTomcat extends DefaultTask {
 
     def tomcatRootDir = project.cuba.tomcat.dir
