@@ -102,11 +102,11 @@ public class CubaHsqlStart extends CubaHsqlTask {
             } else {
                 exec.setCommandline(new String[]{
                         "java",
-                        "-cp", "\"" + driverClasspath + "\"",
+                        "-cp", driverClasspath,
                         HSQLDB_SERVER_MAIN,
                         "--port", String.valueOf(dbPort),
                         "--database.0", "file:\"" + dbName + "\"",
-                        "--dbname.0", "\"" + dbName + "\""
+                        "--dbname.0", dbName
                 });
             }
 
