@@ -25,6 +25,7 @@ import org.apache.tools.ant.taskdefs.WaitFor.Unit;
 import org.apache.tools.ant.taskdefs.condition.Socket;
 import org.gradle.api.GradleException;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.internal.impldep.org.apache.commons.lang.SystemUtils;
 
 import java.awt.*;
 import java.io.File;
@@ -88,12 +89,10 @@ public class CubaHsqlStart extends CubaHsqlTask {
             exec.setAntRun(getProject().getAnt().getProject());
             exec.setWorkingDirectory(dbDataDir);
 
-            String osName = System.getProperty("os.name");
-            if (osName.contains("linux")
-                    || osName.contains("mac")
-                    || osName.contains("nix")) {
+            if (SystemUtils.IS_OS_WINDOWS) {
                 exec.setCommandline(new String[]{
-                        "java",
+                        "cmd.exe", "/C",
+                        "java.exe",
                         "-cp", "\"" + driverClasspath + "\"",
                         HSQLDB_SERVER_MAIN,
                         "--port", String.valueOf(dbPort),
@@ -102,8 +101,7 @@ public class CubaHsqlStart extends CubaHsqlTask {
                 });
             } else {
                 exec.setCommandline(new String[]{
-                        "cmd.exe", "/C",
-                        "java.exe",
+                        "java",
                         "-cp", "\"" + driverClasspath + "\"",
                         HSQLDB_SERVER_MAIN,
                         "--port", String.valueOf(dbPort),
