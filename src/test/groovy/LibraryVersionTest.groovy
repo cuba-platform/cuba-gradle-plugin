@@ -15,9 +15,9 @@
  *
  */
 
-import static com.haulmont.gradle.libs.DependencyResolver.getLibraryDefinition
-import static com.haulmont.gradle.libs.DependencyResolver.getLibraryPlatform
-import static com.haulmont.gradle.libs.DependencyResolver.getLowestVersion
+import static com.haulmont.gradle.dependency.DependencyResolver.getLibraryDefinition
+import static com.haulmont.gradle.dependency.DependencyResolver.getLibraryPlatform
+import static com.haulmont.gradle.dependency.DependencyResolver.getLowestVersion
 
 class LibraryVersionTest extends GroovyTestCase {
 

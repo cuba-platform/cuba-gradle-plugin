@@ -15,7 +15,8 @@
  *
  */
 
-
+import com.haulmont.gradle.task.db.CubaHsqlStop
+import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
@@ -62,6 +63,8 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
+        exportTaskTypes(project)
+
         if (project == project.rootProject) {
             def cubaExtension = project.extensions.create("cuba", CubaPluginExtension, project)
             applyToRootProject(project, cubaExtension)
@@ -78,6 +81,11 @@ class CubaPlugin implements Plugin<Project> {
                 doAfterEvaluateForModuleProject(p)
             }
         }
+    }
+
+    private void exportTaskTypes(Project project) {
+        project.ext.CubaHsqlStop = CubaHsqlStop.class
+        project.ext.CubaHsqlStart = CubaHsqlStart.class
     }
 
     private void doAfterEvaluateForAnyProject(Project project) {

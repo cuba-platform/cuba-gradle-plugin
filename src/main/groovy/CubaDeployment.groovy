@@ -15,13 +15,12 @@
  *
  */
 
-
-import com.haulmont.gradle.libs.DependencyResolver
+import com.haulmont.gradle.dependency.DependencyResolver
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-import static com.haulmont.gradle.libs.DependencyResolver.getLibraryDefinition
+import static com.haulmont.gradle.dependency.DependencyResolver.getLibraryDefinition
 
 class CubaDeployment extends DefaultTask {
     public static final String INHERITED_JAR_NAMES = 'inheritedDeployJarNames'
@@ -165,10 +164,7 @@ class CubaDeployment extends DefaultTask {
         }
 
         if (sharedlibResolve) {
-            DependencyResolver resolver = new DependencyResolver(
-                    new File(tomcatRootDir),
-                    { String message -> project.logger.info(message) }
-            )
+            def resolver = new DependencyResolver(new File(tomcatRootDir), logger)
             if (!copiedToSharedLib.isEmpty()) {
                 resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)
             }

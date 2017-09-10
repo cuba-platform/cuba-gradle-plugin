@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package com.haulmont.gradle.libs;
+package com.haulmont.gradle.dependency;
 
-public final class LibraryDefinition {
+public class LibraryDefinition {
     private String name;
     private String version;
 

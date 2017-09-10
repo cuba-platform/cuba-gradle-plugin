@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.haulmont.gradle.libs;
+package com.haulmont.gradle.dependency;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.gradle.api.GradleException;
+import org.gradle.api.logging.Logger;
 
 import java.io.File;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -167,10 +167,10 @@ public class DependencyResolver {
         return aLibraryVersion;
     }
 
-    private Consumer<String> logger;
+    private Logger logger;
     private File libraryRoot;
 
-    public DependencyResolver(File libraryRoot, Consumer<String> logger) {
+    public DependencyResolver(File libraryRoot, Logger logger) {
         this.logger = logger;
         this.libraryRoot = libraryRoot;
     }
@@ -200,7 +200,7 @@ public class DependencyResolver {
         }
 
         if (logger != null) {
-            logger.accept("[DependencyResolver] check libraries: " + StringUtils.join(libraryNames, ','));
+            logger.info("[DependencyResolver] check libraries: " + StringUtils.join(libraryNames, ','));
         }
 
         // file names to remove
@@ -248,7 +248,7 @@ public class DependencyResolver {
                         String aNameLibrary = key + "-" + versionsList.get(i) + ".jar";
                         String bNameLibrary = key + "-" + versionsList.get(j) + ".jar";
                         if (logger != null) {
-                            logger.accept(String.format("[DependencyResolver] library %s/%s conflicts with %s",
+                            logger.info(String.format("[DependencyResolver] library %s/%s conflicts with %s",
                                     relativePath, aNameLibrary, bNameLibrary));
                         }
                     }
@@ -259,7 +259,7 @@ public class DependencyResolver {
         for (String fileName : removeSet) {
             FileUtils.deleteQuietly(new File(path, fileName));
             if (logger != null) {
-                logger.accept(String.format("[DependencyResolver] remove library %s/%s", relativePath, fileName));
+                logger.info(String.format("[DependencyResolver] remove library %s/%s", relativePath, fileName));
             }
         }
     }

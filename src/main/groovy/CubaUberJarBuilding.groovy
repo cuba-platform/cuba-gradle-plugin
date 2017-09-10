@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-
-import com.haulmont.gradle.libs.DependencyResolver
+import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
 import org.apache.commons.lang.StringUtils
@@ -340,9 +339,10 @@ class CubaUberJarBuilding extends DefaultTask {
         allLibs.addAll(coreLibs)
         allLibs.addAll(webLibs)
         allLibs.addAll(portalLibs)
-        DependencyResolver resolver = new DependencyResolver(project.file(getSharedLibsDir(project)),
-                { String message -> project.logger.info(message) })
-        resolver.resolveDependencies(project.file(getSharedLibsDir(project)), new ArrayList<String>(allLibs))
+
+        def libsDir = project.file(getSharedLibsDir(project))
+        def resolver = new DependencyResolver(libsDir, logger)
+        resolver.resolveDependencies(libsDir, new ArrayList<String>(allLibs))
     }
 
     protected void copyLibsAndContent(Project theProject, Collection<String> jarNames, Set<String> resolvedLibs) {

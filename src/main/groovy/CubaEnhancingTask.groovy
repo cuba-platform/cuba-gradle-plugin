@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.haulmont.gradle.enhance.CubaEnhancer
 import groovy.io.FileType
 import groovy.xml.QName
 import groovy.xml.XmlUtil
@@ -33,7 +34,6 @@ import java.util.regex.Pattern
 
 /**
  * Enhances entity classes specified in persistence xml
- *
  */
 class CubaEnhancingTask extends DefaultTask {
 
@@ -53,7 +53,7 @@ class CubaEnhancingTask extends DefaultTask {
     }
 
     @InputFiles
-    def List getInputFiles() {
+    List getInputFiles() {
         List entities = getPersistentEntities(getOwnPersistenceXmlFiles())
         entities.addAll(getTransientEntities())
 
@@ -63,7 +63,7 @@ class CubaEnhancingTask extends DefaultTask {
     }
 
     @OutputFiles
-    def List getOutputFiles() {
+    List getOutputFiles() {
         List entities = getPersistentEntities(getOwnPersistenceXmlFiles())
         entities.addAll(getTransientEntities())
 

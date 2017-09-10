@@ -15,8 +15,7 @@
  *
  */
 
-
-import com.haulmont.gradle.libs.DependencyResolver
+import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.utils.FrontUtils
 import org.apache.commons.lang.StringUtils
 import org.gradle.api.DefaultTask
@@ -175,9 +174,7 @@ class CubaWarBuilding extends DefaultTask {
         if (portalProject) copyLibs(portalProject)
 
         if (singleWar) {
-            DependencyResolver resolver = new DependencyResolver(
-                    new File(coreTmpWarDir),
-                    { String message -> project.logger.info(message) })
+            def resolver = new DependencyResolver(new File(coreTmpWarDir), logger)
             resolver.resolveDependencies(new File(coreTmpWarDir, 'WEB-INF/lib'), copied)
         }
 
