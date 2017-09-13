@@ -62,7 +62,7 @@ dependencies {
     compile('com.vaadin:vaadin-sass-compiler:0.9.13') {
         exclude group: 'com.yahoo.platform.yui', module: 'yuicompressor'
     }
-    compile('com.jelastic:jelastic-public-j2se:4.0')
+    compile('com.jelastic:jelastic-public-j2se:5.0.6')
     compile('com.moowork.gradle:gradle-node-plugin:1.1.0')
     compile('org.apache.commons:commons-dbcp2:2.1.1')
 

@@ -16,7 +16,7 @@
  */
 
 import com.jelastic.api.Response
-import com.jelastic.api.environment.Environment
+import com.jelastic.api.environment.Control
 import com.jelastic.api.environment.response.EnvironmentInfoResponse
 import com.jelastic.api.environment.response.NodeSSHResponses
 import com.jelastic.api.users.Authentication
@@ -43,18 +43,15 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskAction
 
-/**
- *
- */
 class CubaJelasticDeploy extends DefaultTask {
-    protected static final String SCHEME = 'https';
-    protected static final String VERSION = '/1.0/';
+    protected static final String SCHEME = 'https'
+    protected static final String VERSION = '/1.0/'
     protected static final String UPLOAD_PATH = 'storage/uploader/rest/upload'
     protected static final String ADD_FILE_PATH = 'development/scripting/rest/eval'
     protected static final String GET_ARCHIVES_PATH = "/GetArchives"
     protected static final String DELETE_ARCHIVE_PATH = "/DeleteArchive"
     protected static final String BASE_USER_AGENT = "Mozilla/5.0"
-    protected static final int SAME_FILES_LIMIT = 5;
+    protected static final int SAME_FILES_LIMIT = 5
 
     protected String appName
     String email
@@ -64,7 +61,7 @@ class CubaJelasticDeploy extends DefaultTask {
     String hostUrl
 
     protected Authentication authenticationService
-    protected Environment environmentService
+    protected Control environmentService
     protected File tmpFile
     protected String session
     protected Map<String, String> headers
@@ -108,10 +105,10 @@ class CubaJelasticDeploy extends DefaultTask {
             for (Map.Entry<String, Project> entry : project.getChildProjects().entrySet()) {
                 if (entry.getKey().endsWith("-web")) {
                     def webProject = entry.getValue()
-                    CubaDeployment deployWeb = webProject.getTasksByName('deploy', false).iterator().next() as CubaDeployment
+                    CubaDeployment deployWeb = ++webProject.getTasksByName('deploy', false).iterator() as CubaDeployment
                     appName = deployWeb.appName
                     project.logger.info("[CubaJelasticDeploy] 'appName' is set to '${appName}'")
-                    break;
+                    break
                 }
             }
         }
@@ -121,7 +118,7 @@ class CubaJelasticDeploy extends DefaultTask {
         authenticationService = new Authentication()
         authenticationService.setServerUrl(uri.toString())
 
-        environmentService = new Environment()
+        environmentService = new Control()
         environmentService.setServerUrl(uri.toString())
 
         tmpFile = new File("${warDir}/${appName}.war")
@@ -143,13 +140,13 @@ class CubaJelasticDeploy extends DefaultTask {
             throw new RuntimeException("[CubaJelasticDeploy] authentication failed: ${authenticationResponse.getError()}")
         }
 
-        session = authenticationResponse.getSession();
+        session = authenticationResponse.getSession()
     }
 
     protected Object upload() {
         project.logger.lifecycle("[CubaJelasticDeploy] uploading application...")
 
-        URI uri = new URI(SCHEME, hostUrl, "${VERSION}${UPLOAD_PATH}", null);
+        URI uri = new URI(SCHEME, hostUrl, "${VERSION}${UPLOAD_PATH}", null)
         HttpPost httpPost = new HttpPost(uri)
 
         for (Map.Entry<String, String> entry : headers.entrySet()) {
@@ -189,10 +186,10 @@ class CubaJelasticDeploy extends DefaultTask {
 
     protected void addFile(Map map) {
         project.logger.info("[CubaJelasticDeploy] adding file to deployment manager...")
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new HashMap<>()
 
-        params.put("script", "UploadArchiveCallback");
-        params.put("session", session);
+        params.put("script", "UploadArchiveCallback")
+        params.put("session", session)
 
         String comment = 'Uploaded by CUBA Gradle Plugin'
         def data = JsonOutput.toJson([
@@ -202,28 +199,28 @@ class CubaJelasticDeploy extends DefaultTask {
                 size   : map.size,
                 comment: comment
         ])
-        params.put("data", data);
+        params.put("data", data)
 
-        final HttpClient httpclient = HttpClientBuilder.create().build();
-        List<NameValuePair> nameValuePairList = new ArrayList<>();
+        final HttpClient httpclient = HttpClientBuilder.create().build()
+        List<NameValuePair> nameValuePairList = new ArrayList<>()
 
         for (String key : params.keySet()) {
-            nameValuePairList.add(new BasicNameValuePair(key, params.get(key)));
+            nameValuePairList.add(new BasicNameValuePair(key, params.get(key)))
         }
 
-        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(nameValuePairList, "UTF-8");
-        URI uri = new URI(SCHEME, hostUrl, "${VERSION}${ADD_FILE_PATH}", null);
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(nameValuePairList, "UTF-8")
+        URI uri = new URI(SCHEME, hostUrl, "${VERSION}${ADD_FILE_PATH}", null)
 
-        HttpPost httpPost = new HttpPost(uri);
-        httpPost.setEntity(entity);
+        HttpPost httpPost = new HttpPost(uri)
+        httpPost.setEntity(entity)
 
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            httpPost.addHeader(entry.getKey(), entry.getValue());
+            httpPost.addHeader(entry.getKey(), entry.getValue())
         }
 
-        ResponseHandler<String> responseHandler = new BasicResponseHandler();
+        ResponseHandler<String> responseHandler = new BasicResponseHandler()
 
-        String responseBody = httpclient.execute(httpPost, responseHandler);
+        String responseBody = httpclient.execute(httpPost, responseHandler)
         Map response = (Map) new JsonSlurper().parseText(responseBody)
         if (response.result == 0) {
             project.logger.info("[CubaJelasticDeploy] file added: SUCCESS")
@@ -236,8 +233,8 @@ class CubaJelasticDeploy extends DefaultTask {
 
     protected void removeOldArchives(String archiveName, String comment) {
         project.logger.info("[CubaJelasticDeploy] removing old archives...")
-        Map<String, String> archivesParams = new HashMap<>();
-        archivesParams.put("session", session);
+        Map<String, String> archivesParams = new HashMap<>()
+        archivesParams.put("session", session)
 
         Map archives = makeRequest(GET_ARCHIVES_PATH, archivesParams)
 
@@ -246,52 +243,52 @@ class CubaJelasticDeploy extends DefaultTask {
                 || archives.response.result != 0
                 || archives.response.objects.isEmpty()) {
             project.logger.info("[CubaJelasticDeploy] can't remove old archives")
-            return;
+            return
         }
 
-        List<Integer> ids = new ArrayList<>();
+        List<Integer> ids = new ArrayList<>()
 
         for (Map archive : archives.response.objects) {
             if (archive.name.equals(archiveName) && comment.equals(archive.comment)) {
-                ids.add(archive.id);
+                ids.add(archive.id)
             }
         }
 
         if (ids.size() <= SAME_FILES_LIMIT) {
-            return;
+            return
         }
 
-        Collections.sort(ids);
+        Collections.sort(ids)
 
         for (int id : ids.subList(0, ids.size() - SAME_FILES_LIMIT)) {
-            Map<String, String> parameters = new HashMap<>(archivesParams);
-            parameters.put("id", String.valueOf(id));
+            Map<String, String> parameters = new HashMap<>(archivesParams)
+            parameters.put("id", String.valueOf(id))
 
-            makeRequest(DELETE_ARCHIVE_PATH, parameters);
+            makeRequest(DELETE_ARCHIVE_PATH, parameters)
         }
     }
 
     protected Map makeRequest(String path, Map<String, String> params) {
-        final HttpClient httpclient = HttpClientBuilder.create().build();
-        List<NameValuePair> nameValuePairList = new ArrayList<>();
+        final HttpClient httpclient = HttpClientBuilder.create().build()
+        List<NameValuePair> nameValuePairList = new ArrayList<>()
 
         for (String key : params.keySet()) {
-            nameValuePairList.add(new BasicNameValuePair(key, params.get(key)));
+            nameValuePairList.add(new BasicNameValuePair(key, params.get(key)))
         }
 
-        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(nameValuePairList, "UTF-8");
-        URI uri = new URI(SCHEME, hostUrl, path, null);
+        UrlEncodedFormEntity entity = new UrlEncodedFormEntity(nameValuePairList, "UTF-8")
+        URI uri = new URI(SCHEME, hostUrl, path, null)
 
-        HttpPost httpPost = new HttpPost(uri);
-        httpPost.setEntity(entity);
+        HttpPost httpPost = new HttpPost(uri)
+        httpPost.setEntity(entity)
 
         for (Map.Entry<String, String> entry : headers.entrySet()) {
-            httpPost.addHeader(entry.getKey(), entry.getValue());
+            httpPost.addHeader(entry.getKey(), entry.getValue())
         }
 
-        ResponseHandler<String> responseHandler = new BasicResponseHandler();
+        ResponseHandler<String> responseHandler = new BasicResponseHandler()
 
-        String responseBody = httpclient.execute(httpPost, responseHandler);
+        String responseBody = httpclient.execute(httpPost, responseHandler)
         return (Map) new JsonSlurper().parseText(responseBody)
     }
 
@@ -304,18 +301,18 @@ class CubaJelasticDeploy extends DefaultTask {
             int status = response.getEnv().getStatus()
             switch (status) {
                 case 1: project.logger.info("[CubaJelasticDeploy] environment is running")
-                    break;
+                    break
                 case 2:
                 case 4:
                     project.logger.info("[CubaJelasticDeploy] environment isn't running")
                     startEnv()
-                    break;
+                    break
                 case 3: // environment wakes up after a sleep
                 case 6:
                 case 7:
                 case 8: throw new RuntimeException("[CubaJelasticDeploy] environment aren't ready to start. " +
                         "Environment status: ${status}")
-                    break;
+                    break
             }
         } else {
             throw new RuntimeException("[CubaJelasticDeploy] getting environment info failed: ${response.getError()}")
@@ -324,7 +321,7 @@ class CubaJelasticDeploy extends DefaultTask {
 
     protected void startEnv() {
         project.logger.info("[CubaJelasticDeploy] starting environment...")
-        Response response = environmentService.startEnv(environment, session, headers);
+        Response response = environmentService.startEnv(environment, session, headers)
         if (response.isOK()) {
             project.logger.info("[CubaJelasticDeploy] environment started: SUCCESS")
         } else {
@@ -353,17 +350,17 @@ class CubaJelasticDeploy extends DefaultTask {
 
         private final ProgressCallback progressCallback
 
-        public static interface ProgressCallback {
-            public void progress(float progress)
+        static interface ProgressCallback {
+            void progress(float progress)
         }
 
-        public ProgressHttpEntityWrapper(final HttpEntity entity, final ProgressCallback progressCallback) {
+        ProgressHttpEntityWrapper(final HttpEntity entity, final ProgressCallback progressCallback) {
             super(entity)
             this.progressCallback = progressCallback
         }
 
         @Override
-        public void writeTo(final OutputStream out) throws IOException {
+        void writeTo(final OutputStream out) throws IOException {
             this.wrappedEntity.writeTo(out instanceof ProgressFilterOutputStream
                     ? out
                     : new ProgressFilterOutputStream(out, this.progressCallback, getContentLength()))
@@ -384,14 +381,14 @@ class CubaJelasticDeploy extends DefaultTask {
             }
 
             @Override
-            public void write(final byte[] b, final int off, final int len) throws IOException {
+            void write(final byte[] b, final int off, final int len) throws IOException {
                 out.write(b, off, len)
                 this.transferred += len
                 this.progressCallback.progress(getCurrentProgress())
             }
 
             @Override
-            public void write(final int b) throws IOException {
+            void write(final int b) throws IOException {
                 out.write(b)
                 this.transferred++
                 this.progressCallback.progress(getCurrentProgress())
