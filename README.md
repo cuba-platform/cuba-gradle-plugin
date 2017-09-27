@@ -12,9 +12,7 @@ For more information see [github.com/cuba-platform/cuba](https://github.com/cuba
 
 ## Build and install
 
-In order to build the project from source, you need to install the following:
-* Java 8 Development Kit (JDK)
-* [Gradle](https://gradle.org) (tested on 3.1, but newer versions may also work)
+In order to build the project from source, you need to install the Java 8 Development Kit (JDK).
 
 Open terminal and run the following command to build and install the plugin into your local Maven repository (`~/.m2`):
 ```
