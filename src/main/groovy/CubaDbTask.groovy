@@ -44,6 +44,8 @@ abstract class CubaDbTask extends DefaultTask {
 
     private static final String SQL_COMMENT_PREFIX = "--"
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema"
+    protected static final String MS_SQL_2005 = '2005'
+
 
     protected void init() {
         if (!driver || !dbUrl) {
@@ -54,11 +56,15 @@ abstract class CubaDbTask extends DefaultTask {
                     timeStampType = 'timestamp'
 
             } else if (dbms == 'mssql') {
-                driver = 'com.microsoft.sqlserver.jdbc.SQLServerDriver'
-                dbUrl = "jdbc:sqlserver://$host;databaseName=$dbName$connectionParams"
+                if (dbmsVersion == MS_SQL_2005) {
+                    driver = 'net.sourceforge.jtds.jdbc.Driver'
+                    dbUrl = "jdbc:jtds:sqlserver://$host/$dbName$connectionParams"
+                } else {
+                    driver = 'com.microsoft.sqlserver.jdbc.SQLServerDriver'
+                    dbUrl = "jdbc:sqlserver://$host;databaseName=$dbName$connectionParams"
+                }
                 if (!timeStampType)
                     timeStampType = 'datetime'
-
             } else if (dbms == 'oracle') {
                 driver = 'oracle.jdbc.OracleDriver'
                 dbUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
