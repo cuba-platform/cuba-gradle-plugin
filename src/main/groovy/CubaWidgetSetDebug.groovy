@@ -25,8 +25,8 @@ import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.*
 
-/**
- */
+import static java.util.Collections.singletonList
+
 class CubaWidgetSetDebug extends DefaultTask {
 
     String widgetSetsDir
@@ -93,22 +93,26 @@ class CubaWidgetSetDebug extends DefaultTask {
     }
 
     @InputFiles @SkipWhenEmpty
-    def FileCollection getSourceFiles() {
+    FileCollection getSourceFiles() {
         project.logger.info("Analyze source projects for widgetset building in ${project.name}")
 
         def sources = []
         def files = new ArrayList<File>()
 
-        sources.addAll(project.sourceSets.main.java.srcDirs)
-        sources.addAll(project.sourceSets.main.output.classesDir)
-        sources.addAll(project.sourceSets.main.output.resourcesDir)
+        SourceSet mainSourceSet = project.sourceSets.main
+
+        sources.addAll(mainSourceSet.java.srcDirs)
+        sources.addAll(getClassesDirs(mainSourceSet))
+        sources.addAll(mainSourceSet.output.resourcesDir)
 
         for (Project dependencyProject : collectProjectsWithDependency('vaadin-client')) {
             project.logger.info("\tFound source project ${dependencyProject.name} for widgetset building")
 
-            sources.addAll(dependencyProject.sourceSets.main.java.srcDirs)
-            sources.addAll(dependencyProject.sourceSets.main.output.classesDir)
-            sources.addAll(dependencyProject.sourceSets.main.output.resourcesDir)
+            SourceSet depMainSourceSet = dependencyProject.sourceSets.main
+
+            sources.addAll(depMainSourceSet.java.srcDirs)
+            sources.addAll(getClassesDirs(depMainSourceSet))
+            sources.addAll(depMainSourceSet.output.resourcesDir)
         }
 
         sources.each { File sourceDir ->
@@ -131,9 +135,11 @@ class CubaWidgetSetDebug extends DefaultTask {
         compilerJvmArgs.add(xss)
         compilerJvmArgs.add(xxMPS)
 
-        println('JVM Args:')
-        print('\t')
-        println(compilerJvmArgs)
+        if (project.logger.isInfoEnabled()) {
+            println('JVM Args:')
+            print('\t')
+            println(compilerJvmArgs)
+        }
 
         return new LinkedList(compilerJvmArgs)
     }
@@ -172,9 +178,11 @@ class CubaWidgetSetDebug extends DefaultTask {
 
         args.add(widgetSetClass)
 
-        println('GWT Compiler args: ')
-        print('\t')
-        println(args)
+        if (project.logger.isInfoEnabled()) {
+            println('GWT Compiler args: ')
+            print('\t')
+            println(args)
+        }
 
         return args
     }
@@ -185,6 +193,14 @@ class CubaWidgetSetDebug extends DefaultTask {
 
     boolean excludedArtifact(String name) {
         return excludes.find { it.contains(name) } != null
+    }
+
+    protected Collection<File> getClassesDirs(SourceSet sourceSet) {
+        if (sourceSet.output.metaClass.hasProperty('classesDirs')) {
+            return sourceSet.output['classesDirs'] as Collection<File>
+        } else {
+            return singletonList(sourceSet.output.classesDir)
+        }
     }
 
     protected void collectProjectsWithDependency(Project project, String dependencyName, Set<Project> explored) {
@@ -236,7 +252,7 @@ class CubaWidgetSetDebug extends DefaultTask {
                 SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
                 compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
-                compilerClassPath.add(dependencyMainSourceSet.output.classesDir)
+                compilerClassPath.add(getClassesDirs(dependencyMainSourceSet))
                 compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
 
                 project.logger.debug(">> Widget set building Module: ${dependencyProject.name}")
@@ -246,7 +262,7 @@ class CubaWidgetSetDebug extends DefaultTask {
         SourceSet mainSourceSet = project.sourceSets.main
 
         compilerClassPath.addAll(mainSourceSet.java.srcDirs)
-        compilerClassPath.add(mainSourceSet.output.classesDir)
+        compilerClassPath.add(getClassesDirs(mainSourceSet))
         compilerClassPath.add(mainSourceSet.output.resourcesDir)
         compilerClassPath.addAll(
                 mainSourceSet.compileClasspath.findAll {

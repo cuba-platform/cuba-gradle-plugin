@@ -45,17 +45,17 @@ class CubaReleaseTimeStamp extends DefaultTask {
     }
 
     @InputDirectory
-    def getInputDirectory() {
+    File getInputDirectory() {
         return new File("$project.projectDir/src")
     }
 
     @OutputFiles
-    def List getOutputFiles() {
+    List getOutputFiles() {
         return [new File(releaseTimeStampPath), new File(releaseNumberPath)]
     }
 
     @TaskAction
-    def generateReleaseFiles() {
+    void generateReleaseFiles() {
         if (!releaseNumberPath)
             throw new IllegalStateException('Not specified releaseNumberPath param for CubaReleaseTimeStamp');
 
@@ -68,8 +68,8 @@ class CubaReleaseTimeStamp extends DefaultTask {
         if (isSnapshot == null)
             throw new IllegalStateException('Not specified isSnapshot flag for CubaReleaseTimeStamp');
 
-        Date releaseDate = new Date()
-        String timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(releaseDate)
+        def releaseDate = new Date()
+        def timeStamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(releaseDate)
 
         String releaseNumber = artifactVersion
         if (isSnapshot) {
@@ -78,17 +78,16 @@ class CubaReleaseTimeStamp extends DefaultTask {
             releaseNumber = releaseNumber + '-SNAPSHOT'
         }
 
-        File releaseFile = new File(releaseTimeStampPath)
-        File releaseNumberFile = new File(releaseNumberPath)
+        def releaseFile = new File(releaseTimeStampPath)
+        def releaseNumberFile = new File(releaseNumberPath)
 
         releaseFile.delete()
         releaseFile.write(timeStamp)
 
-        project.logger.lifecycle("Release timestamp: $timeStamp")
-
         releaseNumberFile.delete()
         releaseNumberFile.write(releaseNumber)
 
-        project.logger.lifecycle("Release number: $releaseNumber")
+        project.logger.info("Release timestamp: $timeStamp")
+        project.logger.info("Release number: $releaseNumber")
     }
 }

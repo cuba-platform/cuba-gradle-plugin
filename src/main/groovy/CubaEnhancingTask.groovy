@@ -24,6 +24,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileTree
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.TaskAction
 
 import java.nio.file.Files
@@ -45,9 +46,11 @@ class CubaEnhancingTask extends DefaultTask {
 
     String metadataPackageRegExp
 
+    File customClassesDir
+
     protected String srcRoot
     protected String classesRoot
-    protected def sourceSet
+    protected SourceSet sourceSet
 
     CubaEnhancingTask() {
     }
@@ -57,8 +60,10 @@ class CubaEnhancingTask extends DefaultTask {
         List entities = getPersistentEntities(getOwnPersistenceXmlFiles())
         entities.addAll(getTransientEntities())
 
+        def entityClassesDir = getEntityClassesDir()
+
         entities.collect { name ->
-            new File("$project.buildDir/classes/$classesRoot/${name.replace('.', '/')}.class")
+            new File(entityClassesDir, "${name.replace('.', '/')}.class")
         }
     }
 
@@ -70,6 +75,17 @@ class CubaEnhancingTask extends DefaultTask {
         entities.collect { name ->
             new File("$project.buildDir/enhanced-classes/$classesRoot/${name.replace('.', '/')}.class")
         }
+    }
+
+    File getEntityClassesDir() {
+        if (customClassesDir) {
+            return customClassesDir
+        }
+        if (sourceSet.java.metaClass.hasProperty('outputDir')) {
+            return sourceSet.java['outputDir'] as File
+        }
+        // before gradle 4.0
+        return sourceSet.output.classesDir
     }
 
     private List<File> getOwnPersistenceXmlFiles() {
@@ -219,23 +235,28 @@ class CubaEnhancingTask extends DefaultTask {
         def outputDir = new File("$project.buildDir/enhanced-classes/$classesRoot")
         List allClasses = []
 
+        def javaOutputDir = getEntityClassesDir()
+
+        project.logger.info('[CubaEnhancing] Entity classes directory: ' + entityClassesDir.absolutePath)
+
         logger.info("[CubaEnhancing] Metadata XML files: ${getOwnMetadataXmlFiles()}")
 
         if (!getOwnPersistenceXmlFiles().isEmpty()) {
             File fullPersistenceXml = createFullPersistenceXml()
-            if (new File("$project.buildDir/classes/$classesRoot").exists()) {
+
+            if (javaOutputDir.exists()) {
                 logger.info("[CubaEnhancing] start EclipseLink enhancing")
                 project.javaexec {
                     main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
                     classpath(
                             sourceSet.compileClasspath,
-                            sourceSet.output.classesDir
+                            javaOutputDir
                     )
                     args "-loglevel"
                     args "INFO"
                     args "-persistenceinfo"
                     args "$project.buildDir/tmp/persistence"
-                    args "$project.buildDir/classes/$classesRoot"
+                    args "$javaOutputDir"
                     args "$project.buildDir/enhanced-classes/$classesRoot"
                     debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
                 }
@@ -277,7 +298,7 @@ class CubaEnhancingTask extends DefaultTask {
 
             if (outputDir.exists()) {
                 allClasses.each { String className ->
-                    Path srcFile = Paths.get("$project.buildDir/classes/$classesRoot/${className.replace('.', '/')}.class")
+                    Path srcFile = Paths.get("$javaOutputDir/${className.replace('.', '/')}.class")
                     Path dstFile = Paths.get("$project.buildDir/enhanced-classes/$classesRoot/${className.replace('.', '/')}.class")
                     Files.copy(srcFile, dstFile, StandardCopyOption.REPLACE_EXISTING);
                 }
@@ -292,7 +313,7 @@ class CubaEnhancingTask extends DefaultTask {
             sourceSet.compileClasspath.each { File file ->
                 pool.insertClassPath(file.toString())
             }
-            pool.insertClassPath(sourceSet.output.classesDir.toString())
+            pool.insertClassPath(javaOutputDir.toString())
             pool.insertClassPath(outputDir.toString())
 
             def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
