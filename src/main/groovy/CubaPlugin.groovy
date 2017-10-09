@@ -28,6 +28,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.tasks.Exec
+import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 
@@ -525,7 +526,7 @@ class CubaPlugin implements Plugin<Project> {
 
         project.jar {
             // Ensure there will be no duplicates in jars
-            exclude { details -> !details.isDirectory() && isEnhanced(details.file, project.buildDir) }
+            exclude { details -> !details.isDirectory() && isEnhanced(project, details.file, project.buildDir) }
             // add META-INF/beans.xml
             from ("$project.buildDir/tmp") {
                 include 'META-INF/beans.xml'
@@ -932,9 +933,9 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private static boolean isEnhanced(File file, File buildDir) {
+    private static boolean isEnhanced(Project project, File file, File buildDir) {
         def path = file.toPath()
-        def classesPath = Paths.get(buildDir.toString(), 'classes/main')
+        def classesPath = getEntityClassesDir(project).toPath()
         if (!path.startsWith(classesPath))
             return false
 
@@ -943,6 +944,15 @@ class CubaPlugin implements Plugin<Project> {
         def relPath = classesPath.relativize(path)
         def enhPath = enhClassesPath.resolve(relPath)
         return Files.exists(enhPath)
+    }
+
+    private static File getEntityClassesDir(Project project) {
+        SourceSet mainSourceSet = project.sourceSets.main
+        if (mainSourceSet.java.metaClass.hasProperty('outputDir')) {
+            return mainSourceSet.java['outputDir'] as File
+        }
+        // before gradle 4.0
+        return mainSourceSet.output.classesDir
     }
 
     private static class AppComponent {
