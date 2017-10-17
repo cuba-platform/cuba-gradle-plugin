@@ -453,6 +453,9 @@ class CubaUberJarBuilding extends DefaultTask {
             from theProject.configurations.jdbc
             into "${getSharedLibsDir(theProject)}"
             include { details ->
+                if (!details.file.name.endsWith('.jar')) {
+                    return false
+                }
                 if (details.file.name.endsWith('-sources.jar')) {
                     return false
                 }
@@ -470,6 +473,9 @@ class CubaUberJarBuilding extends DefaultTask {
             from theProject.configurations.jdbc
             into "${getAppLibsDir(theProject)}"
             include { details ->
+                if (!details.file.name.endsWith(".jar")) {
+                    return false
+                }
                 if (details.file.name.endsWith('-sources.jar')) {
                     return false
                 }

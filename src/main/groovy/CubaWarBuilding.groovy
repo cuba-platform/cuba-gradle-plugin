@@ -390,7 +390,7 @@ class CubaWarBuilding extends DefaultTask {
             into "${warDir(theProject)}/WEB-INF/lib"
             include { details ->
                 String name = details.file.name
-                if (!(name.endsWith('-sources.jar'))) {
+                if (!(name.endsWith('-sources.jar')) && name.endsWith(".jar")) {
                     copied.add(name)
                     return true
                 }
@@ -435,6 +435,10 @@ class CubaWarBuilding extends DefaultTask {
 
         dependenciesFile.withWriter('UTF-8') { writer ->
             theProject.configurations.runtime.each { File lib ->
+                if (!lib.name.endsWith('.jar')) {
+                    return false
+                }
+
                 def libraryName = DependencyResolver.getLibraryDefinition(lib.name).name
 
                 if (!lib.name.endsWith('-sources.jar')
