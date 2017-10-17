@@ -20,7 +20,6 @@ import groovy.xml.QName
 import groovy.xml.XmlUtil
 import javassist.ClassPool
 import org.gradle.api.DefaultTask
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.FileTree
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputFiles
@@ -114,22 +113,24 @@ class CubaEnhancingTask extends DefaultTask {
 
         def xmlFiles = []
 
-        Configuration compileConf = project.configurations.findByName('compile')
+        def compileConf = project.configurations.findByName('compile')
         compileConf.resolvedConfiguration.resolvedArtifacts.each { artifact ->
-            FileTree files = project.zipTree(artifact.file.absolutePath).matching {
-                if (fileNames) {
-                    for (name in fileNames) {
-                        include "$name"
+            if (artifact.file.name.endsWith('.jar')) {
+                def files = project.zipTree(artifact.file).matching {
+                    if (fileNames) {
+                        for (name in fileNames) {
+                            include "$name"
+                        }
+                    } else {
+                        include '**/*-persistence.xml'
+                        include '**/persistence.xml'
                     }
-                } else {
-                    include '**/*-persistence.xml'
-                    include '**/persistence.xml'
                 }
+                files.each { xmlFiles.add(it) }
             }
-            files.each { xmlFiles.add(it) }
         }
 
-        FileTree files = project.fileTree(srcRoot).matching {
+        def files = project.fileTree(srcRoot).matching {
             if (fileNames) {
                 for (name in fileNames) {
                     include "$name"
@@ -170,7 +171,7 @@ class CubaEnhancingTask extends DefaultTask {
         def string = XmlUtil.serialize(doc)
         logger.debug('[CubaEnhancing] fullPersistenceXml:\n' + string)
 
-        File fullPersistenceXml = new File("$project.buildDir/tmp/persistence/META-INF/persistence.xml")
+        def fullPersistenceXml = new File("$project.buildDir/tmp/persistence/META-INF/persistence.xml")
         fullPersistenceXml.parentFile.mkdirs()
         fullPersistenceXml.write(string)
         return fullPersistenceXml

@@ -90,6 +90,10 @@ class CubaDeployment extends DefaultTask {
                     return false
                 }
 
+                if (!name.endsWith('.jar')) {
+                    return false
+                }
+
                 def libraryName = getLibraryDefinition(name).name
 
                 if (!(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && !jarNames.contains(libraryName)) {
@@ -113,6 +117,10 @@ class CubaDeployment extends DefaultTask {
                 String name = details.file.name
 
                 if (new File(appLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
+                    return false
+                }
+
+                if (!name.endsWith('.jar')) {
                     return false
                 }
 
