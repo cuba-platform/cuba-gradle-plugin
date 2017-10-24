@@ -51,7 +51,7 @@ class CubaStartTomcat extends DefaultTask {
                 arg(line: 'debug.sh')
             }
         } else {
-            println "Execute tomcat start with ${tomcatStartScript}"
+            println "Executing ${tomcatStartScript}"
 
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: tomcatStartScript, spawn: true) {
                 if (project.hasProperty('studioJavaHome')) {
