@@ -28,6 +28,8 @@ import org.apache.http.HttpHeaders
 import org.apache.http.NameValuePair
 import org.apache.http.client.HttpClient
 import org.apache.http.client.ResponseHandler
+import org.apache.http.client.config.CookieSpecs
+import org.apache.http.client.config.RequestConfig
 import org.apache.http.client.entity.UrlEncodedFormEntity
 import org.apache.http.client.methods.HttpPost
 import org.apache.http.entity.ContentType
@@ -38,6 +40,7 @@ import org.apache.http.entity.mime.content.FileBody
 import org.apache.http.entity.mime.content.StringBody
 import org.apache.http.impl.client.BasicResponseHandler
 import org.apache.http.impl.client.HttpClientBuilder
+import org.apache.http.impl.client.HttpClients
 import org.apache.http.message.BasicNameValuePair
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
@@ -179,7 +182,7 @@ class CubaJelasticDeploy extends DefaultTask {
 
         ResponseHandler<String> responseHandler = new BasicResponseHandler()
 
-        HttpClient httpclient = HttpClientBuilder.create().build()
+        HttpClient httpclient = createHttpClient()
         String response = httpclient.execute(httpPost, responseHandler)
         return new JsonSlurper().parseText(response)
     }
@@ -201,7 +204,7 @@ class CubaJelasticDeploy extends DefaultTask {
         ])
         params.put("data", data)
 
-        final HttpClient httpclient = HttpClientBuilder.create().build()
+        final HttpClient httpclient = createHttpClient()
         List<NameValuePair> nameValuePairList = new ArrayList<>()
 
         for (String key : params.keySet()) {
@@ -269,7 +272,7 @@ class CubaJelasticDeploy extends DefaultTask {
     }
 
     protected Map makeRequest(String path, Map<String, String> params) {
-        final HttpClient httpclient = HttpClientBuilder.create().build()
+        final HttpClient httpClient = createHttpClient()
         List<NameValuePair> nameValuePairList = new ArrayList<>()
 
         for (String key : params.keySet()) {
@@ -288,8 +291,14 @@ class CubaJelasticDeploy extends DefaultTask {
 
         ResponseHandler<String> responseHandler = new BasicResponseHandler()
 
-        String responseBody = httpclient.execute(httpPost, responseHandler)
+        String responseBody = httpClient.execute(httpPost, responseHandler)
         return (Map) new JsonSlurper().parseText(responseBody)
+    }
+
+    protected HttpClient createHttpClient() {
+        RequestConfig requestConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES).build()
+        HttpClientBuilder clientBuilder = HttpClients.custom().setDefaultRequestConfig(requestConfig)
+        return clientBuilder.build()
     }
 
     protected void checkAndStartEnvironment() {
