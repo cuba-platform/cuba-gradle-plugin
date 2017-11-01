@@ -41,6 +41,8 @@ class CubaWarBuilding extends DefaultTask {
     String webWebXmlPath
     String portalWebXmlPath
 
+    String polymerBuildDir = 'es6-unbundled'
+
     boolean projectAll
     List<String> webContentExclude = []
     Closure doAfter
@@ -197,8 +199,15 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (polymerProject) {
+            if (!polymerBuildDir) {
+                throw new GradleException("'polymerBuildDir' property should be required for WAR building with Polymer")
+            }
+            def dir = polymerProject.file("build/$polymerBuildDir")
+            if (!dir.exists()) {
+                throw new GradleException("Polymer build directory $dir doesn't exists")
+            }
             polymerProject.copy {
-                from polymerProject.file('build/bundled')
+                from polymerProject.file("build/$polymerBuildDir")
                 into "${warDir(polymerProject)}"
             }
         }
