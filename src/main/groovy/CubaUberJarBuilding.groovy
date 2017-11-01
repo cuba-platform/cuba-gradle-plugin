@@ -57,6 +57,8 @@ class CubaUberJarBuilding extends DefaultTask {
     List<String> mergeResources = []
     Map<String, Object> appProperties
 
+    String polymerBuildDir = 'es6-unbundled'
+
     protected String distributionDir = "${project.buildDir}/distributions/uberJar"
     protected List<ResourceTransformer> defaultTransformers = new ArrayList<>()
 
@@ -586,8 +588,15 @@ class CubaUberJarBuilding extends DefaultTask {
         }
         if (theProject == polymerProject) {
             theProject.logger.info("[CubaUberJAR] Copy Polymer files for ${theProject}")
+            if (!polymerBuildDir) {
+                throw new GradleException("'polymerBuildDir' property should be required for Uber JAR building with Polymer")
+            }
+            def dir = theProject.file("build/$polymerBuildDir")
+            if (!dir.exists()) {
+                throw new GradleException("Polymer build directory $dir doesn't exists")
+            }
             theProject.copy {
-                from theProject.file('build/bundled')
+                from theProject.file("build/$polymerBuildDir")
                 into "${getContentDir(theProject)}"
             }
         }
