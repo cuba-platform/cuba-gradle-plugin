@@ -948,7 +948,9 @@ class CubaPlugin implements Plugin<Project> {
 
     private static File getEntityClassesDir(Project project) {
         SourceSet mainSourceSet = project.sourceSets.main
-        if (mainSourceSet.java.metaClass.hasProperty('outputDir')) {
+
+        def outputDirGetter = mainSourceSet.java.metaClass.methods.find { it.name == 'getOutputDir'}
+        if (outputDirGetter) {
             return mainSourceSet.java['outputDir'] as File
         }
         // before gradle 4.0

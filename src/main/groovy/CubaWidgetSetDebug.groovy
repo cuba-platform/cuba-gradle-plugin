@@ -196,7 +196,8 @@ class CubaWidgetSetDebug extends DefaultTask {
     }
 
     protected Collection<File> getClassesDirs(SourceSet sourceSet) {
-        if (sourceSet.output.metaClass.hasProperty('classesDirs')) {
+        def classesDirsGetter = sourceSet.output.metaClass.methods.find { it.name == 'getClassesDirs'}
+        if (classesDirsGetter) {
             return sourceSet.output['classesDirs'] as Collection<File>
         } else {
             return singletonList(sourceSet.output.classesDir)
