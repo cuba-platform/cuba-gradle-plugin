@@ -1,3 +1,5 @@
+import static com.haulmont.gradle.task.db.CubaDbTask.*
+
 /*
  * Copyright (c) 2008-2016 Haulmont.
  *
@@ -21,7 +23,7 @@
 class ScriptSplitterTest extends GroovyTestCase {
 
     void testSplit() {
-        def splitter = new CubaDbTask.ScriptSplitter('^')
+        def splitter = new ScriptSplitter('^')
         def commands = splitter.split('''
 alter table FOO add BAR varchar(36)^--go
 alter table FOO add BOO varchar(255)^
@@ -39,7 +41,7 @@ alter table ^ABC REF_COMPANY(ID)''', commands[2])
     }
 
     void testSplit2() {
-        def splitter = new CubaDbTask.ScriptSplitter(';')
+        def splitter = new ScriptSplitter(';')
         def commands = splitter.split('''
 alter table FOO add BAR varchar(36);--go
 alter table FOO add BOO varchar(255);
@@ -57,7 +59,7 @@ alter table ;ABC REF_COMPANY(ID)''', commands[2])
     }
 
     void testSplit3() {
-        def splitter = new CubaDbTask.ScriptSplitter('--go')
+        def splitter = new ScriptSplitter('--go')
         def commands = splitter.split('''
 alter table FOO add BAR varchar(36)--go--bla
 alter table FOO add BOO varchar(255)

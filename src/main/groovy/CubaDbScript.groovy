@@ -15,6 +15,7 @@
  *
  */
 
+import com.haulmont.gradle.task.db.CubaDbTask
 import org.gradle.api.tasks.TaskAction
 
 /**

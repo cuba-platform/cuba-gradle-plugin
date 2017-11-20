@@ -15,10 +15,11 @@
  *
  */
 
+import com.haulmont.gradle.task.db.AbstractCubaDbCreation
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.tasks.TaskAction
 
-class CubaDbCreation extends CubaDbTask {
+class CubaDbCreation extends AbstractCubaDbCreation {
 
     def dropDbSql
     def createDbSql
@@ -26,15 +27,14 @@ class CubaDbCreation extends CubaDbTask {
     def oracleSystemUser = 'system'
     def oracleSystemPassword = 'manager'
 
-    File auxiliaryScript
-
-    CubaDbCreation() {
-        setGroup('Database')
+    @TaskAction
+    @Override
+    void createDb() {
+        super.createDb()
     }
 
-    @TaskAction
-    def createDb() {
-        init()
+    @Override
+    void dropAndCreateDatabase() {
         String createSchemaSql
         if (dbms == 'postgres') {
             if (!masterUrl)
@@ -51,7 +51,6 @@ class CubaDbCreation extends CubaDbTask {
                     }
                 }
             }
-
         } else if (dbms == 'mssql') {
             if (!masterUrl) {
                 if (dbmsVersion == MS_SQL_2005) {
@@ -64,7 +63,6 @@ class CubaDbCreation extends CubaDbTask {
                 dropDbSql = "drop database $dbName;"
             if (!createDbSql)
                 createDbSql = "create database $dbName;"
-
         } else if (dbms == 'oracle') {
             if (!masterUrl)
                 masterUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
@@ -80,7 +78,6 @@ grant create session,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
     to $dbUser;"""
-
         } else if (dbms == 'hsql') {
             if (!masterUrl)
                 masterUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
@@ -96,7 +93,6 @@ grant create session,
                 createDbSql = "create database $dbName;"
             if (!dropDbSql)
                 dropDbSql = "drop database $dbName;"
-
         } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
             throw new UnsupportedOperationException("DBMS $dbms not supported. " +
                     "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
@@ -148,24 +144,6 @@ grant create session,
                     encoding: "UTF-8",
                     createSchemaSql
             )
-        }
-
-        project.logger.warn("Using database URL: $dbUrl, user: $dbUser")
-        try {
-            def pkLength = dbms == 'mysql' ? 190 : 300
-            getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
-                    "SCRIPT_NAME varchar($pkLength) not null primary key, " +
-                    "CREATE_TS $timeStampType default current_timestamp, " +
-                    "IS_INIT integer default 0)")
-
-            initDatabase()
-
-            if (auxiliaryScript) {
-                project.logger.warn("Executing SQL script: ${auxiliaryScript.absolutePath}")
-                executeSqlScript(auxiliaryScript)
-            }
-        } finally {
-            closeSql()
         }
     }
 }

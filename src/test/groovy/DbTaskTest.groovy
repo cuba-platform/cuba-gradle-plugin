@@ -19,6 +19,8 @@ import org.apache.commons.io.FileUtils
 
 import java.nio.file.Paths
 
+import static com.haulmont.gradle.task.db.CubaDbTask.*;
+
 /**
  *
  */
@@ -119,22 +121,22 @@ class DbTaskTest extends GroovyTestCase {
     }
 
     public void testGetInitScripts() throws Exception {
-        CubaDbTask.ScriptFinder scriptFinder = new CubaDbTask.ScriptFinder('mssql', null, dbmsDir, [])
-        List<File> scripts = scriptFinder.getInitScripts();
-        assertEquals(mssqlInitFiles, scripts);
+        ScriptFinder scriptFinder = new ScriptFinder('mssql', null, dbmsDir, [], null)
+        List<File> scripts = scriptFinder.getInitScripts(null)
+        assertEquals(mssqlInitFiles, scripts)
 
-        scriptFinder = new CubaDbTask.ScriptFinder('mssql', '2012', dbmsDir, [])
-        scripts = scriptFinder.getInitScripts();
+        scriptFinder = new ScriptFinder('mssql', '2012', dbmsDir, [], null)
+        scripts = scriptFinder.getInitScripts(null);
         assertEquals(mssql2012InitFiles, scripts);
     }
 
     public void testGetUpdateScripts() throws Exception {
-        CubaDbTask.ScriptFinder scriptFinder = new CubaDbTask.ScriptFinder('mssql', null, dbmsDir, ['sql'])
-        List<File> scripts = scriptFinder.getUpdateScripts()
-        assertEquals(mssqlUpdateFiles, scripts);
+        ScriptFinder scriptFinder = new ScriptFinder('mssql', null, dbmsDir, ['sql'], null)
+        List<File> scripts = scriptFinder.getUpdateScripts(null)
+        assertEquals(mssqlUpdateFiles, scripts)
 
-        scriptFinder = new CubaDbTask.ScriptFinder('mssql', '2012', dbmsDir, ['sql'])
-        scripts = scriptFinder.getUpdateScripts()
-        assertEquals(mssql2012UpdateFiles, scripts);
+        scriptFinder = new ScriptFinder('mssql', '2012', dbmsDir, ['sql'], null)
+        scripts = scriptFinder.getUpdateScripts(null)
+        assertEquals(mssql2012UpdateFiles, scripts)
     }
 }

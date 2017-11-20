@@ -15,6 +15,7 @@
  *
  */
 
+import com.haulmont.gradle.task.db.CubaDbTask
 import groovy.sql.Sql
 import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.io.FileUtils
@@ -46,8 +47,9 @@ class CubaDbUpdate extends CubaDbTask {
         try {
             runRequiredInitScripts()
 
-            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, executeGroovy ? ['sql', 'upgrade.groovy'] : ['sql'])
-            List<File> files = scriptFinder.getUpdateScripts()
+            ScriptFinder scriptFinder = new ScriptFinder(
+                    dbms, dbmsVersion, dbDir, executeGroovy ? ['sql', 'upgrade.groovy'] : ['sql'], null)
+            List<File> files = scriptFinder.getUpdateScripts(null)
 
             List<String> scripts = getExecutedScripts()
             def toExecute = files.findAll { File file ->
@@ -73,13 +75,13 @@ class CubaDbUpdate extends CubaDbTask {
         if (!tableExists('SYS_DB_CHANGELOG')) {
             project.logger.warn("Table SYS_DB_CHANGELOG does not exist, running all init scripts")
             try {
-                def pkLength = dbms == 'mysql' ? 190 : 300;
+                def pkLength = dbms == 'mysql' ? 190 : 300
                 getSql().executeUpdate("create table SYS_DB_CHANGELOG (" +
                         "SCRIPT_NAME varchar($pkLength) not null primary key, " +
                         "CREATE_TS $timeStampType default current_timestamp, " +
                         "IS_INIT integer default 0)")
 
-                initDatabase()
+                initDatabase(null)
             } finally {
                 closeSql()
             }
@@ -87,7 +89,7 @@ class CubaDbUpdate extends CubaDbTask {
         }
 
         List<String> executedScripts = getExecutedScripts()
-        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'])
+        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'], null)
         def dirs = scriptFinder.getModuleDirs()
         if (dirs.size() > 1) {
             def lastDir = dirs[dirs.size() - 1]
@@ -124,10 +126,10 @@ class CubaDbUpdate extends CubaDbTask {
 
     protected boolean tableExists(String tableName) {
         if (connectionParams) {
-            Map<String, String> paramsMap = parseDatabaseParams(connectionParams);
+            Map<String, String> paramsMap = parseDatabaseParams(connectionParams)
             String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
             if (StringUtils.isNotEmpty(currentSchema)) {
-                return tableExistsInSchema(tableName, currentSchema);
+                return tableExistsInSchema(tableName, currentSchema)
             }
         }
         try {
@@ -145,22 +147,22 @@ class CubaDbUpdate extends CubaDbTask {
             if (e.message?.toLowerCase()?.contains(mark)) {
                 return false
             } else {
-                throw e;
+                throw e
             }
         }
     }
 
     protected boolean tableExistsInSchema(String tableName, String schemaName) {
-        Connection connection = getSql().getConnection();
-        DatabaseMetaData dbMetaData = connection.getMetaData();
-        ResultSet tables = dbMetaData.getTables(null, schemaName, null, null);
+        Connection connection = getSql().getConnection()
+        DatabaseMetaData dbMetaData = connection.getMetaData()
+        ResultSet tables = dbMetaData.getTables(null, schemaName, null, null)
         while (tables.next()) {
-            String tableNameFromDb = tables.getString("TABLE_NAME");
+            String tableNameFromDb = tables.getString("TABLE_NAME")
             if (tableName.equalsIgnoreCase(tableNameFromDb)) {
-                return true;
+                return true
             }
         }
-        return false;
+        return false
     }
 
     protected void executeScript(File file) {
@@ -169,7 +171,7 @@ class CubaDbUpdate extends CubaDbTask {
             executeSqlScript(file)
         } else if (file.name.endsWith(".upgrade.groovy")) {
             if (!executeGroovy) {
-                project.logger.warn("Skip execution of groovy script " + file.getPath());
+                project.logger.warn("Skip execution of groovy script " + file.getPath())
             } else {
                 executeGroovyScript(file)
             }
@@ -177,7 +179,7 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected void executeGroovyScript(File file) {
-        def dataSource = null;
+        def dataSource = null
         try {
             dataSource = new BasicDataSource()
             dataSource.setUrl(dbUrl)
@@ -190,7 +192,7 @@ class CubaDbUpdate extends CubaDbTask {
             def cc = new CompilerConfiguration()
             cc.setRecompileGroovySource(true)
 
-            def bind = new Binding();
+            def bind = new Binding()
             bind.setProperty("ds", dataSource)
             bind.setProperty("log", LoggerFactory.getLogger(file.getName()))
 
