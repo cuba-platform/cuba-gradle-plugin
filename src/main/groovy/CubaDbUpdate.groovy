@@ -31,6 +31,7 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Level
 import java.util.logging.Logger
+import static com.haulmont.gradle.task.db.CubaDbTask.*
 
 class CubaDbUpdate extends CubaDbTask {
 

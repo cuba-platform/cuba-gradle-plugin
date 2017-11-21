@@ -33,7 +33,7 @@ public abstract class AbstractCubaDbCreation extends CubaDbTask {
 
         getProject().getLogger().warn("Using database URL: " + dbUrl + ", user: " + dbUser);
         try {
-            creteSysDbChangeLogTable();
+            createSysDbChangeLogTable();
 
             initDatabase(null);
 
@@ -50,12 +50,12 @@ public abstract class AbstractCubaDbCreation extends CubaDbTask {
         }
     }
 
-    protected void creteSysDbChangeLogTable() {
+    protected void createSysDbChangeLogTable() {
         int pkLength = MYSQL_DBMS.equals(dbms) ? 190 : 300;
         try {
-            getSql().executeUpdate(String.format("create table SYS_DB_CHANGELOG (" +
-                    "SCRIPT_NAME varchar(%s) not null primary key, " +
-                    "CREATE_TS %s default current_timestamp, " +
+            getSql().executeUpdate(String.format("create table SYS_DB_CHANGELOG (\n" +
+                    "SCRIPT_NAME varchar(%s) not null primary key, \n" +
+                    "CREATE_TS %s default current_timestamp, \n" +
                     "IS_INIT integer default 0)", pkLength, timeStampType));
         } catch (SQLException e) {
             throw new RuntimeException("", e);
