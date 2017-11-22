@@ -1,5 +1,3 @@
-import com.haulmont.gradle.enhance.BeanValidationMessageTransformer
-
 /*
  * Copyright (c) 2008-2017 Haulmont.
  *
@@ -16,7 +14,9 @@ import com.haulmont.gradle.enhance.BeanValidationMessageTransformer
  * limitations under the License.
  */
 
-class EnhanceRegExTest extends GroovyTestCase {
+import com.haulmont.gradle.enhance.BeanValidationMessageTransformer
+
+class BeanValidationMessageTransformerTest extends GroovyTestCase {
 
     def packageName = "com.haulmont.app.global"
     BeanValidationMessageTransformer transformer = new BeanValidationMessageTransformer()
