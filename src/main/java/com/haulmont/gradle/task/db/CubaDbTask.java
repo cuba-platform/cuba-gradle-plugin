@@ -45,7 +45,7 @@ public abstract class CubaDbTask extends DefaultTask {
     public static final String MYSQL_DBMS = "mysql";
     public static final String HSQL_DBMS = "hsql";
 
-    private static final String SQL_COMMENT_PREFIX = "--";
+    protected static final String SQL_COMMENT_PREFIX = "--";
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema";
     protected static final String MS_SQL_2005 = "2005";
 
