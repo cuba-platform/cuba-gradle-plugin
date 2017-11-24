@@ -80,12 +80,8 @@ class CubaEnhancingTask extends DefaultTask {
         if (customClassesDir) {
             return customClassesDir
         }
-        def outputDirGetter = sourceSet.java.metaClass.methods.find { it.name == 'getOutputDir'}
-        if (outputDirGetter) {
-            return sourceSet.java['outputDir'] as File
-        }
-        // before gradle 4.0
-        return sourceSet.output.classesDir
+
+        return sourceSet.java.outputDir
     }
 
     private List<File> getOwnPersistenceXmlFiles() {

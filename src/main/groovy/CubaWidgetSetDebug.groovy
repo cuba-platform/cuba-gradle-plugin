@@ -25,8 +25,6 @@ import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.tasks.*
 
-import static java.util.Collections.singletonList
-
 class CubaWidgetSetDebug extends DefaultTask {
 
     String widgetSetsDir
@@ -196,12 +194,7 @@ class CubaWidgetSetDebug extends DefaultTask {
     }
 
     protected Collection<File> getClassesDirs(SourceSet sourceSet) {
-        def classesDirsGetter = sourceSet.output.metaClass.methods.find { it.name == 'getClassesDirs'}
-        if (classesDirsGetter) {
-            return sourceSet.output['classesDirs'] as Collection<File>
-        } else {
-            return singletonList(sourceSet.output.classesDir)
-        }
+        return sourceSet.output.classesDirs
     }
 
     protected void collectProjectsWithDependency(Project project, String dependencyName, Set<Project> explored) {
