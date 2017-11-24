@@ -159,7 +159,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
     }
 
     protected Collection<File> getClassesDirs(SourceSet sourceSet) {
-        return sourceSet.output.classesDirs
+        return sourceSet.output.classesDirs.files
     }
 
     protected List collectCompilerJvmArgs() {

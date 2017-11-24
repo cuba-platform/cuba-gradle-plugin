@@ -194,7 +194,7 @@ class CubaWidgetSetDebug extends DefaultTask {
     }
 
     protected Collection<File> getClassesDirs(SourceSet sourceSet) {
-        return sourceSet.output.classesDirs
+        return sourceSet.output.classesDirs.files
     }
 
     protected void collectProjectsWithDependency(Project project, String dependencyName, Set<Project> explored) {
