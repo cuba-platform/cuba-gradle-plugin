@@ -18,6 +18,7 @@ package com.haulmont.gradle.uberjar
 
 import org.apache.commons.io.IOUtils
 import org.gradle.api.logging.Logger
+import org.gradle.internal.logging.progress.ProgressLogger
 
 import java.nio.file.*
 
@@ -27,8 +28,11 @@ class UberJar {
     protected final List<ResourceTransformer> transformers
     protected final String jarName
     protected FileSystem toJarFs
+    protected ProgressLogger progressLogger
 
-    UberJar(Logger logger, Path toPath, String jarName, List<ResourceTransformer> transformers) {
+    UberJar(Logger logger, ProgressLogger progressLogger, Path toPath, String jarName, List<ResourceTransformer>
+            transformers) {
+        this.progressLogger = progressLogger
         this.logger = logger
         this.toPath = toPath
         if (transformers == null) {
@@ -53,17 +57,17 @@ class UberJar {
                 def stepSize = paths.size() / 5
                 def jarIndex = 0
                 int currentPercent = 0, nextPercent
-                logger.warn("[CubaUberJAR] Pack libs progress: $currentPercent%")
+                progressLogger.progress("Pack ${jarName} libs progress: $currentPercent%")
                 for (path in paths) {
                     nextPercent = jarIndex / stepSize
                     if (nextPercent != currentPercent) {
-                        logger.warn("[CubaUberJAR] Pack libs progress: ${nextPercent * 20}%")
+                        progressLogger.progress("Pack ${jarName} libs progress: ${nextPercent * 20}%")
                     }
                     visitJar(path, locator)
                     currentPercent = nextPercent
                     jarIndex++
                 }
-                logger.warn("[CubaUberJAR] Pack libs progress: 100%")
+                progressLogger.progress("Pack ${jarName} libs progress: 100%")
             } finally {
                 IOUtils.closeQuietly(stream)
             }

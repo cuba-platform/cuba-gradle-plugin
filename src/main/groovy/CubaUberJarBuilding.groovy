@@ -24,6 +24,12 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.logging.progress.ProgressLogger
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
+
+import javax.inject.Inject
+
+import static com.haulmont.gradle.dependency.DependencyResolver.getLibraryDefinition
 
 class CubaUberJarBuilding extends DefaultTask {
 
@@ -80,7 +86,6 @@ class CubaUberJarBuilding extends DefaultTask {
     public static String WEB_CONTENT_DIR_IN_JAR = "app"
     public static String PORTAL_CONTENT_DIR_IN_JAR = "app-portal"
     public static String FRONT_CONTENT_DIR_IN_JAR = "app-front"
-
 
     CubaUberJarBuilding() {
         setGroup('Deployment')
@@ -167,8 +172,17 @@ class CubaUberJarBuilding extends DefaultTask {
         this.dependsOn(assemblePolymer)
     }
 
+    @Inject
+    protected ProgressLoggerFactory getProgressLoggerFactory() {
+        // Injected automatically by Gradle
+        throw new UnsupportedOperationException()
+    }
+
     @TaskAction
     def createJar() {
+        def progressLogger = getProgressLoggerFactory().newOperation(getClass())
+        progressLogger.start("Build UberJAR", getName())
+
         project.delete(distributionDir)
 
         initVariables()
@@ -179,27 +193,36 @@ class CubaUberJarBuilding extends DefaultTask {
         Set<String> webLibs = new LinkedHashSet<>()
         Set<String> portalLibs = new LinkedHashSet<>()
 
+        progressLogger.progress("Copy server libs")
         copyServerLibs(serverLibs)
-        copyLibsAndContent(coreProject, coreJarNames, coreLibs)
-        copyLibsAndContent(webProject, webJarNames, webLibs)
+
+        progressLogger.progress("Copy libs and content of 'core'")
+        copyLibsAndContent(coreProject, progressLogger, coreJarNames, coreLibs)
+
+        progressLogger.progress("Copy libs and content of 'web'")
+        copyLibsAndContent(webProject, progressLogger, webJarNames, webLibs)
         if (polymerProject) {
-            copyFrontLibsAndContent(polymerProject)
+            progressLogger.progress("Copy libs and content of 'polymer'")
+
+            copyFrontLibsAndContent(polymerProject, progressLogger)
         }
         if (portalProject) {
-            copyLibsAndContent(portalProject, portalJarNames, portalLibs)
+            progressLogger.progress("Copy libs and content of 'portal'")
+
+            copyLibsAndContent(portalProject, progressLogger, portalJarNames, portalLibs)
         }
 
         if (singleJar) {
             resolveSharedLibConflicts(coreLibs, webLibs, portalLibs)
-            UberJar jar = createJarTask(appName)
-            packServerLibs(jar)
-            packLibsAndContent(coreProject, jar, false)
-            packLibsAndContent(webProject, jar, true)
+            UberJar jar = createJarTask(appName, progressLogger)
+            packServerLibs(jar, progressLogger)
+            packLibsAndContent(coreProject, progressLogger, jar, false)
+            packLibsAndContent(webProject, progressLogger, jar, true)
             if (polymerProject) {
                 packFrontContent(polymerProject, jar)
             }
             if (portalProject) {
-                packLibsAndContent(portalProject, jar, false)
+                packLibsAndContent(portalProject, progressLogger, jar, false)
             }
             packLogbackConfigurationFile(jar)
             packJettyFile(null, jar)
@@ -211,16 +234,16 @@ class CubaUberJarBuilding extends DefaultTask {
                 into distributionDir
             }
         } else {
-            UberJar coreJar = createJarTask(coreAppName)
-            packServerLibs(coreJar)
-            packLibsAndContent(coreProject, coreJar, true)
+            UberJar coreJar = createJarTask(coreAppName, progressLogger)
+            packServerLibs(coreJar, progressLogger)
+            packLibsAndContent(coreProject, progressLogger, coreJar, true)
             packLogbackConfigurationFile(coreJar)
             packJettyFile(coreProject, coreJar)
             coreJar.createManifest(MAIN_CLASS)
 
-            UberJar webJar = createJarTask(appName)
-            packServerLibs(webJar)
-            packLibsAndContent(webProject, webJar, true)
+            UberJar webJar = createJarTask(appName, progressLogger)
+            packServerLibs(webJar, progressLogger)
+            packLibsAndContent(webProject, progressLogger, webJar, true)
             if (polymerProject) {
                 packFrontContent(polymerProject, webJar)
             }
@@ -236,9 +259,9 @@ class CubaUberJarBuilding extends DefaultTask {
             }
 
             if (portalProject) {
-                UberJar portalJar = createJarTask(portalAppName)
-                packServerLibs(portalJar)
-                packLibsAndContent(portalProject, portalJar, true)
+                UberJar portalJar = createJarTask(portalAppName, progressLogger)
+                packServerLibs(portalJar, progressLogger)
+                packLibsAndContent(portalProject, progressLogger, portalJar, true)
                 packLogbackConfigurationFile(portalJar)
                 packJettyFile(portalProject, portalJar)
                 portalJar.createManifest(MAIN_CLASS)
@@ -332,12 +355,13 @@ class CubaUberJarBuilding extends DefaultTask {
         defaultTransformers.add(new MergeResourceTransformer(mergeResources))
     }
 
-    protected UberJar createJarTask(String name) {
-        return new UberJar(project.logger, project.file(rootJarTmpDir).toPath(), "${name}.jar", defaultTransformers)
+    protected UberJar createJarTask(String name, ProgressLogger progressLogger) {
+        return new UberJar(project.logger, progressLogger, project.file(rootJarTmpDir).toPath(), "${name}.jar",
+                defaultTransformers)
     }
 
     protected void resolveSharedLibConflicts(Set<String> coreLibs, Set<String> webLibs, Set<String> portalLibs) {
-        Set<String> allLibs = new LinkedHashSet<>();
+        Set<String> allLibs = new LinkedHashSet<>()
         allLibs.addAll(coreLibs)
         allLibs.addAll(webLibs)
         allLibs.addAll(portalLibs)
@@ -347,17 +371,20 @@ class CubaUberJarBuilding extends DefaultTask {
         resolver.resolveDependencies(libsDir, new ArrayList<String>(allLibs))
     }
 
-    protected void copyLibsAndContent(Project theProject, Collection<String> jarNames, Set<String> resolvedLibs) {
-        theProject.logger.warn("[CubaUberJAR] Copy shared libs for ${theProject}")
+    protected void copyLibsAndContent(Project theProject, ProgressLogger progressLogger, Collection<String> jarNames,
+                                      Set<String> resolvedLibs) {
+
+        progressLogger.progress("Copy shared libs for ${theProject}")
         copySharedLibs(theProject, jarNames, resolvedLibs)
 
-        theProject.logger.warn("[CubaUberJAR] Copy app libs for ${theProject}")
+        progressLogger.progress("Copy app libs for ${theProject}")
         copyAppLibs(theProject, jarNames, resolvedLibs)
 
-        copyWebInfContent(theProject)
-        copySpecificWebContent(theProject)
+        copyWebInfContent(theProject, progressLogger)
+        copySpecificWebContent(theProject, progressLogger)
 
-        project.logger.info("[CubaUberJAR] Writing local app properties for ${theProject}")
+        progressLogger.progress("Writing local app properties for ${theProject}")
+
         def projectProperties = collectProperties(theProject)
         writeLocalAppProperties(theProject, projectProperties)
         writeLibsFile(theProject, resolvedLibs)
@@ -365,7 +392,7 @@ class CubaUberJarBuilding extends DefaultTask {
         touchWebXml(theProject)
     }
 
-    protected void copyFrontLibsAndContent(Project theProject) {
+    protected void copyFrontLibsAndContent(Project theProject, ProgressLogger progressLogger) {
         theProject.copy {
             from project.configurations.front
             into "${getAppLibsDir(theProject)}"
@@ -373,7 +400,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
             }
         }
-        copySpecificWebContent(theProject)
+        copySpecificWebContent(theProject, progressLogger)
         File webInf = new File("${getContentDir(polymerProject)}/WEB-INF/")
         if (!webInf.exists()) {
             webInf.mkdir()
@@ -383,26 +410,32 @@ class CubaUberJarBuilding extends DefaultTask {
         writeIndexHtmlTemplate()
     }
 
-    protected void packServerLibs(UberJar jar) {
-        project.logger.warn("[CubaUberJAR] Pack server libs")
+    protected void packServerLibs(UberJar jar, ProgressLogger progressLogger) {
+        progressLogger.progress("Pack server libs")
         jar.copyJars(project.file(getServerLibsDir()).toPath(), null)
     }
 
-    protected void packLibsAndContent(Project theProject, UberJar jar, boolean copyShared) {
-        theProject.logger.warn("[CubaUberJAR] Pack app libs for ${theProject}")
-        jar.copyJars(project.file(getAppLibsDir(theProject)).toPath(), new AllResourceLocator("${getPackDir(theProject)}/WEB-INF/classes"))
+    protected void packLibsAndContent(Project theProject, ProgressLogger progressLogger, UberJar jar,
+                                      boolean copyShared) {
+        progressLogger.progress("Pack app libs for ${theProject}")
+
+        jar.copyJars(project.file(getAppLibsDir(theProject)).toPath(),
+                new AllResourceLocator("${getPackDir(theProject)}/WEB-INF/classes"))
 
         if (copyShared) {
-            theProject.logger.warn("[CubaUberJAR] Pack shared libs for ${theProject}")
-            jar.copyJars(project.file(getSharedLibsDir(theProject)).toPath(), new SharedResourceLocator("LIB-INF/shared", getPackDir(webProject)))
+            progressLogger.progress("Pack shared libs for ${theProject}")
+            jar.copyJars(project.file(getSharedLibsDir(theProject)).toPath(),
+                    new SharedResourceLocator("LIB-INF/shared", getPackDir(webProject)))
         }
 
-        theProject.logger.warn("[CubaUberJAR] Pack content for ${theProject}")
+        progressLogger.progress("Pack content for ${theProject}")
         jar.copyFiles(project.file(getContentDir(theProject)).toPath(), new AllResourceLocator(getPackDir(theProject)))
     }
 
     protected void packFrontContent(Project theProject, UberJar jar) {
-        jar.copyJars(project.file(getAppLibsDir(theProject)).toPath(), new AllResourceLocator("${getPackDir(theProject)}/WEB-INF/classes"))
+        jar.copyJars(project.file(getAppLibsDir(theProject)).toPath(),
+                new AllResourceLocator("${getPackDir(theProject)}/WEB-INF/classes"))
+
         jar.copyFiles(project.file(getContentDir(theProject)).toPath(), new AllResourceLocator(getPackDir(theProject)))
     }
 
@@ -439,10 +472,12 @@ class CubaUberJarBuilding extends DefaultTask {
             from project.configurations.uberJar
             into getServerLibsDir()
             include { details ->
-                if (details.file.name.endsWith('-sources.jar')) {
+                File f = details.file
+
+                if (f.name.endsWith('-sources.jar')) {
                     return false
                 }
-                resolvedLibs.add(details.file.name)
+                resolvedLibs.add(f.name)
                 return true
             }
         }
@@ -455,14 +490,16 @@ class CubaUberJarBuilding extends DefaultTask {
             from theProject.configurations.jdbc
             into "${getSharedLibsDir(theProject)}"
             include { details ->
-                if (!details.file.name.endsWith('.jar')) {
+                File f = details.file
+
+                if (!f.name.endsWith('.jar')) {
                     return false
                 }
-                if (details.file.name.endsWith('-sources.jar')) {
+                if (f.name.endsWith('-sources.jar')) {
                     return false
                 }
-                resolvedLibs.add(details.file.name)
-                def libraryName = DependencyResolver.getLibraryDefinition(details.file.name).name
+                resolvedLibs.add(f.name)
+                def libraryName = getLibraryDefinition(f.name).name
                 !jarNames.contains(libraryName)
             }
         }
@@ -475,21 +512,24 @@ class CubaUberJarBuilding extends DefaultTask {
             from theProject.configurations.jdbc
             into "${getAppLibsDir(theProject)}"
             include { details ->
-                if (!details.file.name.endsWith(".jar")) {
+                File f = details.file
+
+                if (!f.name.endsWith(".jar")) {
                     return false
                 }
-                if (details.file.name.endsWith('-sources.jar')) {
+                if (f.name.endsWith('-sources.jar')) {
                     return false
                 }
-                resolvedLibs.add(details.file.name)
-                def libraryName = DependencyResolver.getLibraryDefinition(details.file.name).name
+                resolvedLibs.add(f.name)
+                def libraryName = getLibraryDefinition(f.name).name
                 jarNames.contains(libraryName)
             }
         }
     }
 
-    protected void copyWebInfContent(Project theProject) {
-        theProject.logger.info("[CubaUberJAR] Copy WEB-INF content for ${theProject}")
+    protected void copyWebInfContent(Project theProject, ProgressLogger progressLogger) {
+        progressLogger.progress("Copy WEB-INF content for ${theProject}")
+
         String webXmlPath
         if (coreWebXmlPath && theProject == coreProject) {
             webXmlPath = coreWebXmlPath
@@ -547,9 +587,10 @@ class CubaUberJarBuilding extends DefaultTask {
         }
     }
 
-    protected void copySpecificWebContent(Project theProject) {
+    protected void copySpecificWebContent(Project theProject, ProgressLogger progressLogger) {
         if (theProject == webProject || theProject == portalProject) {
-            theProject.logger.info("[CubaUberJAR] Copy web content for ${theProject}")
+            progressLogger.progress("Copy web content for ${theProject}")
+
             def excludePatterns = ['**/WEB-INF/**', '**/META-INF/**'] + webContentExclude
             if (theProject.configurations.findByName('webcontent')) {
                 theProject.configurations.webcontent.files.each { dep ->
@@ -562,13 +603,16 @@ class CubaUberJarBuilding extends DefaultTask {
                     }
                 }
             }
-            theProject.logger.info("[CubaUberJAR] Copying webcontent from ${theProject.buildDir}/web for project ${theProject}")
+
+            progressLogger.progress("Copying webcontent from ${theProject.buildDir}/web for project " +
+                    "${theProject}")
             theProject.copy {
                 from "${theProject.buildDir}/web"
                 into "${getContentDir(theProject)}"
                 excludes = excludePatterns
             }
-            project.logger.info("[CubaUberJAR] copying from web for project ${theProject}")
+            progressLogger.progress("copying from web for project ${theProject}")
+
             project.copy {
                 from theProject.file('web')
                 into "${getContentDir(theProject)}"
@@ -577,7 +621,7 @@ class CubaUberJarBuilding extends DefaultTask {
             if (theProject == webProject) {
                 def webToolkit = theProject.rootProject.subprojects.find { it -> it.name.endsWith('web-toolkit') }
                 if (webToolkit) {
-                    theProject.logger.info("[CubaUberJAR] Copying webcontent from ${webToolkit.buildDir}/web} for project ${theProject}")
+                    progressLogger.progress("Copying webcontent from ${webToolkit.buildDir}/web} for project ${theProject}")
                     theProject.copy {
                         from "${webToolkit.buildDir}/web"
                         into "${getContentDir(theProject)}"
@@ -587,7 +631,7 @@ class CubaUberJarBuilding extends DefaultTask {
             }
         }
         if (theProject == polymerProject) {
-            theProject.logger.info("[CubaUberJAR] Copy Polymer files for ${theProject}")
+            progressLogger.progress("Copy Polymer files for ${theProject}")
             if (!polymerBuildDir) {
                 throw new GradleException("'polymerBuildDir' property should be required for Uber JAR building with Polymer")
             }

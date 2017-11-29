@@ -15,6 +15,8 @@
  *
  */
 
+
+import com.haulmont.gradle.task.db.CubaDbScript
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.utils.BOMVersions
@@ -86,6 +88,7 @@ class CubaPlugin implements Plugin<Project> {
     private void exportTaskTypes(Project project) {
         project.ext.CubaHsqlStop = CubaHsqlStop.class
         project.ext.CubaHsqlStart = CubaHsqlStart.class
+        project.ext.CubaDbScript = CubaDbScript.class
     }
 
     private void doAfterEvaluateForAnyProject(Project project) {

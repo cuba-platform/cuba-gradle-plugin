@@ -21,6 +21,7 @@ import org.apache.commons.dbcp2.BasicDataSource
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.control.CompilerConfiguration
+import org.gradle.api.GradleException
 import org.gradle.api.tasks.TaskAction
 import org.slf4j.LoggerFactory
 
@@ -96,7 +97,8 @@ class CubaDbUpdate extends CubaDbTask {
             def lastDir = dirs[dirs.size() - 1]
             def dashIdx = lastDir.indexOf('-')
             if (dashIdx < 1 || dashIdx > lastDir.length() - 2)
-                throw new RuntimeException("Invalid DB scripts directory name format: $lastDir")
+                throw new GradleException("Invalid DB scripts directory name format: $lastDir")
+
             if (lastDir.substring(dashIdx + 1) == project.rootProject.name) {
                 // if own scripts exist, check all db folders except the last because it is the folder of the app and we need only components
                 dirs = dirs.subList(0, dirs.size() - 1)
@@ -167,7 +169,7 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected void executeScript(File file) {
-        project.logger.warn("Executing script " + file.getPath())
+        project.logger.lifecycle("Executing script " + file.getPath())
         if (file.name.endsWith('.sql')) {
             executeSqlScript(file)
         } else if (file.name.endsWith(".upgrade.groovy")) {

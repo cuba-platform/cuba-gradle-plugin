@@ -100,9 +100,9 @@ grant create session,
         }
 
         def user = dbms == 'oracle' ? (oracleSystemUser ? oracleSystemUser : 'system') : dbUser
-        project.logger.warn("Using database URL: $masterUrl, user: $user")
+        project.logger.lifecycle("Using database URL: $masterUrl, user: $user")
 
-        project.logger.warn("Executing SQL: $dropDbSql")
+        project.logger.lifecycle("Executing SQL: $dropDbSql")
         try {
             project.ant.sql(
                     classpath: driverClasspath,
@@ -119,7 +119,7 @@ grant create session,
         }
 
         if (createDbSql) {
-            project.logger.warn("Executing SQL: $createDbSql")
+            project.logger.lifecycle("Executing SQL: $createDbSql")
             project.ant.sql(
                     classpath: driverClasspath,
                     driver: driver,
@@ -133,7 +133,7 @@ grant create session,
         }
 
         if (createSchemaSql) {
-            project.logger.warn("Executing SQL: $createSchemaSql")
+            project.logger.lifecycle("Executing SQL: $createSchemaSql")
             project.ant.sql(
                     classpath: driverClasspath,
                     driver: driver,
