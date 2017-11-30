@@ -29,6 +29,7 @@ class CubaSetupTomcat extends DefaultTask {
 
     public static final List<String> TOMCAT_RESOURCES = Collections.unmodifiableList([
             "/tomcat/bin/call_and_exit.bat",
+            "/tomcat/bin/catalina.bat",
             "/tomcat/bin/catalina.sh",
             "/tomcat/bin/debug.bat",
             "/tomcat/bin/debug.sh",
