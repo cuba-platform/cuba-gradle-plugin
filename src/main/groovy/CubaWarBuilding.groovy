@@ -23,29 +23,53 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputFiles
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.jvm.tasks.Jar
 
 class CubaWarBuilding extends DefaultTask {
     Project coreProject
     Project webProject
     Project portalProject
     Project polymerProject
+    Project webToolkitProject
 
+    @Input
     String appHome
+    @Input
+    @Optional
     String appName
+    @Input
     boolean singleWar = true
 
+    @Input
+    @Optional
     String webXmlPath
 
+    @Input
+    @Optional
     String coreWebXmlPath
+    @Input
+    @Optional
     String webWebXmlPath
+    @Input
+    @Optional
     String portalWebXmlPath
 
+    @Input
     String polymerBuildDir = 'es6-unbundled'
 
     boolean projectAll
+
+    @Input
     List<String> webContentExclude = []
     Closure doAfter
+
+    @Input
+    @Optional
     Map<String, Object> appProperties
 
     def coreJarNames
@@ -57,17 +81,26 @@ class CubaWarBuilding extends DefaultTask {
     String portalTmpWarDir
     String polymerTmpWarDir
 
+    @Input
     boolean includeJdbcDriver = false
+    @Input
     boolean includeContextXml = false
 
+    @Input
+    @Optional
     String coreContextXmlPath
 
-    Boolean hsqlInProcess = false
+    @Input
+    boolean hsqlInProcess = false
 
     String distrDir = "${project.buildDir}/distributions/war"
 
+    @Input
+    @Optional
     @Deprecated
     Object webXml
+    @Input
+    @Optional
     @Deprecated
     String coreContextXml
 
@@ -123,13 +156,14 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
 
-            // look for web toolkit module
-            for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
-                if (entry.getKey().endsWith("-web-toolkit")) {
-                    def webToolkit = entry.getValue()
-                    def assembleWebToolkit = webToolkit.getTasksByName("assemble", false).iterator().next()
-                    this.dependsOn(assembleWebToolkit)
-                    break
+            if (!webToolkitProject) {
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-web-toolkit")) {
+                        webToolkitProject = entry.getValue()
+                        def assembleWebToolkit = webToolkitProject.getTasksByName("assemble", false).iterator().next()
+                        this.dependsOn(assembleWebToolkit)
+                        break
+                    }
                 }
             }
         }
@@ -157,6 +191,52 @@ class CubaWarBuilding extends DefaultTask {
         this.polymerProject = polymerProject
         def assemblePolymer = polymerProject.getTasksByName('assemble', false).iterator().next()
         this.dependsOn(assemblePolymer)
+    }
+
+    void setWebToolkitProject(Project webToolkitProject) {
+        this.webToolkitProject = webToolkitProject
+        def assembleWebToolkit = webToolkitProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assembleWebToolkit)
+    }
+
+    @OutputDirectory
+    File getOutputDirectory() {
+        return new File(distrDir)
+    }
+
+    @InputFiles
+    List<File> getInputFiles() {
+        def dependencyFiles = new ArrayList<File>()
+
+        if (coreProject) {
+            def jarTask = coreProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (webProject) {
+            def jarTask = webProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (portalProject) {
+            def jarTask = portalProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (polymerProject) {
+            dependencyFiles.addAll(project.fileTree(polymerProject.file('src')).files)
+        }
+        if (webToolkitProject) {
+            def jarTask = webToolkitProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+
+        return dependencyFiles
     }
 
     String warDir(Project project) {

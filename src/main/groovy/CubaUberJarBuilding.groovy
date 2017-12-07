@@ -23,40 +23,78 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
+import org.gradle.jvm.tasks.Jar
 
 class CubaUberJarBuilding extends DefaultTask {
 
+    private static final String LIBS_DIR = "libs"
+    private static final String LIBS_SHARED_DIR = "libs_shared"
+    private static final String CONTENT_DIR = "content"
+    private static final String MAIN_CLASS = "com.haulmont.cuba.uberjar.ServerRunner"
+
+    public static final String CORE_CONTENT_DIR_IN_JAR = "app-core"
+    public static final String WEB_CONTENT_DIR_IN_JAR = "app"
+    public static final String PORTAL_CONTENT_DIR_IN_JAR = "app-portal"
+    public static final String FRONT_CONTENT_DIR_IN_JAR = "app-front"
+
+    @Input
     boolean singleJar
 
+    @Input
     String appName
 
     Project coreProject
     Project webProject
     Project portalProject
     Project polymerProject
+    Project webToolkitProject
 
+    @Input
+    @Optional
     String coreWebXmlPath
+    @Input
+    @Optional
     String webWebXmlPath
+    @Input
+    @Optional
     String portalWebXmlPath
 
+    @Input
+    @Optional
     String coreJettyConfPath
+    @Input
+    @Optional
     String webJettyConfPath
+    @Input
+    @Optional
     String portalJettyConfPath
 
+    @Input
+    @Optional
     String coreJettyEnvPath
 
+    @Input
+    @Optional
     String logbackConfigurationFile
 
+    @Input
     int corePort = 8079
+    @Input
     int webPort = 8080
+    @Input
     int portalPort = 8081
 
+    @Input
     List<String> webContentExclude = []
+    @Input
     List<String> excludeResources = []
+    @Input
     List<String> mergeResources = []
+    @Input
     Map<String, Object> appProperties
 
+    @Input
     String polymerBuildDir = 'es6-unbundled'
 
     protected String distributionDir = "${project.buildDir}/distributions/uberJar"
@@ -70,17 +108,6 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> coreJarNames
     protected Collection<String> webJarNames
     protected Collection<String> portalJarNames
-
-    private static final String LIBS_DIR = "libs"
-    private static final String LIBS_SHARED_DIR = "libs_shared"
-    private static final String CONTENT_DIR = "content"
-    private static final String MAIN_CLASS = "com.haulmont.cuba.uberjar.ServerRunner"
-
-    public static String CORE_CONTENT_DIR_IN_JAR = "app-core"
-    public static String WEB_CONTENT_DIR_IN_JAR = "app"
-    public static String PORTAL_CONTENT_DIR_IN_JAR = "app-portal"
-    public static String FRONT_CONTENT_DIR_IN_JAR = "app-front"
-
 
     CubaUberJarBuilding() {
         setGroup('Deployment')
@@ -132,12 +159,13 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
             }
 
-            for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
-                if (entry.getKey().endsWith("-web-toolkit")) {
-                    def webToolkit = entry.getValue()
-                    def assembleWebToolkit = webToolkit.getTasksByName("assemble", false).iterator().next()
-                    this.dependsOn(assembleWebToolkit)
-                    break
+            if (!webToolkitProject) {
+                for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
+                    if (entry.getKey().endsWith("-web-toolkit")) {
+                        setWebToolkitProject(entry.getValue())
+                        project.logger.info("[CubaUberJAR] $webToolkitProject is set as web-toolkit project")
+                        break
+                    }
                 }
             }
         }
@@ -165,6 +193,52 @@ class CubaUberJarBuilding extends DefaultTask {
         this.polymerProject = polymerProject
         def assemblePolymer = polymerProject.getTasksByName('assemble', false).iterator().next()
         this.dependsOn(assemblePolymer)
+    }
+
+    void setWebToolkitProject(Project webToolkitProject) {
+        this.webToolkitProject = webToolkitProject
+        def assembleWebToolkit = webToolkitProject.getTasksByName('assemble', false).iterator().next()
+        this.dependsOn(assembleWebToolkit)
+    }
+
+    @OutputDirectory
+    File getOutputDirectory() {
+        return new File(distributionDir)
+    }
+
+    @InputFiles
+    List<File> getInputFiles() {
+        def dependencyFiles = new ArrayList<File>()
+
+        if (coreProject) {
+            def jarTask = coreProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (webProject) {
+            def jarTask = webProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (portalProject) {
+            def jarTask = portalProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+        if (polymerProject) {
+            dependencyFiles.addAll(project.fileTree(polymerProject.file('src')).files)
+        }
+        if (webToolkitProject) {
+            def jarTask = webToolkitProject.getTasks().findByName('jar')
+            if (jarTask instanceof Jar) {
+                dependencyFiles.add(jarTask.archivePath)
+            }
+        }
+
+        return dependencyFiles
     }
 
     @TaskAction
