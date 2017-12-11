@@ -42,6 +42,7 @@ class CubaUberJarBuilding extends DefaultTask {
     boolean singleJar
 
     @Input
+    @Optional
     String appName
 
     Project coreProject
