@@ -15,6 +15,8 @@
  *
  */
 
+
+import com.haulmont.gradle.polymer.CubaPolymerToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.utils.BOMVersions
@@ -689,8 +691,10 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToPolymerClientProject(Project project) {
         project.plugins.apply(NodePlugin)
         def nodeExtension = project.extensions.getByType(NodeExtension)
-        nodeExtension.version = '8.9.1'
+        nodeExtension.version = '8.9.3'
         nodeExtension.download = true
+
+        project.task([type: CubaPolymerToolingInfoTask], CubaPolymerToolingInfoTask.NAME)
     }
 
     private void addDependenciesFromAppComponents(Project project) {
