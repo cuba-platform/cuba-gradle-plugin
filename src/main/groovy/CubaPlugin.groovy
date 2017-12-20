@@ -33,6 +33,7 @@ import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.javadoc.Javadoc
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -523,6 +524,10 @@ class CubaPlugin implements Plugin<Project> {
 
         project.tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:-options"
+            options.encoding = 'UTF-8'
+        }
+
+        project.tasks.withType(Javadoc) {
             options.encoding = 'UTF-8'
         }
 
