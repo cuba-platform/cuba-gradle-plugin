@@ -490,14 +490,14 @@ class CubaUberJarBuilding extends DefaultTask {
             if (!new File(logbackConfigurationFile).exists()) {
                 throw new GradleException("$logbackConfigurationFile doesn't exists")
             }
-            jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
+            jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator())
         } else if (useDefaultLogbackConfiguration) {
             InputStream inputStream = getClass().getClassLoader().getResourceAsStream("logback.xml")
             if (inputStream == null) {
                 throw new GradleException("Default logback configuration file doesn't exists")
             }
             try {
-                jar.copy(inputStream, new LogbackResourceLocator("LIB-INF/shared"))
+                jar.copy(inputStream, new LogbackResourceLocator())
             } finally {
                 try {
                     inputStream.close()

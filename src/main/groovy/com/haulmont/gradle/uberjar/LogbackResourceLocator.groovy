@@ -19,12 +19,6 @@ package com.haulmont.gradle.uberjar
 import java.nio.file.Path
 
 class LogbackResourceLocator implements ResourceLocator {
-    String relocationPath
-
-    LogbackResourceLocator(String relocationPath) {
-        this.relocationPath = relocationPath
-    }
-
     @Override
     boolean canRelocateEntry(String path) {
         return true
@@ -32,6 +26,6 @@ class LogbackResourceLocator implements ResourceLocator {
 
     @Override
     Path relocate(Path toRootPath, Path fromPath) {
-        return toRootPath.resolve(relocationPath).resolve("logback.xml")
+        return toRootPath.resolve("logback.xml")
     }
 }
