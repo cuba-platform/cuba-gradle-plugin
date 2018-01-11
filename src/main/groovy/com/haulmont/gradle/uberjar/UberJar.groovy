@@ -17,6 +17,7 @@
 package com.haulmont.gradle.uberjar
 
 import org.apache.commons.io.IOUtils
+import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 
 import java.nio.file.*
@@ -102,6 +103,18 @@ class UberJar {
                 }
                 Files.copy(fromPath, toPath, StandardCopyOption.REPLACE_EXISTING)
             }
+        })
+    }
+
+    public void copy(InputStream inputStream, ResourceLocator locator) {
+        execute({
+            def toRootPath = toJarRoot()
+            def toPath
+            if (locator == null) {
+                throw new GradleException("ResourceLocator is null")
+            }
+            toPath = locator.relocate(toRootPath, null)
+            Files.copy(inputStream, toPath, StandardCopyOption.REPLACE_EXISTING)
         })
     }
 

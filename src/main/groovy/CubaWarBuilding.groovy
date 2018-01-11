@@ -30,6 +30,10 @@ import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.jvm.tasks.Jar
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+
 class CubaWarBuilding extends DefaultTask {
     Project coreProject
     Project webProject
@@ -61,6 +65,13 @@ class CubaWarBuilding extends DefaultTask {
 
     @Input
     String polymerBuildDir = 'es6-unbundled'
+
+    @Input
+    @Optional
+    String logbackConfigurationFile
+
+    @Input
+    boolean useDefaultLogbackConfiguration = true
 
     boolean projectAll
 
@@ -424,6 +435,9 @@ class CubaWarBuilding extends DefaultTask {
 
         coreAppName = singleWar ? deployCore.appName : appName + '-core'
 
+        if (logbackConfigurationFile) {
+            logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
+        }
         String platformVersion = resolvePlatformVersion(coreProject)
         if (polymerProject && singleWar) {
             project.dependencies {
@@ -512,7 +526,7 @@ class CubaWarBuilding extends DefaultTask {
     protected void copyFrontLibs() {
         webProject.copy {
             from project.configurations.front
-            into "${warDir(webProject)}//WEB-INF/lib"
+            into "${warDir(webProject)}/WEB-INF/lib"
             include { details ->
                 !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
             }
@@ -621,6 +635,7 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
         }
+        copyLogbackConfigurationFile(theProject)
     }
 
     protected void copyWebContext(Project theProject) {
@@ -742,6 +757,35 @@ class CubaWarBuilding extends DefaultTask {
         text = FrontUtils.rewriteApiUrl(text, null)
         indexTemplate.write(text)
         indexHtml.delete()
+    }
+
+    protected void copyLogbackConfigurationFile(Project theProject) {
+        if (logbackConfigurationFile) {
+            if (!new File(logbackConfigurationFile).exists()) {
+                throw new GradleException("$logbackConfigurationFile doesn't exists")
+            }
+            theProject.copy {
+                from new File(logbackConfigurationFile)
+                into "${warDir(theProject)}/WEB-INF/classes"
+            }
+        } else if (useDefaultLogbackConfiguration) {
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream("logback.xml")
+            if (inputStream == null) {
+                throw new GradleException("Default logback configuration file doesn't exists")
+            }
+            try {
+                Path classesDir = theProject.file("${warDir(theProject)}/WEB-INF/classes").toPath()
+                Files.createDirectories(classesDir)
+                Files.copy(inputStream, classesDir.resolve("logback.xml"),
+                        StandardCopyOption.REPLACE_EXISTING)
+            } finally {
+                try {
+                    inputStream.close()
+                } catch (Exception e) {
+                    //Do nothing
+                }
+            }
+        }
     }
 
     protected void processDoAfter() {

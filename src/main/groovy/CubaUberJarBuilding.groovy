@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
@@ -78,6 +79,9 @@ class CubaUberJarBuilding extends DefaultTask {
     @Input
     @Optional
     String logbackConfigurationFile
+
+    @Input
+    boolean useDefaultLogbackConfiguration = true
 
     @Input
     int corePort = 8079
@@ -487,6 +491,20 @@ class CubaUberJarBuilding extends DefaultTask {
                 throw new GradleException("$logbackConfigurationFile doesn't exists")
             }
             jar.copyFiles(project.file(logbackConfigurationFile).toPath(), new LogbackResourceLocator("LIB-INF/shared"))
+        } else if (useDefaultLogbackConfiguration) {
+            InputStream inputStream = getClass().getClassLoader().getResourceAsStream("logback.xml")
+            if (inputStream == null) {
+                throw new GradleException("Default logback configuration file doesn't exists")
+            }
+            try {
+                jar.copy(inputStream, new LogbackResourceLocator("LIB-INF/shared"))
+            } finally {
+                try {
+                    inputStream.close()
+                } catch (Exception e) {
+                    //Do nothing
+                }
+            }
         }
     }
 
