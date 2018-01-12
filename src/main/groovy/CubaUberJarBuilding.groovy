@@ -16,6 +16,7 @@
 
 
 import com.haulmont.gradle.dependency.DependencyResolver
+import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
 import org.apache.commons.lang3.StringUtils
@@ -214,36 +215,47 @@ class CubaUberJarBuilding extends DefaultTask {
     @InputFiles
     List<File> getInputFiles() {
         def dependencyFiles = new ArrayList<File>()
+        def projects = Arrays.asList(coreProject, webProject, portalProject,
+                polymerProject, webToolkitProject)
+        def allProjects = new LinkedHashSet<Project>()
 
-        if (coreProject) {
-            def jarTask = coreProject.getTasks().findByName('jar')
-            if (jarTask instanceof Jar) {
-                dependencyFiles.add(jarTask.archivePath)
+        for (theProject in projects) {
+            if (theProject) {
+                allProjects.add(theProject)
+                allProjects.addAll(ProjectCollector.collectProjectDependencies(theProject))
+                File webDir = theProject.file("web")
+                if (webDir.exists()) {
+                    dependencyFiles.add(webDir)
+                }
             }
         }
-        if (webProject) {
-            def jarTask = webProject.getTasks().findByName('jar')
+
+        for (theProject in allProjects) {
+            def jarTask = theProject.getTasks().findByName('jar')
             if (jarTask instanceof Jar) {
-                dependencyFiles.add(jarTask.archivePath)
+                dependencyFiles.addAll(jarTask.outputs.files)
             }
         }
-        if (portalProject) {
-            def jarTask = portalProject.getTasks().findByName('jar')
-            if (jarTask instanceof Jar) {
-                dependencyFiles.add(jarTask.archivePath)
-            }
-        }
-        if (polymerProject) {
-            dependencyFiles.addAll(project.fileTree(polymerProject.file('src')).files)
-        }
-        if (webToolkitProject) {
-            def jarTask = webToolkitProject.getTasks().findByName('jar')
-            if (jarTask instanceof Jar) {
-                dependencyFiles.add(jarTask.archivePath)
-            }
-        }
+
+        addToInputFiles(coreWebXmlPath, dependencyFiles)
+        addToInputFiles(webWebXmlPath, dependencyFiles)
+        addToInputFiles(portalWebXmlPath, dependencyFiles)
+        addToInputFiles(webJettyConfPath, dependencyFiles)
+        addToInputFiles(coreJettyConfPath, dependencyFiles)
+        addToInputFiles(portalJettyConfPath, dependencyFiles)
+        addToInputFiles(coreJettyEnvPath, dependencyFiles)
+        addToInputFiles(logbackConfigurationFile, dependencyFiles)
 
         return dependencyFiles
+    }
+
+    void addToInputFiles(String filePath, List<File> files) {
+        if (filePath) {
+            File file = new File(filePath)
+            if (file.exists()) {
+                files.add(file)
+            }
+        }
     }
 
     @TaskAction
