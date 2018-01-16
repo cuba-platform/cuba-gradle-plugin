@@ -22,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.DefaultTask;
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 
 import java.io.File;
@@ -174,7 +175,7 @@ public abstract class CubaDbTask extends DefaultTask {
             String path = file.getCanonicalPath();
             return path.substring(dir.length() + 1).replace("\\", "/");
         } catch (IOException e) {
-            throw new RuntimeException("", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -204,12 +205,12 @@ public abstract class CubaDbTask extends DefaultTask {
                     try {
                         sql.execute(sqlCommand);
                     } catch (SQLException e) {
-                        getProject().getLogger().error("[CubaDbTask] Exception when executing SQL: " + sqlCommand, e);
+                        throw new GradleException("[CubaDbTask] Exception when executing SQL: " + sqlCommand, e);
                     }
                 }
             }
         } catch (IOException e) {
-            getProject().getLogger().error("[CubaDbTask] Exception when executing sql script: " + file.getAbsolutePath());
+            throw new GradleException("[CubaDbTask] Exception when executing sql script: " + file.getAbsolutePath(), e);
         }
     }
 
