@@ -125,7 +125,7 @@ public abstract class CubaDbTask extends DefaultTask {
                             addURLMethod.invoke(classLoader, file.toURI().toURL());
                         } catch (NoSuchMethodException | IllegalAccessException
                                 | InvocationTargetException | MalformedURLException e) {
-                            throw new RuntimeException("Exception when invoke 'java.net.URLClassLoader.addURL' method", e);
+                            throw new GradleException("Exception when invoke 'java.net.URLClassLoader.addURL' method", e);
                         }
 
                     });
@@ -139,7 +139,7 @@ public abstract class CubaDbTask extends DefaultTask {
                     addURLMethod.invoke(classLoader, url);
                 } catch (NoSuchMethodException | IllegalAccessException
                         | InvocationTargetException | MalformedURLException e) {
-                    throw new RuntimeException("Exception when invoke 'java.net.URLClassLoader.addURL' method", e);
+                    throw new GradleException("Exception when invoke 'java.net.URLClassLoader.addURL' method", e);
                 }
             }
         }
@@ -175,7 +175,7 @@ public abstract class CubaDbTask extends DefaultTask {
             String path = file.getCanonicalPath();
             return path.substring(dir.length() + 1).replace("\\", "/");
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new GradleException("Exception while resolve script name", e);
         }
     }
 
@@ -205,12 +205,12 @@ public abstract class CubaDbTask extends DefaultTask {
                     try {
                         sql.execute(sqlCommand);
                     } catch (SQLException e) {
-                        throw new GradleException("[CubaDbTask] Exception when executing SQL: " + sqlCommand, e);
+                        throw new GradleException("Exception when executing SQL: " + sqlCommand, e);
                     }
                 }
             }
         } catch (IOException e) {
-            throw new GradleException("[CubaDbTask] Exception when executing sql script: " + file.getAbsolutePath(), e);
+            throw new GradleException("Exception when executing sql script: " + file.getAbsolutePath(), e);
         }
     }
 
@@ -220,7 +220,7 @@ public abstract class CubaDbTask extends DefaultTask {
             sql.executeUpdate("insert into SYS_DB_CHANGELOG (SCRIPT_NAME, IS_INIT) values (?, ?)",
                     Arrays.asList(name, (init ? 1 : 0)));
         } catch (SQLException e) {
-            throw new RuntimeException("", e);
+            throw new GradleException("Exception when mark sql script", e);
         }
     }
 
@@ -229,7 +229,7 @@ public abstract class CubaDbTask extends DefaultTask {
             try {
                 sqlInstance = Sql.newInstance(dbUrl, dbUser, dbPassword, driver);
             } catch (SQLException | ClassNotFoundException e) {
-                throw new RuntimeException("", e);
+                throw new GradleException("Unable to get SQL instance", e);
             }
         return sqlInstance;
     }
