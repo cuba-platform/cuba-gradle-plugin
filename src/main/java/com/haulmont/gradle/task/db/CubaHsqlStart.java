@@ -59,6 +59,8 @@ public class CubaHsqlStart extends CubaHsqlTask {
         dbDataDir.mkdirs();
 
         if (isShowUi() && !GraphicsEnvironment.isHeadless()) {
+            getProject().getLogger().info("[CubaHsqlStart] Starting HSQL UI");
+
             URL[] classloaderUrls = ((URLClassLoader) CubaHSQLDBServer.class.getClassLoader()).getURLs();
 
             String[] paths = new String[classloaderUrls.length];
@@ -85,6 +87,8 @@ public class CubaHsqlStart extends CubaHsqlTask {
 
             java.execute();
         } else {
+            getProject().getLogger().info("[CubaHsqlStart] Starting HSQL headless");
+
             Execute exec = new Execute();
             exec.setAntRun(getProject().getAnt().getProject());
             exec.setWorkingDirectory(dbDataDir);
@@ -109,6 +113,9 @@ public class CubaHsqlStart extends CubaHsqlTask {
                         "--dbname.0", dbName
                 });
             }
+
+            getProject().getLogger().info("[CubaHsqlStart] Starting HSQL process: {}",
+                    StringUtils.join(exec.getCommandline()));
 
             try {
                 exec.spawn();
