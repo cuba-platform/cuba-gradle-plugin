@@ -88,12 +88,18 @@ class CubaWidgetSetBuilding extends DefaultTask {
             gwtTemp.mkdir()
         }
 
+        File gwtJavaTmp = project.file("build/tmp/" + this.getName())
+        if (gwtJavaTmp.exists()) {
+            gwtJavaTmp.deleteDir()
+        }
+        gwtJavaTmp.mkdirs()
+
         File gwtWidgetSetTemp = new File(gwtTemp, 'widgetset')
         gwtWidgetSetTemp.mkdir()
 
         List compilerClassPath = collectClassPathEntries()
         List gwtCompilerArgs = collectCompilerArgs(gwtWidgetSetTemp.absolutePath)
-        List gwtCompilerJvmArgs = collectCompilerJvmArgs()
+        List gwtCompilerJvmArgs = collectCompilerJvmArgs(gwtJavaTmp)
 
         project.javaexec {
             main = 'com.google.gwt.dev.Compiler'
@@ -162,17 +168,21 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return sourceSet.output.classesDirs.files
     }
 
-    protected List collectCompilerJvmArgs() {
-        compilerJvmArgs.add(xmx)
-        compilerJvmArgs.add(xss)
+    protected List collectCompilerJvmArgs(File gwtJavaTmp) {
+        List args = new ArrayList(compilerJvmArgs)
+
+        args.add(xmx)
+        args.add(xss)
+
+        args.add('-Djava.io.tmpdir=' + gwtJavaTmp.getAbsolutePath())
 
         if (project.logger.isInfoEnabled()) {
             println('JVM Args:')
             print('\t')
-            println(compilerJvmArgs)
+            println(args)
         }
 
-        return new LinkedList(compilerJvmArgs)
+        return args
     }
 
     protected List collectCompilerArgs(warPath) {
