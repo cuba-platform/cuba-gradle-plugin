@@ -15,20 +15,16 @@
  *
  */
 
+import com.google.common.base.Strings
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.utils.FrontUtils
-import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.Optional
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 
 import java.nio.file.Files
@@ -271,6 +267,14 @@ class CubaWarBuilding extends DefaultTask {
     def build() {
         init()
 
+        def outputDirectory = getOutputDirectory()
+        if (!outputDirectory.exists()) {
+            outputDirectory.mkdirs()
+        }
+
+        def tmpDir = new File(project.buildDir, 'tmp/' + getName())
+        tmpDir.deleteDir()
+
         List<String> copied = copyLibs(coreProject)
         copied.addAll(copyLibs(webProject))
         if (portalProject) copyLibs(portalProject)
@@ -332,48 +336,65 @@ class CubaWarBuilding extends DefaultTask {
                 writeIndexHtmlTemplate()
             }
 
-            packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
-            project.copy {
-                from webProject.file("${warDir(webProject)}/${appName}.war")
-                into distrDir
-            }
+            def webWarFile = webProject.file("${warDir(webProject)}/${appName}.war")
+
+            packWarFile(webProject, webWarFile)
+
+            moveToDistributions(webWarFile)
         } else {
             writeLocalAppProperties(coreProject, coreProperties)
             writeLocalAppProperties(webProject, webProperties)
-            if (portalProject) writeLocalAppProperties(portalProject, portalProperties)
-
-            packWarFile(webProject, webProject.file("${warDir(webProject)}/${appName}.war"))
-            packWarFile(coreProject, coreProject.file("${warDir(coreProject)}/${appName}-core.war"))
-            if (portalProject) packWarFile(portalProject, portalProject.file("${warDir(portalProject)}/${appName}-portal.war"))
-            if (polymerProject) packWarFile(polymerProject, polymerProject.file("${warDir(polymerProject)}/${appName}-front.war"))
-
-            webProject.copy {
-                from webProject.file("${warDir(webProject)}/${appName}.war")
-                from coreProject.file("${warDir(coreProject)}/${appName}-core.war")
-                into distrDir
-            }
 
             if (portalProject) {
-                portalProject.copy {
-                    from portalProject.file("${warDir(portalProject)}/${appName}-portal.war")
-                    into distrDir
-                }
+                writeLocalAppProperties(portalProject, portalProperties)
             }
 
+            def webWarFile = webProject.file("${warDir(webProject)}/${appName}.war")
+            def coreWarFile = coreProject.file("${warDir(coreProject)}/${appName}-core.war")
+
+            packWarFile(webProject, webWarFile)
+            packWarFile(coreProject, coreWarFile)
+
+            File portalWarFile = null
+            if (portalProject) {
+                portalWarFile = portalProject.file("${warDir(portalProject)}/${appName}-portal.war")
+                packWarFile(portalProject, portalWarFile)
+            }
+
+            File polymerWarFile = null
             if (polymerProject) {
-                polymerProject.copy {
-                    from polymerProject.file("${warDir(polymerProject)}/${appName}-front.war")
-                    into distrDir
-                }
+                polymerWarFile = polymerProject.file("${warDir(polymerProject)}/${appName}-front.war")
+                packWarFile(polymerProject, polymerWarFile)
+            }
+
+            moveToDistributions(webWarFile)
+            moveToDistributions(coreWarFile)
+
+            if (portalWarFile) {
+                moveToDistributions(portalWarFile)
+            }
+
+            if (polymerWarFile) {
+                moveToDistributions(polymerWarFile)
             }
         }
 
-        project.delete("${project.buildDir}/tmp")
+        tmpDir.deleteDir()
+    }
+
+    protected void moveToDistributions(File resultFile) {
+        def outputDir = getOutputDirectory()
+
+        project.logger.info("[CubaWarBuilding] moving $resultFile into $outputDir")
+
+        if (!resultFile.renameTo(new File(outputDir, resultFile.name))) {
+            throw new GradleException("Unable to move WAR file into " + outputDir.absolutePath)
+        }
     }
 
     protected void init() {
-        webXmlPath = webXmlPath ? "$project.rootDir/$webXmlPath" : webXml
-        coreContextXmlPath = coreContextXmlPath ? "$project.rootDir/$coreContextXmlPath" : coreContextXml
+        webXmlPath = webXmlPath ? project.file(webXmlPath).absolutePath : webXml
+        coreContextXmlPath = coreContextXmlPath ? project.file(coreContextXmlPath).absolutePath : coreContextXml
 
         if (!singleWar && webXmlPath) {
             throw new GradleException("'webXmlPath' property should be used only in single WAR building. " +
@@ -428,14 +449,14 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (singleWar) {
-            coreTmpWarDir = "${project.buildDir}/tmp/war"
+            coreTmpWarDir = "${project.buildDir}/tmp/" + getName()
             webTmpWarDir = coreTmpWarDir
             polymerTmpWarDir = "$coreTmpWarDir/front"
         } else {
-            coreTmpWarDir = "${project.buildDir}/tmp/core/war"
-            webTmpWarDir = "${project.buildDir}/tmp/web/war"
-            portalTmpWarDir = "${project.buildDir}/tmp/portal/war"
-            polymerTmpWarDir = "${project.buildDir}/tmp/polymer/war"
+            coreTmpWarDir = "${project.buildDir}/tmp/${getName()}/core/war"
+            webTmpWarDir = "${project.buildDir}/tmp/${getName()}/web/war"
+            portalTmpWarDir = "${project.buildDir}/tmp/${getName()}/portal/war"
+            polymerTmpWarDir = "${project.buildDir}/tmp/${getName()}/polymer/war"
         }
 
         if (!appName) {
@@ -665,6 +686,8 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
             if ('context.xml' != coreContextXmlFileName) {
+                theProject.logger.info("[CubaWarBuilding] removing $coreContextXmlFileName from META-INF")
+
                 theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
             }
         } else if (theProject == coreProject && hsqlInProcess) {
@@ -816,14 +839,14 @@ class CubaWarBuilding extends DefaultTask {
             // detect version automatically
             String buildTimeStamp = theProject.ext.get('webResourcesTs').toString()
 
-            def webXmlText = webXml.text
-            if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
+            def webXmlText = Strings.nullToEmpty(webXml.text)
+            if (webXmlText.contains('${webResourcesTs}')) {
                 webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp)
             }
             webXml.write(webXmlText)
         }
         theProject.logger.info("[CubaWarBuilding] touch ${warDir(theProject)}/WEB-INF/web.xml")
-        webXml.setLastModified(new Date().getTime())
+        webXml.setLastModified(System.currentTimeMillis())
     }
 
     protected void packWarFile(Project project, File destFile) {
