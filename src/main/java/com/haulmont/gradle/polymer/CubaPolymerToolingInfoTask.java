@@ -40,7 +40,7 @@ public class CubaPolymerToolingInfoTask extends DefaultTask {
     public CubaPolymerToolingInfoTask() {
         setDescription("Provides info about Polymer tooling used in project");
         setGroup("Node");
-        setDependsOn(this.getProject().getTasksByName(NpmInstallTask.NAME, false));
+        setDependsOn(this.getProject().getTasks().withType(NpmInstallTask.class));
     }
 
     @TaskAction

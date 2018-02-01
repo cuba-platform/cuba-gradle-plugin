@@ -34,6 +34,7 @@ import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.language.jvm.tasks.ProcessResources
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -54,16 +55,19 @@ class CubaPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.logger.info("[CubaPlugin] applying to project $project.name")
 
-        if (project != project.rootProject && project.name.endsWith('-polymer-client')) {
-            applyToPolymerClientProject(project)
-            return
-        }
-
         project.repositories {
             project.rootProject.buildscript.repositories.each {
                 project.logger.info("[CubaPlugin] using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
                 project.repositories.add(it)
             }
+        }
+
+        if (project != project.rootProject && project.name.endsWith('-polymer-client')) {
+            applyToPolymerClientProject(project)
+            project.afterEvaluate { p ->
+                doAfterEvaluateForAnyProject(p)
+            }
+            return
         }
 
         exportTaskTypes(project)
@@ -700,6 +704,13 @@ class CubaPlugin implements Plugin<Project> {
         nodeExtension.download = true
 
         project.task([type: CubaPolymerToolingInfoTask], CubaPolymerToolingInfoTask.NAME)
+
+        project.getTasks().withType(JavaCompile) {
+            enabled = false
+        }
+        project.getTasks().withType(ProcessResources) {
+            enabled = false
+        }
     }
 
     private void addDependenciesFromAppComponents(Project project) {
