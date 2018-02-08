@@ -842,6 +842,9 @@ class CubaPlugin implements Plugin<Project> {
         GPathResult module = (GPathResult) xml.module.find { it.@name == moduleName }
         if (module.size() > 0) {
             module.artifact.each { art ->
+                if (Boolean.valueOf(art.@library.toString()))
+                    return
+
                 String dep = "$compGroup:${art.@name}:$compVersion"
                 if (art.@classifier != "" || art.@ext != "") {
                     dep += ':'
