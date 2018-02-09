@@ -112,7 +112,7 @@ class CubaDbUpdate extends CubaDbTask {
                             break
                         }
                     }
-                    if (!anInitScriptHasBeenExecuted) {
+                    if (!anInitScriptHasBeenExecuted && !initializedByOwnScript(executedScripts, dirName)) {
                         project.logger.warn("No init scripts from $dirName have been executed, running init scripts")
                         initDatabase(dirName)
                     }
@@ -121,8 +121,12 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
+    protected boolean initializedByOwnScript(List<String> executedScripts, String dirName) {
+        executedScripts.find { it.substring(it.lastIndexOf('/') + 1) == "01.${dirName.substring(3)}-create-db.sql" }
+    }
+
     protected boolean containsIgnoringPrefix(List<String> strings, String s) {
-        return strings.find { it -> it.length() > 3 && s.length() > 3 && it.substring(3) == s.substring(3) }
+        strings.find { it -> it.length() > 3 && s.length() > 3 && it.substring(3) == s.substring(3) }
     }
 
     protected boolean tableExists(String tableName) {
