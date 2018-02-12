@@ -50,7 +50,7 @@ class CubaDeployment extends DefaultTask {
     }
 
     @TaskAction
-    def deploy() {
+    void deploy() {
         if (project.hasProperty(INHERITED_JAR_NAMES)) {
             def inheritedJarNames = project[INHERITED_JAR_NAMES]
             project.logger.info("[CubaDeployment] adding inherited JAR names: ${inheritedJarNames}")
@@ -61,79 +61,74 @@ class CubaDeployment extends DefaultTask {
             tomcatRootDir = new File(project.cuba.tomcat.dir).canonicalPath
 
         project.logger.info("[CubaDeployment] copying from configurations.jdbc to ${tomcatRootDir}/lib")
+
+        def tomcatLibsDir = project.file("${tomcatRootDir}/lib")
+        def tomcatLibsAbsolutePath = tomcatLibsDir.absolutePath
+
         project.copy {
             from project.configurations.jdbc {
-                exclude {f ->
-                    def libsPath = "${tomcatRootDir}/lib".toString()
-                    String fileName = f.file.name
+                include { details ->
+                    File file = details.file
 
-                    if (new File(libsPath, fileName).exists()) {
-                        return true
+                    if (!isDependencyDeploymentRequired(tomcatLibsDir, file)) {
+                        return false
                     }
 
-                    f.file.absolutePath.startsWith(project.file("${tomcatRootDir}/lib/").absolutePath)
+                    return !file.absolutePath.startsWith(tomcatLibsAbsolutePath)
                 }
             }
-            into "${tomcatRootDir}/lib"
+            into tomcatLibsDir
         }
-        project.logger.info("[CubaDeployment] copying shared libs from configurations.runtime")
 
-        File sharedLibDir = new File("${tomcatRootDir}/shared/lib")
         List<String> copiedToSharedLib = []
+
+        project.logger.info("[CubaDeployment] copying shared libs from configurations.runtime")
+        def sharedLibDir = new File("${tomcatRootDir}/shared/lib")
         project.copy {
             from project.configurations.runtime
-            into "${tomcatRootDir}/shared/lib"
+            into sharedLibDir
             include { details ->
-                String name = details.file.name
+                File file = details.file
 
-                if (new File(sharedLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
+                if (!isDependencyDeploymentRequired(sharedLibDir, file)) {
                     return false
                 }
 
-                if (!name.endsWith('.jar')) {
+                def libraryName = getLibraryDefinition(file.name).name
+                if (jarNames.contains(libraryName)) {
                     return false
                 }
 
-                def libraryName = getLibraryDefinition(name).name
+                copiedToSharedLib.add(file.name)
 
-                if (!(name.endsWith('-sources.jar')) && !name.endsWith('-tests.jar') && !jarNames.contains(libraryName)) {
-                    copiedToSharedLib.add(name)
-
-                    return true
-                }
-
-                return false
+                return true
             }
         }
 
-        File appLibDir = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/lib")
         List<String> copiedToAppLib = []
+
         project.logger.info("[CubaDeployment] copying app libs from configurations.runtime")
+        def appLibDir = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/lib")
         project.copy {
             from project.configurations.runtime
             from project.libsDir
-            into "${tomcatRootDir}/webapps/$appName/WEB-INF/lib"  //
+            into appLibDir
             include { details ->
-                String name = details.file.name
+                File file = details.file
 
-                if (new File(appLibDir, name).exists() && !name.contains("-SNAPSHOT")) {
+                if (!isDependencyDeploymentRequired(appLibDir, file)) {
                     return false
                 }
 
-                if (!name.endsWith('.jar')) {
+                def libraryName = getLibraryDefinition(file.name).name
+
+                if (!jarNames.contains(libraryName)) {
                     return false
                 }
 
-                def libraryName = getLibraryDefinition(name).name
+                copiedToAppLib.add(file.name)
 
-                if (!(name.endsWith('.zip')) && !(name.endsWith('-tests.jar')) && !(name.endsWith('-sources.jar')) &&
-                        jarNames.contains(libraryName)) {
-                    copiedToAppLib.add(name)
-
-                    return true
-                }
-
-                return false
+                return true
             }
         }
 
@@ -202,14 +197,39 @@ class CubaDeployment extends DefaultTask {
         webXml.setLastModified(System.currentTimeMillis())
     }
 
-    def appJars(Object... names) {
+    protected boolean isDependencyDeploymentRequired(File targetDir, File libFile) {
+        String name = libFile.name
+
+        if (!name.endsWith('.jar')) {
+            return false
+        }
+
+        if (name.endsWith('-sources.jar') || name.endsWith('-tests.jar')) {
+            return false
+        }
+
+        def targetFile = new File(targetDir, name)
+        if (targetFile.exists()) {
+            if (targetFile.lastModified() >= libFile.lastModified()) {
+                project.logger.info("[CubaDeployment] skipping library '{}' since Tomcat already contains the newer " +
+                        "version of the same file", name)
+                return false
+            } else {
+                project.logger.info("[CubaDeployment] replacing library '{}' with the newer version", name)
+            }
+        }
+
+        return true
+    }
+
+    void appJars(Object... names) {
         if (names) {
             def namesList = names.collect { String.valueOf(it) }
             jarNames.addAll(namesList)
         }
     }
 
-    def appJar(String name) {
+    void appJar(String name) {
         jarNames.add(name)
     }
 }
