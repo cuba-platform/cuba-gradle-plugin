@@ -269,16 +269,16 @@ class CubaWidgetSetBuilding extends DefaultTask {
         return result
     }
 
-    protected List collectClassPathEntries() {
-        def compilerClassPath = []
+    protected List<File> collectClassPathEntries() {
+        List<File> compilerClassPath = new ArrayList<>()
 
-        Configuration compileConfiguration = project.configurations.findByName('compile')
+        def compileConfiguration = project.configurations.findByName('compile')
         if (compileConfiguration) {
             for (dependencyProject in collectProjectsWithDependency('vaadin-shared')) {
                 SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
                 compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
-                compilerClassPath.add(getClassesDirs(dependencyMainSourceSet))
+                compilerClassPath.addAll(getClassesDirs(dependencyMainSourceSet))
                 compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
 
                 project.logger.debug(">> Widget set building Module: ${dependencyProject.name}")
@@ -288,7 +288,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         SourceSet mainSourceSet = project.sourceSets.main
 
         compilerClassPath.addAll(mainSourceSet.java.srcDirs)
-        compilerClassPath.add(getClassesDirs(mainSourceSet))
+        compilerClassPath.addAll(getClassesDirs(mainSourceSet))
         compilerClassPath.add(mainSourceSet.output.resourcesDir)
         compilerClassPath.addAll(
                 mainSourceSet.compileClasspath.findAll {
