@@ -230,7 +230,7 @@ class CubaWidgetSetDebug extends DefaultTask {
     }
 
     protected List collectClassPathEntries() {
-        def compilerClassPath = []
+        List<File> compilerClassPath = []
 
         // import runtime dependencies such as servlet-api
         Configuration runtimeConfiguration = project.configurations.findByName('runtime')
@@ -246,7 +246,7 @@ class CubaWidgetSetDebug extends DefaultTask {
                 SourceSet dependencyMainSourceSet = dependencyProject.sourceSets.main
 
                 compilerClassPath.addAll(dependencyMainSourceSet.java.srcDirs)
-                compilerClassPath.add(getClassesDirs(dependencyMainSourceSet))
+                compilerClassPath.addAll(getClassesDirs(dependencyMainSourceSet))
                 compilerClassPath.add(dependencyMainSourceSet.output.resourcesDir)
 
                 project.logger.debug(">> Widget set building Module: ${dependencyProject.name}")
@@ -256,7 +256,7 @@ class CubaWidgetSetDebug extends DefaultTask {
         SourceSet mainSourceSet = project.sourceSets.main
 
         compilerClassPath.addAll(mainSourceSet.java.srcDirs)
-        compilerClassPath.add(getClassesDirs(mainSourceSet))
+        compilerClassPath.addAll(getClassesDirs(mainSourceSet))
         compilerClassPath.add(mainSourceSet.output.resourcesDir)
         compilerClassPath.addAll(
                 mainSourceSet.compileClasspath.findAll {
