@@ -654,7 +654,7 @@ class CubaPlugin implements Plugin<Project> {
                 plusConfigurations += [project.configurations.provided]
                 file.whenMerged { classpath ->
                     classpath.entries.removeAll { entry ->
-                        entry.path.contains('build/enhanced-classes')
+                        entry.path.contains('build/enhanced-classes/main')
                     }
                 }
             }
@@ -687,7 +687,7 @@ class CubaPlugin implements Plugin<Project> {
                 if (project.name.endsWith('-global')) {
                     Node entry = root.appendNode('classpathentry')
                     entry.@kind = 'lib'
-                    entry.@path = "$project.buildDir/enhanced-classes"
+                    entry.@path = "$project.buildDir/enhanced-classes/main"
                     entry.@exported = 'true'
 
                     root.children().remove(entry)
