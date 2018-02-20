@@ -534,28 +534,9 @@ class CubaPlugin implements Plugin<Project> {
         project.jar {
             // Ensure there will be no duplicates in jars
             exclude { details -> !details.isDirectory() && isEnhanced(project, details.file, project.buildDir) }
-            // add META-INF/beans.xml
-            from ("$project.buildDir/tmp") {
-                include 'META-INF/beans.xml'
-            }
         }
 
-        if (!project.hasProperty("noBeansXml")) {
-            // create META-INF/beans.xml
-            project.jar.doFirst {
-                def file = new File("$project.buildDir/tmp/META-INF/beans.xml")
-                file.parentFile.mkdirs()
-                file.write(
-'''<?xml version="1.0" encoding="UTF-8"?>
-<beans xmlns="http://xmlns.jcp.org/xml/ns/javaee"
-       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
-                       http://xmlns.jcp.org/xml/ns/javaee/beans_1_1.xsd"
-       version="1.1" bean-discovery-mode="none">
-</beans>'''
-                )
-            }
-        }
+        setJavaeeCdiNoScan(project)
 
         if (project.name.endsWith('-global')) {
             project.task([type: CubaBuildInfo], 'buildInfo')
@@ -688,6 +669,35 @@ class CubaPlugin implements Plugin<Project> {
 
                     root.children().remove(entry)
                     root.children().add(0, entry)
+                }
+            }
+        }
+    }
+
+    private void setJavaeeCdiNoScan(Project project) {
+        if (!project.hasProperty('noBeansXml')) {
+            def beansXmlDir = new File(project.buildDir, 'beansXml')
+
+            // create META-INF/beans.xml
+            def beansXmlTask = project.task('beansXml') {
+                group = 'Compile'
+                description = 'Generates beans.xml file to disable JavaEE CDI'
+
+                outputs.dir(beansXmlDir)
+
+                doLast {
+                    def file = new File(beansXmlDir, 'META-INF/beans.xml')
+                    file.parentFile.mkdirs()
+                    file.write(getClass().getResource('/javaeecdi/beans.xml').text)
+                }
+            }
+
+            project.jar.dependsOn beansXmlTask
+
+            project.jar {
+                // add META-INF/beans.xml
+                from(beansXmlDir) {
+                    include 'META-INF/beans.xml'
                 }
             }
         }
