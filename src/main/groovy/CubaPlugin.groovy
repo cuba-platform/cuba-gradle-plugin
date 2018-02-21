@@ -710,7 +710,7 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToPolymerClientProject(Project project) {
         project.plugins.apply(NodePlugin)
         def nodeExtension = project.extensions.getByType(NodeExtension)
-        nodeExtension.version = '8.9.3'
+        nodeExtension.version = '8.9.4'
         nodeExtension.download = true
 
         project.task([type: CubaPolymerToolingInfoTask], CubaPolymerToolingInfoTask.NAME)
