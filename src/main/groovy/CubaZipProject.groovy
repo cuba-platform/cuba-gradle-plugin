@@ -17,16 +17,22 @@
 
 import org.apache.tools.ant.DirectoryScanner
 import org.gradle.api.DefaultTask
+import org.gradle.api.internal.tasks.options.Option
 import org.gradle.api.tasks.TaskAction
 
 /**
- *
+ * Create ZIP archive with the current project including HSQL database.
  */
 class CubaZipProject extends DefaultTask {
 
     def excludeFromZip = []
     def includeToZip = []
+
+    @Option(option = "zipDir", description = "Where to place resulting ZIP")
     def zipDir = "${project.rootDir}"
+
+    @Option(option = "zipFileName", description = "Resulting ZIP file name with extension")
+    def zipFileName = "${project.name}.zip"
 
     @TaskAction
     def zipProject() {
@@ -48,7 +54,7 @@ class CubaZipProject extends DefaultTask {
         ]
         excludeFromZip += this.excludeFromZip
 
-        String zipFilePath = "${zipDir}/${project.name}.zip"
+        String zipFilePath = "${zipDir}/${zipFileName}"
 
         project.logger.info("[CubaZipProject] Deleting old archive")
         // to exclude recursive packing
