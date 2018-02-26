@@ -1,6 +1,6 @@
 CATALINA_OPTS="-Xmx512m -Dfile.encoding=UTF-8"
 
-CATALINA_OPTS="$CATALINA_OPTS -Dlogback.configurationFile=../conf/logback.xml"
+CATALINA_OPTS="$CATALINA_OPTS -Dlogback.configurationFile=\"$CATALINA_BASE/conf/logback.xml\""
 
 CATALINA_OPTS="$CATALINA_OPTS -Dcom.sun.management.jmxremote"
 
