@@ -16,6 +16,7 @@
  */
 
 
+import com.haulmont.gradle.javaeecdi.CubaBeansXml
 import com.haulmont.gradle.polymer.CubaPolymerToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
@@ -680,29 +681,14 @@ class CubaPlugin implements Plugin<Project> {
 
     private void setJavaeeCdiNoScan(Project project) {
         if (!project.hasProperty('noBeansXml')) {
-            def beansXmlDir = new File(project.buildDir, 'beansXml')
-
             // create META-INF/beans.xml
-            def beansXmlTask = project.task('beansXml') {
-                group = 'Compile'
-                description = 'Generates beans.xml file to disable JavaEE CDI'
-
-                outputs.dir(beansXmlDir)
-
-                doLast {
-                    def file = new File(beansXmlDir, 'META-INF/beans.xml')
-                    file.parentFile.mkdirs()
-                    file.write(getClass().getResource('/javaeecdi/beans.xml').text)
-                }
-            }
+            def beansXmlTask = project.task([type: CubaBeansXml], CubaBeansXml.NAME)
 
             project.jar.dependsOn beansXmlTask
 
             project.jar {
                 // add META-INF/beans.xml
-                from(beansXmlDir) {
-                    include 'META-INF/beans.xml'
-                }
+                from(beansXmlTask)
             }
         }
     }
