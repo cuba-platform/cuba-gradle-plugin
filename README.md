@@ -29,3 +29,19 @@ We use IntelliJ Idea IDE for development.
 ```
 
 2. Open the .ipr file and start working on the project
+
+## Debugging
+
+Export `GRADLE_OPTS` environment variable:
+```
+   export GRADLE_OPTS="-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005"
+```
+
+Set up `Remote` debug configuration for port 5005 in Intellij Idea.
+
+Stop existing Gradle daemon:
+```
+   gradlew --stop
+```
+
+Start build of the test project with `--no-daemon` option.

@@ -122,8 +122,9 @@ class CubaDbUpdate extends CubaDbTask {
     }
 
     protected boolean initializedByOwnScript(List<String> executedScripts, String dirName) {
-        executedScripts.find { it.substring(it.lastIndexOf('/') + 1).equalsIgnoreCase(
-                "01.${dirName.substring(3)}-create-db.sql") }
+        executedScripts.find {
+            it.substring(it.lastIndexOf('/') + 1).equalsIgnoreCase("01.${dirName.substring(3)}-create-db.sql")
+        }
     }
 
     protected boolean containsIgnoringPrefix(List<String> strings, String s) {

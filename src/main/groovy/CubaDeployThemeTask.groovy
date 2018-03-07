@@ -20,8 +20,6 @@ import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaDeployThemeTask extends DefaultTask {
 
     String appName = null
@@ -32,12 +30,12 @@ class CubaDeployThemeTask extends DefaultTask {
     }
 
     @InputDirectory
-    def File getSourceFiles() {
-        new File(project.buildDir, 'web/VAADIN/themes')
+    File getSourceFiles() {
+        return new File(project.buildDir, 'web/VAADIN/themes')
     }
 
     @OutputDirectory
-    def File getOutputDirectory() {
+    File getOutputDirectory() {
         String targetAppName = getTargetAppName()
 
         return new File("${project.cuba.tomcat.dir}/webapps/$targetAppName/VAADIN/themes")
@@ -56,7 +54,7 @@ class CubaDeployThemeTask extends DefaultTask {
     protected String getTargetAppName() {
         String targetAppName = appName
         if (targetAppName == null) {
-            def deployTask = project.tasks.findByName('deploy')
+            def deployTask = project.tasks.findByName(CubaPlugin.DEPLOY_TASK_NAME)
             if (deployTask instanceof CubaDeployment) {
                 targetAppName = deployTask.appName
             }

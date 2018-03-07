@@ -21,6 +21,8 @@ import org.gradle.api.tasks.TaskAction
 
 class CubaStartTomcat extends DefaultTask {
 
+    public static final String CUBA_TOMCAT_START_SCRIPT_ENV = 'CUBA_TOMCAT_START_SCRIPT'
+
     def tomcatRootDir = project.cuba.tomcat.dir
 
     CubaStartTomcat() {
@@ -37,7 +39,7 @@ class CubaStartTomcat extends DefaultTask {
         def binDir = "${tomcatRootDir}/bin"
         project.logger.info "[CubaStartTomcat] starting $tomcatRootDir"
 
-        def tomcatStartScript = System.getenv("CUBA_TOMCAT_START_SCRIPT")
+        def tomcatStartScript = System.getenv(CUBA_TOMCAT_START_SCRIPT_ENV)
         if (StringUtils.isBlank(tomcatStartScript)) {
             ant.exec(osfamily: 'windows', dir: "${binDir}", executable: 'cmd.exe', spawn: true) {
                 env(key: 'NOPAUSE', value: true)

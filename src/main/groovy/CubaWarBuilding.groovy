@@ -24,6 +24,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
+import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 
@@ -168,8 +169,7 @@ class CubaWarBuilding extends DefaultTask {
                 for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
                     if (entry.getKey().endsWith("-web-toolkit")) {
                         webToolkitProject = entry.getValue()
-                        def assembleWebToolkit = webToolkitProject.getTasksByName("assemble", false).iterator().next()
-                        this.dependsOn(assembleWebToolkit)
+                        this.dependsOn(webToolkitProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME))
                         break
                     }
                 }
@@ -179,31 +179,31 @@ class CubaWarBuilding extends DefaultTask {
 
     void setCoreProject(Project coreProject) {
         this.coreProject = coreProject
-        def assembleCore = coreProject.getTasksByName('assemble', false).iterator().next()
+        def assembleCore = coreProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleCore)
     }
 
     void setWebProject(Project webProject) {
         this.webProject = webProject
-        def assembleWeb = webProject.getTasksByName('assemble', false).iterator().next()
+        def assembleWeb = webProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleWeb)
     }
 
     void setPortalProject(Project portalProject) {
         this.portalProject = portalProject
-        def assembleWeb = portalProject.getTasksByName('assemble', false).iterator().next()
+        def assembleWeb = portalProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleWeb)
     }
 
     void setPolymerProject(Project polymerProject) {
         this.polymerProject = polymerProject
-        def assemblePolymer = polymerProject.getTasksByName('assemble', false).iterator().next()
+        def assemblePolymer = polymerProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assemblePolymer)
     }
 
     void setWebToolkitProject(Project webToolkitProject) {
         this.webToolkitProject = webToolkitProject
-        def assembleWebToolkit = webToolkitProject.getTasksByName('assemble', false).iterator().next()
+        def assembleWebToolkit = webToolkitProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleWebToolkit)
     }
 
@@ -418,22 +418,12 @@ class CubaWarBuilding extends DefaultTask {
 
         project.delete(distrDir)
 
-        Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
-        if (coreDeployTasks.isEmpty())
-            throw new GradleException("'core' module has no 'deploy' task")
-        def deployCore = coreDeployTasks.first()
-
-        Set webDeployTasks = webProject.getTasksByName('deploy', false)
-        if (webDeployTasks.isEmpty())
-            throw new GradleException("'web' module has no 'deploy' task")
-        def deployWeb = webDeployTasks.first()
+        def deployCore = coreProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+        def deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
 
         def deployPortal = null
         if (portalProject) {
-            Set portalDeployTasks = webProject.getTasksByName('deploy', false)
-            if (portalDeployTasks.isEmpty())
-                throw new GradleException("'portal' module has no 'deploy' task")
-            deployPortal = portalDeployTasks.first()
+            deployPortal = portalProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
         }
 
         if (!coreJarNames) {

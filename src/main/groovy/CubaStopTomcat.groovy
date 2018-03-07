@@ -18,8 +18,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaStopTomcat extends DefaultTask {
 
     def tomcatRootDir = project.cuba.tomcat.dir

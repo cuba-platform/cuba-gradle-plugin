@@ -27,6 +27,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
+import org.gradle.language.base.plugins.LifecycleBasePlugin
 
 class CubaUberJarBuilding extends DefaultTask {
 
@@ -179,31 +180,31 @@ class CubaUberJarBuilding extends DefaultTask {
 
     void setCoreProject(Project coreProject) {
         this.coreProject = coreProject
-        def assembleCore = coreProject.getTasksByName('assemble', false).iterator().next()
+        def assembleCore = coreProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleCore)
     }
 
     void setWebProject(Project webProject) {
         this.webProject = webProject
-        def assembleWeb = webProject.getTasksByName('assemble', false).iterator().next()
+        def assembleWeb = webProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleWeb)
     }
 
     void setPortalProject(Project portalProject) {
         this.portalProject = portalProject
-        def assemblePortal = portalProject.getTasksByName('assemble', false).iterator().next()
+        def assemblePortal = portalProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assemblePortal)
     }
 
     void setPolymerProject(Project polymerProject) {
         this.polymerProject = polymerProject
-        def assemblePolymer = polymerProject.getTasksByName('assemble', false).iterator().next()
+        def assemblePolymer = polymerProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assemblePolymer)
     }
 
     void setWebToolkitProject(Project webToolkitProject) {
         this.webToolkitProject = webToolkitProject
-        def assembleWebToolkit = webToolkitProject.getTasksByName('assemble', false).iterator().next()
+        def assembleWebToolkit = webToolkitProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assembleWebToolkit)
     }
 
@@ -372,25 +373,12 @@ class CubaUberJarBuilding extends DefaultTask {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
         }
 
-        Set coreDeployTasks = coreProject.getTasksByName('deploy', false)
-        if (coreDeployTasks.isEmpty()) {
-            throw new GradleException("'core' module has no 'deploy' task")
-        }
-        def deployCore = coreDeployTasks.first()
-
-        Set webDeployTasks = webProject.getTasksByName('deploy', false)
-        if (webDeployTasks.isEmpty()) {
-            throw new GradleException("'web' module has no 'deploy' task")
-        }
-        def deployWeb = webDeployTasks.first()
+        def deployCore = coreProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+        def deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
 
         def deployPortal = null
         if (portalProject) {
-            Set portalDeployTasks = portalProject.getTasksByName('deploy', false)
-            if (portalDeployTasks.isEmpty()) {
-                throw new GradleException("'portal' module has no 'deploy' task")
-            }
-            deployPortal = portalDeployTasks.first()
+            deployPortal = portalProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
         }
 
         coreJarNames = deployCore.getAllJarNames()

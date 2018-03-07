@@ -32,7 +32,10 @@ class CubaWebStartCreation extends DefaultTask {
     def signJarsPassword = 'HaulmontSignJars'
     def signJarsKeystore = "${project.projectDir}/webstart/sign-jars-keystore.jks"
     def applicationSignJars = []
+
+    @Deprecated
     def jarSignerThreadCount = 4
+
     def useSignerCache = true
 
     def threadLocalAnt = new ThreadLocal<AntBuilder>()

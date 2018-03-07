@@ -17,6 +17,7 @@
 
 import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFiles
 import org.gradle.api.tasks.TaskAction
@@ -39,9 +40,10 @@ class CubaReleaseTimeStamp extends DefaultTask {
     CubaReleaseTimeStamp() {
         setDescription('Generates release timestamp and release number files with optional VCS version')
         setGroup('Util')
+
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileJava', false))
-        project.getTasksByName('classes', false).each { it.dependsOn(this) }
+        dependsOn(project.tasks.getByPath(JavaPlugin.COMPILE_JAVA_TASK_NAME))
+        project.tasks.getByPath(JavaPlugin.CLASSES_TASK_NAME).dependsOn(this)
     }
 
     @InputDirectory

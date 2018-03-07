@@ -108,7 +108,8 @@ class CubaJelasticDeploy extends DefaultTask {
             for (Map.Entry<String, Project> entry : project.getChildProjects().entrySet()) {
                 if (entry.getKey().endsWith("-web")) {
                     def webProject = entry.getValue()
-                    CubaDeployment deployWeb = ++webProject.getTasksByName('deploy', false).iterator() as CubaDeployment
+
+                    CubaDeployment deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME) as CubaDeployment
                     appName = deployWeb.appName
                     project.logger.info("[CubaJelasticDeploy] 'appName' is set to '${appName}'")
                     break

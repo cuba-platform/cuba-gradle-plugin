@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.api.tasks.SourceSet
+
 /**
  * Enhances entity classes specified in persistence xml
  */
@@ -28,11 +31,12 @@ class CubaTestEnhancing extends CubaEnhancingTask {
         sourceSet = project.sourceSets.test
 
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileTestJava', false))
-        project.getTasksByName('testClasses', false).each { it.dependsOn(this) }
+        dependsOn(project.tasks.getByPath(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME))
+        project.tasks.getByPath(JavaPlugin.TEST_CLASSES_TASK_NAME).dependsOn(this)
 
         // move enhanced classes to the beginning of test classpath
-        project.sourceSets.test.runtimeClasspath =
-                project.files('build/enhanced-classes/test').plus(project.sourceSets.test.runtimeClasspath)
+        SourceSet testSourceSet = project.sourceSets.test
+        testSourceSet.runtimeClasspath =
+                project.files('build/enhanced-classes/test') + testSourceSet.runtimeClasspath
     }
 }

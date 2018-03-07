@@ -22,8 +22,6 @@ import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaDbScriptsAssembling extends DefaultTask {
     String moduleAlias
 

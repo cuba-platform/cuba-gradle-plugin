@@ -15,6 +15,8 @@
  *
  */
 
+import org.gradle.api.plugins.JavaPlugin
+
 /**
  * Enhances entity classes specified in persistence xml
  */
@@ -28,8 +30,7 @@ class CubaEnhancing extends CubaEnhancingTask {
         classesRoot = 'main'
         sourceSet = project.sourceSets.main
 
-        // set default task dependsOn
-        setDependsOn(project.getTasksByName('compileJava', false))
-        project.getTasksByName('classes', false).each { it.dependsOn(this) }
+        dependsOn(project.tasks.getByPath(JavaPlugin.COMPILE_JAVA_TASK_NAME))
+        project.tasks.getByPath(JavaPlugin.CLASSES_TASK_NAME).dependsOn(this)
     }
 }

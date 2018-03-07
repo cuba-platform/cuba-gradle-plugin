@@ -18,8 +18,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-/**
- */
 class CubaWebStartDeployment extends DefaultTask {
 
     def basePath = "${project.applicationName}-webstart"

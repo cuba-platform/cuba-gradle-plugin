@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-
 import org.gradle.api.DefaultTask
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
+import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 
 /**
@@ -46,6 +47,9 @@ class CubaBuildInfo extends DefaultTask {
     CubaBuildInfo() {
         setDescription('Generates build info files')
         setGroup('Util')
+
+        dependsOn(project.tasks.getByPath(JavaPlugin.PROCESS_RESOURCES_TASK_NAME))
+        project.tasks.getByPath(JavaPlugin.CLASSES_TASK_NAME).dependsOn(this)
     }
 
     @InputDirectory
@@ -64,7 +68,7 @@ class CubaBuildInfo extends DefaultTask {
         String buildDate = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(releaseDate)
 
         File buildInfoFile = new File(buildInfoPath)
-        buildInfoFile.withWriter('UTF-8') { writer ->
+        buildInfoFile.withWriter(StandardCharsets.UTF_8.name()) { writer ->
             writer.write("appName = $appName\n")
             writer.write("buildDate = $buildDate\n")
             writer.write("version = $version\n")

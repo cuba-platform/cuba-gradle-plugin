@@ -23,6 +23,7 @@ import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
 import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.*
 
 class CubaWidgetSetBuilding extends DefaultTask {
@@ -64,7 +65,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
         setDescription('Builds GWT widgetset')
         setGroup('Web resources')
         // set default task dependsOn
-        setDependsOn(project.getTasksByName('classes', false))
+        dependsOn(project.tasks.getByPath(JavaPlugin.CLASSES_TASK_NAME))
     }
 
     @TaskAction

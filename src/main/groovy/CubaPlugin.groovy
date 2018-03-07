@@ -15,7 +15,6 @@
  *
  */
 
-
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
 import com.haulmont.gradle.polymer.CubaPolymerToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
@@ -26,16 +25,18 @@ import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.language.jvm.tasks.ProcessResources
+import org.gradle.plugins.ide.eclipse.EclipsePlugin
+import org.gradle.plugins.ide.idea.IdeaPlugin
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -51,6 +52,19 @@ class CubaPlugin implements Plugin<Project> {
 
     public static final String APP_COMPONENT_ID_MANIFEST_ATTRIBUTE = 'App-Component-Id'
     public static final String APP_COMPONENT_VERSION_MANIFEST_ATTRIBUTE = 'App-Component-Version'
+
+    public static final String ASSEMBLE_DB_SCRIPTS_TASK_NAME = 'assembleDbScripts'
+    public static final String DEPLOY_TASK_NAME = 'deploy'
+    public static final String TOMCAT_TASK_NAME = 'tomcat'
+    public static final String SETUP_TOMCAT_TASK_NAME = 'setupTomcat'
+    public static final String START_TOMCAT_TASK_NAME = 'start'
+    public static final String DROP_TOMCAT_TASK_NAME = 'dropTomcat'
+    public static final String STOP_TOMCAT_TASK_NAME = 'stop'
+    public static final String DB_SCRIPTS_ARCHIVE_TASK_NAME = 'dbScriptsArchive'
+    public static final String BUILD_INFO_TASK_NAME = 'buildInfo'
+    public static final String ZIP_PROJECT_TASK_NAME = 'zipProject'
+
+    public static final String BOM_CONFIGURATION_NAME = 'bom'
 
     @Override
     void apply(Project project) {
@@ -156,12 +170,12 @@ class CubaPlugin implements Plugin<Project> {
 
         enableBOMVersionResolver(project, cubaExtension.bom)
 
-        project.task([type: CubaSetupTomcat], 'setupTomcat')
-        project.task([type: CubaStartTomcat], 'start')
-        project.task([type: Exec], 'tomcat')
-        project.task([type: CubaStopTomcat], 'stop')
-        project.task([type: CubaDropTomcat], 'dropTomcat')
-        project.task([type: CubaZipProject], 'zipProject')
+        project.task([type: CubaSetupTomcat], SETUP_TOMCAT_TASK_NAME)
+        project.task([type: CubaStartTomcat], START_TOMCAT_TASK_NAME)
+        project.task([type: Exec], TOMCAT_TASK_NAME)
+        project.task([type: CubaStopTomcat], STOP_TOMCAT_TASK_NAME)
+        project.task([type: CubaDropTomcat], DROP_TOMCAT_TASK_NAME)
+        project.task([type: CubaZipProject], ZIP_PROJECT_TASK_NAME)
 
         importBomFromDependencies(project, cubaExtension)
     }
@@ -173,10 +187,7 @@ class CubaPlugin implements Plugin<Project> {
     private void doAfterEvaluateForModuleProject(Project project) {
         addDependenciesFromAppComponents(project)
 
-        if (project.name.endsWith('-global')) {
-            project.buildInfo.setDependsOn(project.getTasksByName('processResources', false))
-            project.getTasksByName('classes', false).each { it.dependsOn(project.buildInfo) }
-        }
+        defineExecutionOrderForSubProject(project)
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
@@ -189,13 +200,13 @@ class CubaPlugin implements Plugin<Project> {
             tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: project.cuba.tomcat.version, ext: 'zip')
         }
 
-        CubaSetupTomcat setupTomcat = project.getTasksByName('setupTomcat', false).iterator().next()
+        CubaSetupTomcat setupTomcat = project.tasks.getByPath(SETUP_TOMCAT_TASK_NAME) as CubaSetupTomcat
         setupTomcat.tomcatRootDir = project.cuba.tomcat.dir
 
-        CubaStartTomcat start = project.getTasksByName('start', false).iterator().next()
+        CubaStartTomcat start = project.tasks.getByPath(START_TOMCAT_TASK_NAME) as CubaStartTomcat
         start.tomcatRootDir = project.cuba.tomcat.dir
 
-        Exec tomcat = project.getTasksByName('tomcat', false).iterator().next()
+        Exec tomcat = project.tasks.getByPath(TOMCAT_TASK_NAME) as Exec
         if (System.getProperty('os.name').contains('Windows')) {
             tomcat.workingDir "${project.cuba.tomcat.dir}/bin"
             tomcat.commandLine 'cmd'
@@ -206,22 +217,20 @@ class CubaPlugin implements Plugin<Project> {
             tomcat.args 'jpda', 'run'
         }
 
-        CubaStopTomcat stop = project.getTasksByName('stop', false).iterator().next()
+        CubaStopTomcat stop = project.tasks.getByPath(STOP_TOMCAT_TASK_NAME) as CubaStopTomcat
         stop.tomcatRootDir = project.cuba.tomcat.dir
 
-        CubaDropTomcat dropTomcat = project.getTasksByName('dropTomcat', false).iterator().next()
+        CubaDropTomcat dropTomcat = project.tasks.getByPath(DROP_TOMCAT_TASK_NAME) as CubaDropTomcat
         dropTomcat.tomcatRootDir = project.cuba.tomcat.dir
         dropTomcat.listeningPort = '8787'
 
-        if (project.hasProperty('idea')) {
+        if (project.getPlugins().hasPlugin(IdeaPlugin.class)) {
             applyIdeaConfigRootProject(project)
         }
 
-        if (project.hasProperty('eclipse')) {
+        if (project.getPlugins().hasPlugin(EclipsePlugin.class)) {
             applyEclipseConfigRootProject(project)
         }
-
-        defineTasksExecutionOrder(project)
     }
 
     private void applyEclipseConfigRootProject(Project project) {
@@ -252,7 +261,7 @@ class CubaPlugin implements Plugin<Project> {
                 classpath.children().add(0, entry)
             }
         }
-        def cleanTask = project.getTasksByName("clean", false).iterator().next()
+        def cleanTask = project.tasks.getByPath(BasePlugin.CLEAN_TASK_NAME)
         cleanTask.delete = ['build/libs', 'build/tmp']
     }
 
@@ -391,20 +400,21 @@ class CubaPlugin implements Plugin<Project> {
      * For example if we run 'deploy' and 'start' tasks in parallel mode we want the 'start' task to
      * be executed only after 'deploy' is completed
      */
-    private void defineTasksExecutionOrder(Project project) {
-        def deploymentTasks = findAllTasksByType(project, CubaDeployment.class)
-        def dbCreationTasks = findAllTasksByType(project, CubaDbCreation.class)
-        def dbUpdateTasks = findAllTasksByType(project, CubaDbUpdate.class)
-        def startTomcatTasks = project.getTasks().findAll { it instanceof CubaStartTomcat }
-        def setupTomcatTasks = project.getTasks().findAll { it instanceof CubaSetupTomcat }
-        def dropTomcatTasks = project.getTasks().findAll { it instanceof CubaDropTomcat }
-        def hsqlStartTasks = project.getTasks().findAll { it instanceof CubaHsqlStart }
-        def deployNameTasks = project.getTasksByName("deploy", true)
-        def tomcatNameTasks = project.getTasksByName("tomcat", true)
+    protected void defineExecutionOrderForSubProject(Project subProject) {
+        def deploymentTasks = subProject.tasks.withType(CubaDeployment.class)
+        def deployNameTasks = subProject.tasks.matching({ it.name == DEPLOY_TASK_NAME})
+        def dbCreationTasks = subProject.tasks.withType(CubaDbCreation.class)
+        def dbUpdateTasks = subProject.tasks.withType(CubaDbUpdate.class)
+        def hsqlStartTasks = subProject.tasks.withType(CubaHsqlStart.class)
 
-        startTomcatTasks.addAll(tomcatNameTasks)
+        def rootProject = subProject.getRootProject()
 
-        startTomcatTasks.each {
+        def startTomcatTasks = rootProject.tasks.withType(CubaStartTomcat.class)
+        def setupTomcatTasks = rootProject.tasks.withType(CubaSetupTomcat.class)
+        def dropTomcatTasks = rootProject.tasks.withType(CubaDropTomcat.class)
+        def tomcatNameTask = rootProject.tasks.getByPath(TOMCAT_TASK_NAME)
+
+        startTomcatTasks.all {
             it.mustRunAfter deploymentTasks
             it.mustRunAfter dbCreationTasks
             it.mustRunAfter dbUpdateTasks
@@ -412,25 +422,33 @@ class CubaPlugin implements Plugin<Project> {
             it.mustRunAfter deployNameTasks
         }
 
-        deploymentTasks.each {
+        tomcatNameTask.with {
+            it.mustRunAfter deploymentTasks
+            it.mustRunAfter dbCreationTasks
+            it.mustRunAfter dbUpdateTasks
+            it.mustRunAfter setupTomcatTasks
+            it.mustRunAfter deployNameTasks
+        }
+
+        deploymentTasks.all {
             it.mustRunAfter setupTomcatTasks
         }
 
-        setupTomcatTasks.each {
+        setupTomcatTasks.all {
             it.mustRunAfter dropTomcatTasks
         }
 
-        dbCreationTasks.each {
+        dbCreationTasks.all {
             it.mustRunAfter hsqlStartTasks
         }
 
-        dbUpdateTasks.each {
+        dbUpdateTasks.all {
             it.mustRunAfter hsqlStartTasks
         }
     }
 
     private void importBomFromDependencies(Project project, CubaPluginExtension cubaExtension) {
-        def bomComponentConf = project.rootProject.configurations.findByName('bom')
+        def bomComponentConf = project.rootProject.configurations.findByName(BOM_CONFIGURATION_NAME)
         if (bomComponentConf == null) {
             return
         }
@@ -472,17 +490,6 @@ class CubaPlugin implements Plugin<Project> {
                 closeQuietly(jarFile)
             }
         })
-    }
-
-    /**
-     * Finds tasks by type in the given project and in its sub projects
-     */
-    private Collection<Task> findAllTasksByType(Project project, Class type) {
-        def result = []
-        project.getAllTasks(true).each {subProject, tasks ->
-            result.addAll(tasks.findAll {type.isAssignableFrom(it.class)})
-        }
-        return result
     }
 
     private Node nestedProjectsFilter() {
@@ -529,11 +536,11 @@ class CubaPlugin implements Plugin<Project> {
 
         project.tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:-options"
-            options.encoding = 'UTF-8'
+            options.encoding = StandardCharsets.UTF_8.name()
         }
 
         project.tasks.withType(Javadoc) {
-            options.encoding = 'UTF-8'
+            options.encoding = StandardCharsets.UTF_8.name()
         }
 
         project.jar {
@@ -544,16 +551,17 @@ class CubaPlugin implements Plugin<Project> {
         setJavaeeCdiNoScan(project)
 
         if (project.name.endsWith('-global')) {
-            project.task([type: CubaBuildInfo], 'buildInfo')
+            project.task([type: CubaBuildInfo], BUILD_INFO_TASK_NAME)
         }
 
         if (project.name.endsWith('-core')) {
             File dbDir = new File(project.projectDir, "db")
-            project.task([type: CubaDbScriptsAssembling], 'assembleDbScripts')
-            project.assemble.dependsOn(project.assembleDbScripts)
+            def assembleDbScriptsTask = project.task([type: CubaDbScriptsAssembling], ASSEMBLE_DB_SCRIPTS_TASK_NAME)
+            project.assemble.dependsOn(assembleDbScriptsTask)
 
             if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
-                project.task([type: Zip, dependsOn: 'assembleDbScripts'], 'dbScriptsArchive') {
+                def dbScriptsArchiveTask = project.task(
+                        [type: Zip, dependsOn: ASSEMBLE_DB_SCRIPTS_TASK_NAME], DB_SCRIPTS_ARCHIVE_TASK_NAME) {
                     from "${project.buildDir}/db"
                     include "*-$project.rootProject.name/**/*"
                     exclude '**/*.bat'
@@ -562,7 +570,7 @@ class CubaPlugin implements Plugin<Project> {
                 }
 
                 project.artifacts {
-                    archives project.dbScriptsArchive
+                    archives dbScriptsArchiveTask
                 }
             }
         }
