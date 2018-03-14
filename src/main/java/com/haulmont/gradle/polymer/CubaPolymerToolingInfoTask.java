@@ -17,7 +17,7 @@
 package com.haulmont.gradle.polymer;
 
 import com.moowork.gradle.node.NodeExtension;
-import com.moowork.gradle.node.npm.NpmInstallTask;
+import com.moowork.gradle.node.npm.NpmSetupTask;
 import groovy.json.JsonBuilder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
@@ -40,7 +40,7 @@ public class CubaPolymerToolingInfoTask extends DefaultTask {
     public CubaPolymerToolingInfoTask() {
         setDescription("Provides info about Polymer tooling used in project");
         setGroup("Node");
-        setDependsOn(this.getProject().getTasks().withType(NpmInstallTask.class));
+        setDependsOn(this.getProject().getTasks().withType(NpmSetupTask.class));
     }
 
     @TaskAction
