@@ -134,9 +134,16 @@ class CubaDeployment extends DefaultTask {
 
         if (project.configurations.getAsMap().dbscripts) {
             project.logger.info("[CubaDeployment] copying dbscripts from ${project.buildDir}/db to ${tomcatRootDir}/webapps/$appName/WEB-INF/db")
+
+            // remove scripts that do not exist in project
+            def dbScriptsDir = project.file("${tomcatRootDir}/webapps/$appName/WEB-INF/db")
+            if (dbScriptsDir.exists()) {
+                dbScriptsDir.deleteDir()
+            }
+
             project.copy {
                 from "${project.buildDir}/db"
-                into "${tomcatRootDir}/webapps/$appName/WEB-INF/db"
+                into dbScriptsDir
                 excludes = dbScriptsExcludes
             }
         }
