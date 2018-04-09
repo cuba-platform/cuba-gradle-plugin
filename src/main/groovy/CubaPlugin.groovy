@@ -16,7 +16,7 @@
  */
 
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
-import com.haulmont.gradle.polymer.CubaPolymerToolingInfoTask
+import com.haulmont.gradle.polymer.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.utils.BOMVersions
@@ -707,7 +707,7 @@ class CubaPlugin implements Plugin<Project> {
         nodeExtension.version = '8.9.4'
         nodeExtension.download = true
 
-        project.task([type: CubaPolymerToolingInfoTask], CubaPolymerToolingInfoTask.NAME)
+        project.task([type: CubaNodeToolingInfoTask], CubaNodeToolingInfoTask.NAME)
 
         project.getTasks().withType(JavaCompile) {
             enabled = false

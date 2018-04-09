@@ -18,6 +18,7 @@ package com.haulmont.gradle.polymer;
 
 import com.moowork.gradle.node.NodeExtension;
 import com.moowork.gradle.node.npm.NpmSetupTask;
+import com.moowork.gradle.node.variant.Variant;
 import groovy.json.JsonBuilder;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
@@ -30,15 +31,15 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-public class CubaPolymerToolingInfoTask extends DefaultTask {
+public class CubaNodeToolingInfoTask extends DefaultTask {
 
-    public static final String NAME = "polymerToolingInfo";
+    public static final String NAME = "nodeToolingInfo";
 
     private static final String BUILD_DIR  = "tooling";
     private static final String INFO_FILE_NAME = "info.json";
 
-    public CubaPolymerToolingInfoTask() {
-        setDescription("Provides info about Polymer tooling used in project");
+    public CubaNodeToolingInfoTask() {
+        setDescription("Provides info about node/npm tooling used in project");
         setGroup("Node");
         setDependsOn(this.getProject().getTasks().withType(NpmSetupTask.class));
     }
@@ -46,8 +47,10 @@ public class CubaPolymerToolingInfoTask extends DefaultTask {
     @TaskAction
     public void generateInfo() {
         NodeExtension ext = NodeExtension.get( this.getProject() );
-        String nodeExec = ext.getVariant().getNodeExec();
-        Info info = new Info(nodeExec);
+        Variant variant = ext.getVariant();
+        String nodeExec = variant.getNodeExec();
+        String npmExec = variant.getNpmExec();
+        Info info = new Info(nodeExec, npmExec);
         byte[] jsonBytes = new JsonBuilder(info).toPrettyString().getBytes(StandardCharsets.UTF_8);
         try {
             Files.write(new File(getOutputDirectory(), INFO_FILE_NAME).toPath(), jsonBytes);
@@ -63,14 +66,18 @@ public class CubaPolymerToolingInfoTask extends DefaultTask {
 
     @InputFile
     private File getInputFile() {
-        return new File(getProject().getProjectDir(), "package.json");
+        // build.gradle since node/npm versions specified there
+        return new File(getProject().getRootProject().getProjectDir(), "build.gradle");
     }
 
     private class Info {
         private String nodeExec;
+        private String npmExec;
 
-        public Info(String nodeExec) {
+
+        public Info(String nodeExec, String npmExec) {
             this.nodeExec = nodeExec;
+            this.npmExec = npmExec;
         }
 
         public String getNodeExec() {
@@ -79,6 +86,14 @@ public class CubaPolymerToolingInfoTask extends DefaultTask {
 
         public void setNodeExec(String nodeExec) {
             this.nodeExec = nodeExec;
+        }
+
+        public String getNpmExec() {
+            return npmExec;
+        }
+
+        public void setNpmExec(String npmExec) {
+            this.npmExec = npmExec;
         }
     }
 }
