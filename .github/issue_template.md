@@ -9,7 +9,11 @@ When creating an issue, provide as much as possible of the following information
 
 - Platform version: X.Y.Z <!-- e.g. 6.8.7 -->
 - Gradle version: X.Y <!-- e.g. 4.3 -->
-<!-- Optional info, if relevant -->
+<!-- Optional. Remove irrelevant lines. -->
 - Operating system: <!-- Windows, Linux, macOS -->
 
 ### Description of the bug or enhancement
+
+- Minimal reproducible example
+- Expected behavior
+- Actual behavior
