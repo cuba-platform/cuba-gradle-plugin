@@ -63,4 +63,12 @@ public abstract class AbstractCubaDbCreation extends CubaDbTask {
     }
 
     protected abstract void dropAndCreateDatabase();
+
+    public void setAuxiliaryScript(File auxiliaryScript) {
+        this.auxiliaryScript = auxiliaryScript;
+    }
+
+    public File getAuxiliaryScript() {
+        return auxiliaryScript;
+    }
 }
