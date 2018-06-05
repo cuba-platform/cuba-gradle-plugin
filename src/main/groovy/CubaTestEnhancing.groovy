@@ -15,28 +15,17 @@
  */
 
 import org.gradle.api.plugins.JavaPlugin
-import org.gradle.api.tasks.SourceSet
 
 /**
- * Enhances entity classes specified in persistence xml
+ * Enhances entity classes specified in persistence xml.
+ *
+ * @deprecated enhancing is performed by {@link CubaEnhancingAction} now
  */
+@Deprecated
 class CubaTestEnhancing extends CubaEnhancingTask {
 
     CubaTestEnhancing() {
-        setDescription('Enhances persistent test classes')
-        setGroup('Compile')
-
-        srcRoot = 'test'
-        classesRoot = 'test'
-        sourceSet = project.sourceSets.test
-
-        // set default task dependsOn
         dependsOn(project.tasks.getByPath(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME))
         project.tasks.getByPath(JavaPlugin.TEST_CLASSES_TASK_NAME).dependsOn(this)
-
-        // move enhanced classes to the beginning of test classpath
-        SourceSet testSourceSet = project.sourceSets.test
-        testSourceSet.runtimeClasspath =
-                project.files('build/enhanced-classes/test') + testSourceSet.runtimeClasspath
     }
 }
