@@ -789,6 +789,9 @@ class CubaWarBuilding extends DefaultTask {
             theProject.copy {
                 from new File(logbackConfigurationFile)
                 into "${warDir(theProject)}/WEB-INF/classes"
+                rename { String fileName ->
+                    "logback.xml"
+                }
             }
         } else if (useDefaultLogbackConfiguration) {
             InputStream inputStream = getClass().getClassLoader().getResourceAsStream("logback.xml")
