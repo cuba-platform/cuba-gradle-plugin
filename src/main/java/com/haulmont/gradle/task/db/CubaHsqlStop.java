@@ -20,6 +20,11 @@ import org.apache.tools.ant.taskdefs.SQLExec;
 import org.gradle.api.tasks.TaskAction;
 
 public class CubaHsqlStop extends CubaHsqlTask {
+
+    public CubaHsqlStop() {
+        setGroup("Database");
+    }
+
     @TaskAction
     public void stopDb() {
         init();

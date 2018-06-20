@@ -41,6 +41,10 @@ public class CubaHsqlStart extends CubaHsqlTask {
     protected File dbDataDir;
     protected boolean showUi = true;
 
+    public CubaHsqlStart() {
+        setGroup("Database");
+    }
+
     @Override
     protected void init() {
         super.init();
