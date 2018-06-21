@@ -104,7 +104,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
 
         project.javaexec {
             main = 'com.google.gwt.dev.Compiler'
-            classpath = new SimpleFileCollection(compilerClassPath)
+            classpath = project.files(compilerClassPath)
             args = gwtCompilerArgs
             jvmArgs = gwtCompilerJvmArgs
         }
@@ -158,7 +158,7 @@ class CubaWidgetSetBuilding extends DefaultTask {
             }
         }
 
-        return new SimpleFileCollection(files)
+        return project.files(files)
     }
 
     void jvmArgs(String... jvmArgs) {

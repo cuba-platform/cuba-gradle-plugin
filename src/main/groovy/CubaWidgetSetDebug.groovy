@@ -21,7 +21,6 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.file.FileCollection
-import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.logging.LogLevel
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.*
@@ -72,7 +71,7 @@ class CubaWidgetSetDebug extends DefaultTask {
 
         project.javaexec {
             main = 'com.google.gwt.dev.codeserver.CodeServer'
-            classpath = new SimpleFileCollection(compilerClassPath)
+            classpath = project.files(compilerClassPath)
             args = gwtCompilerArgs
             jvmArgs = gwtCompilerJvmArgs
         }
@@ -122,7 +121,7 @@ class CubaWidgetSetDebug extends DefaultTask {
             }
         }
 
-        return new SimpleFileCollection(files)
+        return project.files(files)
     }
 
     void jvmArgs(String... jvmArgs) {
