@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 
 public class BeanValidationMessageTransformer {
 
-    public static final Pattern messagePattern = Pattern.compile("(\\{msg://)([\\w.]*})");
+    public static final Pattern messagePattern = Pattern.compile("(\\{msg://)([\\p{L}\\w.]*})");
 
     public String transformAnnotationMessage(String messageValue, String packageName) {
         if (messagePattern.matcher(messageValue).matches()) {

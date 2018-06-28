@@ -23,6 +23,7 @@ class BeanValidationMessageTransformerTest extends GroovyTestCase {
 
     void testEnhanceRegexMatcherValid() {
         def testData = [
+                "{msg://Genérico.not_null}" : "{msg://" + packageName + "/Genérico.not_null}",
                 "{msg://User.name.empty}" : "{msg://" + packageName + "/User.name.empty}",
                 "{msg://.User.name.empty}": "{msg://" + packageName + "/.User.name.empty}",
                 "{msg://User.name.empty.}": "{msg://" + packageName + "/User.name.empty.}",
