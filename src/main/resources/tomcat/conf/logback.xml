@@ -95,6 +95,14 @@
 
     <logger name="org.xlsx4j.jaxb.Context" level="ERROR"/>
 
+    <logger name="org.docx4j.utils.XSLTUtils" level="ERROR"/>
+
+    <logger name="org.docx4j.jaxb.JaxbValidationEventHandler" level="ERROR"/>
+
+    <logger name="org.docx4j.TraversalUtil" level="ERROR"/>
+
+    <logger name="org.docx4j.fonts" level="ERROR"/>
+
     <!-- Begin Perf4J  -->
 
     <appender name="PerfStatFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
