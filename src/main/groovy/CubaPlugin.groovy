@@ -528,7 +528,6 @@ class CubaPlugin implements Plugin<Project> {
         project.targetCompatibility = '1.8'
 
         project.configurations {
-            provided
             themes
             jdbc
         }
@@ -537,7 +536,7 @@ class CubaPlugin implements Plugin<Project> {
             main {
                 java {
                     srcDir 'src'
-                    compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
+                    compileClasspath = compileClasspath + project.configurations.jdbc
                 }
                 resources { srcDir 'src' }
                 output.dir("$project.buildDir/classes/java/main")
@@ -545,7 +544,7 @@ class CubaPlugin implements Plugin<Project> {
             test {
                 java {
                     srcDir 'test'
-                    compileClasspath = compileClasspath + project.configurations.provided + project.configurations.jdbc
+                    compileClasspath = compileClasspath + project.configurations.jdbc
                 }
                 resources { srcDir 'test' }
                 output.dir("$project.buildDir/classes/java/test")
@@ -608,7 +607,6 @@ class CubaPlugin implements Plugin<Project> {
 
             def providedConfs = new ArrayList<Configuration>()
             providedConfs.add(project.configurations.compile)
-            providedConfs.add(project.configurations.provided)
             providedConfs.add(project.configurations.jdbc)
 
             if (project.configurations.findByName('themes')) {
@@ -622,10 +620,6 @@ class CubaPlugin implements Plugin<Project> {
 
         if (project.hasProperty('eclipse')) {
             project.logger.info "[CubaPlugin] configuring Eclipse module $project.name"
-
-            project.eclipse.classpath {
-                plusConfigurations += [project.configurations.provided]
-            }
 
             project.eclipse.project.file.withXml { provider ->
                 def projectDescription = provider.asNode()
@@ -899,14 +893,6 @@ class CubaPlugin implements Plugin<Project> {
                 }
                 project.dependencies {
                     themes(dependency)
-                }
-                break
-            case 'provided':
-                project.configurations {
-                    provided
-                }
-                project.dependencies {
-                    provided(dependency)
                 }
                 break
             default:
