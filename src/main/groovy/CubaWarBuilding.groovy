@@ -265,6 +265,10 @@ class CubaWarBuilding extends DefaultTask {
 
     @TaskAction
     def build() {
+        if (!webProject && singleWar) {
+            throw new GradleException("Web module should be exist for single WAR building.")
+        }
+
         init()
 
         def outputDirectory = getOutputDirectory()
@@ -277,7 +281,7 @@ class CubaWarBuilding extends DefaultTask {
 
         List<String> copied = copyLibs(coreProject)
         copied.addAll(copyLibs(webProject))
-        if (portalProject) copyLibs(portalProject)
+        copyLibs(portalProject)
 
         if (singleWar) {
             def resolver = new DependencyResolver(new File(coreTmpWarDir), logger)
@@ -285,20 +289,20 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         def coreProperties = collectProperties(coreProject)
-        def webProperties = collectProperties(webProject)
-        def portalProperties = portalProject ? collectProperties(portalProject) : []
+        def webProperties = webProject ? collectProperties(webProject) : Collections.emptyMap()
+        def portalProperties = portalProject ? collectProperties(portalProject) : Collections.emptyMap()
 
         copyDbScripts(coreProject)
 
         copyWebContent(coreProject)
         copyWebContent(webProject)
-        if (portalProject) copyWebContent(portalProject)
+        copyWebContent(portalProject)
 
         if (includeContextXml) {
             copyWebContext(coreProject)
             if (!singleWar) {
                 copyWebContext(webProject)
-                if (portalProject) copyWebContext(portalProject)
+                copyWebContext(portalProject)
             }
         }
 
@@ -321,39 +325,43 @@ class CubaWarBuilding extends DefaultTask {
         processDoAfter()
 
         touchWebXml(coreProject)
-        touchWebXml(webProject)
-        if (portalProject) {
-            touchWebXml(portalProject)
-        }
+        if (webProject) touchWebXml(webProject)
+        if (portalProject) touchWebXml(portalProject)
 
         if (singleWar) {
             def summaryProperties = coreProperties + webProperties
             writeLocalAppProperties(webProject, summaryProperties)
             writeDependencies(coreProject, 'core', coreJarNames)
             writeDependencies(webProject, 'web', webJarNames)
-            if (polymerProject) {
+            if (webProject && polymerProject) {
                 copyFrontLibs()
                 writeIndexHtmlTemplate()
             }
 
-            def webWarFile = webProject.file("${warDir(webProject)}/${appName}.war")
+            def warFile = webProject.file("${warDir(webProject)}/${appName}.war")
 
-            packWarFile(webProject, webWarFile)
+            packWarFile(webProject, warFile)
 
-            moveToDistributions(webWarFile)
+            moveToDistributions(warFile)
         } else {
             writeLocalAppProperties(coreProject, coreProperties)
-            writeLocalAppProperties(webProject, webProperties)
+
+            if (webProject) {
+                writeLocalAppProperties(webProject, webProperties)
+            }
 
             if (portalProject) {
                 writeLocalAppProperties(portalProject, portalProperties)
             }
 
-            def webWarFile = webProject.file("${warDir(webProject)}/${appName}.war")
             def coreWarFile = coreProject.file("${warDir(coreProject)}/${appName}-core.war")
-
-            packWarFile(webProject, webWarFile)
             packWarFile(coreProject, coreWarFile)
+
+            File webWarFile = null
+            if (webProject) {
+                webWarFile = webProject.file("${warDir(webProject)}/${appName}.war")
+                packWarFile(webProject, webWarFile)
+            }
 
             File portalWarFile = null
             if (portalProject) {
@@ -367,8 +375,11 @@ class CubaWarBuilding extends DefaultTask {
                 packWarFile(polymerProject, polymerWarFile)
             }
 
-            moveToDistributions(webWarFile)
             moveToDistributions(coreWarFile)
+
+            if (webWarFile) {
+                moveToDistributions(webWarFile)
+            }
 
             if (portalWarFile) {
                 moveToDistributions(portalWarFile)
@@ -419,7 +430,11 @@ class CubaWarBuilding extends DefaultTask {
         project.delete(distrDir)
 
         def deployCore = coreProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
-        def deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+
+        def deployWeb = null
+        if (webProject) {
+            deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+        }
 
         def deployPortal = null
         if (portalProject) {
@@ -430,7 +445,7 @@ class CubaWarBuilding extends DefaultTask {
             coreJarNames = deployCore.getAllJarNames()
         }
 
-        if (!webJarNames) {
+        if (deployWeb && !webJarNames) {
             webJarNames = deployWeb.getAllJarNames()
         }
 
@@ -450,7 +465,11 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (!appName) {
-            appName = deployWeb.appName
+            if (deployWeb) {
+                appName = deployWeb.appName
+            } else {
+                appName = deployCore.appName.replace('-core', '')
+            }
         }
 
         coreAppName = singleWar ? deployCore.appName : appName + '-core'
@@ -503,44 +522,46 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     protected List<String> copyLibs(Project theProject) {
-        theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
+        if (theProject) {
+            List<String> copied = []
+            theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
 
-        List<String> copied = []
-
-        theProject.copy {
-            from theProject.configurations.runtime
-            from theProject.libsDir
-            into "${warDir(theProject)}/WEB-INF/lib"
-            include { details ->
-                String name = details.file.name
-                if (!(name.endsWith('-sources.jar')) && name.endsWith(".jar")) {
-                    copied.add(name)
-                    return true
-                }
-                return false
-            }
-        }
-
-        if (includeJdbcDriver) {
-            theProject.logger.info("[CubaWarBuilding] copying libs from configurations.jdbc")
-            def libsDir = "${warDir(theProject)}/WEB-INF/lib"
             theProject.copy {
-                from theProject.configurations.jdbc {
-                    exclude { f ->
-                        def file = f.file
-                        def fileName = (String) file.name
-                        if (new File(libsDir, fileName).exists()) {
-                            return true
-                        }
-
-                        file.absolutePath.startsWith(project.file(libsDir).absolutePath)
+                from theProject.configurations.runtime
+                from theProject.libsDir
+                into "${warDir(theProject)}/WEB-INF/lib"
+                include { details ->
+                    String name = details.file.name
+                    if (!(name.endsWith('-sources.jar')) && name.endsWith(".jar")) {
+                        copied.add(name)
+                        return true
                     }
+                    return false
                 }
-                into libsDir
             }
-        }
 
-        return copied
+            if (includeJdbcDriver) {
+                theProject.logger.info("[CubaWarBuilding] copying libs from configurations.jdbc")
+                def libsDir = "${warDir(theProject)}/WEB-INF/lib"
+                theProject.copy {
+                    from theProject.configurations.jdbc {
+                        exclude { f ->
+                            def file = f.file
+                            def fileName = (String) file.name
+                            if (new File(libsDir, fileName).exists()) {
+                                return true
+                            }
+
+                            file.absolutePath.startsWith(project.file(libsDir).absolutePath)
+                        }
+                    }
+                    into libsDir
+                }
+            }
+
+            return copied
+        }
+        return Collections.emptyList()
     }
 
     protected void copyFrontLibs() {
@@ -591,172 +612,178 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     protected void copyWebContent(Project theProject) {
-        theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
+        if (theProject) {
+            theProject.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
 
-        if (webXmlPath) {
-            def webXml = new File(webXmlPath)
-            if (!webXml.exists()) {
-                throw new GradleException("$webXmlPath doesn't exists")
-            }
-
-            def webXmlFileName = webXml.name
-            theProject.copy {
-                from 'web'
-                into warDir(theProject)
-                exclude '**/context.xml'
-                exclude "**/$webXmlFileName"//do not copy webXml file twice
-            }
-
-            theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXmlPath} to ${warDir(theProject)}/WEB-INF/web.xml")
-            theProject.copy {
-                from webXmlPath
-                into "${warDir(theProject)}/WEB-INF/"
-                rename { String fileName ->
-                    "web.xml"
-                }
-            }
-        } else {
-            String path
-            if (coreWebXmlPath && theProject == coreProject)
-                path = coreWebXmlPath
-            if (webWebXmlPath && theProject == webProject)
-                path = webWebXmlPath
-            if (portalWebXmlPath && theProject == portalProject)
-                path = portalWebXmlPath
-
-            if (path) {
-                File file = new File(path)
-                if (!file.exists()) {
-                    file = new File("$project.rootDir/$path")
-                    if (!file.exists())
-                        throw new GradleException("File $path or $project.rootDir/$path not found")
+            if (webXmlPath) {
+                def webXml = new File(webXmlPath)
+                if (!webXml.exists()) {
+                    throw new GradleException("$webXmlPath doesn't exists")
                 }
 
+                def webXmlFileName = webXml.name
                 theProject.copy {
                     from 'web'
                     into warDir(theProject)
-                    exclude '**/META-INF/context.xml'
-                    exclude { it.file.absolutePath == file.absolutePath }
+                    exclude '**/context.xml'
+                    exclude "**/$webXmlFileName"//do not copy webXml file twice
                 }
 
+                theProject.logger.info("[CubaWarBuilding] copying web.xml from ${webXmlPath} to ${warDir(theProject)}/WEB-INF/web.xml")
                 theProject.copy {
-                    from file.absolutePath
+                    from webXmlPath
                     into "${warDir(theProject)}/WEB-INF/"
                     rename { String fileName ->
                         "web.xml"
                     }
                 }
-
             } else {
-                theProject.copy {
-                    from 'web'
-                    into warDir(theProject)
-                    exclude '**/META-INF/context.xml'
+                String path
+                if (coreWebXmlPath && theProject == coreProject)
+                    path = coreWebXmlPath
+                if (webWebXmlPath && theProject == webProject)
+                    path = webWebXmlPath
+                if (portalWebXmlPath && theProject == portalProject)
+                    path = portalWebXmlPath
+
+                if (path) {
+                    File file = new File(path)
+                    if (!file.exists()) {
+                        file = new File("$project.rootDir/$path")
+                        if (!file.exists())
+                            throw new GradleException("File $path or $project.rootDir/$path not found")
+                    }
+
+                    theProject.copy {
+                        from 'web'
+                        into warDir(theProject)
+                        exclude '**/META-INF/context.xml'
+                        exclude { it.file.absolutePath == file.absolutePath }
+                    }
+
+                    theProject.copy {
+                        from file.absolutePath
+                        into "${warDir(theProject)}/WEB-INF/"
+                        rename { String fileName ->
+                            "web.xml"
+                        }
+                    }
+
+                } else {
+                    theProject.copy {
+                        from 'web'
+                        into warDir(theProject)
+                        exclude '**/META-INF/context.xml'
+                    }
                 }
             }
+            copyLogbackConfigurationFile(theProject)
         }
-        copyLogbackConfigurationFile(theProject)
     }
 
     protected void copyWebContext(Project theProject) {
-        theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
-        if (theProject == coreProject && coreContextXmlPath) {
-            def coreContextXml = new File(coreContextXmlPath)
-            if (!coreContextXml.exists()) {
-                throw new GradleException("$coreContextXmlPath doesn't exists")
-            }
-
-            def coreContextXmlFileName = coreContextXml.name
-            theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXmlPath} to ${warDir(theProject)}/META-INF/context.xml")
-            theProject.copy {
-                from coreContextXmlPath
-                into "${warDir(theProject)}/META-INF/"
-                rename { String fileName ->
-                    "context.xml"
+        if (theProject) {
+            theProject.logger.info("[CubaWarBuilding] copying context.xml to ${warDir(theProject)}")
+            if (theProject == coreProject && coreContextXmlPath) {
+                def coreContextXml = new File(coreContextXmlPath)
+                if (!coreContextXml.exists()) {
+                    throw new GradleException("$coreContextXmlPath doesn't exists")
                 }
-            }
-            if ('context.xml' != coreContextXmlFileName) {
-                theProject.logger.info("[CubaWarBuilding] removing $coreContextXmlFileName from META-INF")
 
-                theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
-            }
-        } else if (theProject == coreProject && hsqlInProcess) {
-            def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
-            if (!contextFile.exists()) {
-                throw new GradleException("$contextFile doesn't exists")
-            }
+                def coreContextXmlFileName = coreContextXml.name
+                theProject.logger.info("[CubaWarBuilding] copying context.xml from ${coreContextXmlPath} to ${warDir(theProject)}/META-INF/context.xml")
+                theProject.copy {
+                    from coreContextXmlPath
+                    into "${warDir(theProject)}/META-INF/"
+                    rename { String fileName ->
+                        "context.xml"
+                    }
+                }
+                if ('context.xml' != coreContextXmlFileName) {
+                    theProject.logger.info("[CubaWarBuilding] removing $coreContextXmlFileName from META-INF")
 
-            def context
-            try {
-                context = new XmlParser().parse(contextFile)
-            } catch (Exception ignored) {
-                throw new GradleException("Core context.xml parsing error")
-            }
+                    theProject.delete("${warDir(theProject)}/META-INF/${coreContextXmlFileName}")
+                }
+            } else if (theProject == coreProject && hsqlInProcess) {
+                def contextFile = new File("${theProject.projectDir}/web/META-INF/context.xml")
+                if (!contextFile.exists()) {
+                    throw new GradleException("$contextFile doesn't exists")
+                }
 
-            String url = context.Resource.@url.get(0)
-            context.Resource.@url = "jdbc:hsqldb:file:db/hsql" + url.substring(url.lastIndexOf('/'))
+                def context
+                try {
+                    context = new XmlParser().parse(contextFile)
+                } catch (Exception ignored) {
+                    throw new GradleException("Core context.xml parsing error")
+                }
 
-            def targetFile = new File("${warDir(theProject)}/META-INF/context.xml")
-            def printer = new XmlNodePrinter(new PrintWriter(new FileWriter(targetFile)))
-            printer.preserveWhitespace = true
-            printer.print(context)
-        } else {
-            theProject.copy {
-                from 'web/META-INF/context.xml'
-                into "${warDir(theProject)}/META-INF"
+                String url = context.Resource.@url.get(0)
+                context.Resource.@url = "jdbc:hsqldb:file:db/hsql" + url.substring(url.lastIndexOf('/'))
+
+                def targetFile = new File("${warDir(theProject)}/META-INF/context.xml")
+                def printer = new XmlNodePrinter(new PrintWriter(new FileWriter(targetFile)))
+                printer.preserveWhitespace = true
+                printer.print(context)
+            } else {
+                theProject.copy {
+                    from 'web/META-INF/context.xml'
+                    into "${warDir(theProject)}/META-INF"
+                }
             }
         }
     }
 
     protected void copySpecificWebContent(Project theProject) {
-        if (!projectAll) {
-            def excludePatterns = ['**/web.xml', '**/context.xml'] + webContentExclude
-            if (theProject.configurations.findByName('webcontent')) {
-                theProject.configurations.webcontent.files.each { dep ->
-                    theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
-                    theProject.copy {
-                        from theProject.zipTree(dep.absolutePath)
-                        into warDir(theProject)
-                        excludes = excludePatterns
-                        includeEmptyDirs = false
+        if (theProject) {
+            if (!projectAll) {
+                def excludePatterns = ['**/web.xml', '**/context.xml'] + webContentExclude
+                if (theProject.configurations.findByName('webcontent')) {
+                    theProject.configurations.webcontent.files.each { dep ->
+                        theProject.logger.info("[CubaWarBuilding] copying webcontent from $dep.absolutePath to ${warDir(theProject)}")
+                        theProject.copy {
+                            from theProject.zipTree(dep.absolutePath)
+                            into warDir(theProject)
+                            excludes = excludePatterns
+                            includeEmptyDirs = false
+                        }
                     }
                 }
-            }
-            theProject.logger.info("[CubaWarBuilding] copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
-            theProject.copy {
-                from "${theProject.buildDir}/web"
-                into warDir(theProject)
-                excludes = excludePatterns
-            }
-            project.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
-            project.copy {
-                from theProject.file('web')
-                into warDir(theProject)
-                excludes = excludePatterns
-            }
-            def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
-            if (webToolkit) {
-                theProject.logger.info("[CubaWarBuilding] copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
+                theProject.logger.info("[CubaWarBuilding] copying webcontent from ${theProject.buildDir}/web to ${warDir(theProject)}")
                 theProject.copy {
-                    from "${webToolkit.buildDir}/web"
+                    from "${theProject.buildDir}/web"
                     into warDir(theProject)
+                    excludes = excludePatterns
+                }
+                project.logger.info("[CubaWarBuilding] copying from web to ${warDir(theProject)}")
+                project.copy {
+                    from theProject.file('web')
+                    into warDir(theProject)
+                    excludes = excludePatterns
+                }
+                def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
+                if (webToolkit) {
+                    theProject.logger.info("[CubaWarBuilding] copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
+                    theProject.copy {
+                        from "${webToolkit.buildDir}/web"
+                        into warDir(theProject)
+                        exclude '**/gwt-unitCache/'
+                    }
+                }
+            } else {
+                theProject.logger.info("[CubaWarBuilding] copying webcontent from theProject-all directories to ${warDir(theProject)}")
+                theProject.copy {
+                    from new File(project.project(':cuba-web').projectDir, 'web')
+                    from new File(project.project(':charts-web').projectDir, 'web')
+                    from new File(project.project(':workflow-web').projectDir, 'web')
+                    from new File(project.project(':reports-web').projectDir, 'web')
+                    from new File(project.project(':refapp-web').buildDir, 'web')
+                    from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
+                    from new File(project.project(':refapp-web').projectDir, 'web')
+                    into warDir(theProject)
+                    exclude '**/web.xml'
+                    exclude '**/context.xml'
                     exclude '**/gwt-unitCache/'
                 }
-            }
-        } else {
-            theProject.logger.info("[CubaWarBuilding] copying webcontent from theProject-all directories to ${warDir(theProject)}")
-            theProject.copy {
-                from new File(project.project(':cuba-web').projectDir, 'web')
-                from new File(project.project(':charts-web').projectDir, 'web')
-                from new File(project.project(':workflow-web').projectDir, 'web')
-                from new File(project.project(':reports-web').projectDir, 'web')
-                from new File(project.project(':refapp-web').buildDir, 'web')
-                from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
-                from new File(project.project(':refapp-web').projectDir, 'web')
-                into warDir(theProject)
-                exclude '**/web.xml'
-                exclude '**/context.xml'
-                exclude '**/gwt-unitCache/'
             }
         }
     }
