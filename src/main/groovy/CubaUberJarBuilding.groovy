@@ -273,7 +273,9 @@ class CubaUberJarBuilding extends DefaultTask {
 
         copyServerLibs(serverLibs)
         copyLibsAndContent(coreProject, coreJarNames, coreLibs)
-        copyLibsAndContent(webProject, webJarNames, webLibs)
+        if (webProject) {
+            copyLibsAndContent(webProject, webJarNames, webLibs)
+        }
         if (polymerProject) {
             copyFrontLibsAndContent(polymerProject)
         }
@@ -285,8 +287,10 @@ class CubaUberJarBuilding extends DefaultTask {
             resolveSharedLibConflicts(coreLibs, webLibs, portalLibs)
             UberJar jar = createJarTask(appName)
             packServerLibs(jar)
-            packLibsAndContent(coreProject, jar, false)
-            packLibsAndContent(webProject, jar, true)
+            packLibsAndContent(coreProject, jar, webProject == null)
+            if (webProject) {
+                packLibsAndContent(webProject, jar, true)
+            }
             if (polymerProject) {
                 packFrontContent(polymerProject, jar)
             }
@@ -310,21 +314,28 @@ class CubaUberJarBuilding extends DefaultTask {
             packJettyFile(coreProject, coreJar)
             coreJar.createManifest(MAIN_CLASS)
 
-            UberJar webJar = createJarTask(appName)
-            packServerLibs(webJar)
-            packLibsAndContent(webProject, webJar, true)
-            if (polymerProject) {
-                packFrontContent(polymerProject, webJar)
-            }
-            packJettyFile(webProject, webJar)
-            packLogbackConfigurationFile(webJar)
-            webJar.createManifest(MAIN_CLASS)
-
             //copy jars to distribution dir
             project.copy {
                 from coreProject.file("$rootJarTmpDir/${coreAppName}.jar")
-                from webProject.file("$rootJarTmpDir/${appName}.jar")
                 into distributionDir
+            }
+
+            if (webProject) {
+                UberJar webJar = createJarTask(appName)
+                packServerLibs(webJar)
+                packLibsAndContent(webProject, webJar, true)
+                if (polymerProject) {
+                    packFrontContent(polymerProject, webJar)
+                }
+                packJettyFile(webProject, webJar)
+                packLogbackConfigurationFile(webJar)
+                webJar.createManifest(MAIN_CLASS)
+
+                //copy jars to distribution dir
+                project.copy {
+                    from webProject.file("$rootJarTmpDir/${appName}.jar")
+                    into distributionDir
+                }
             }
 
             if (portalProject) {
@@ -336,11 +347,9 @@ class CubaUberJarBuilding extends DefaultTask {
                 portalJar.createManifest(MAIN_CLASS)
 
                 //copy jar to distribution dir
-                if (portalProject) {
-                    project.copy {
-                        from portalProject.file("$rootJarTmpDir/${portalAppName}.jar")
-                        into distributionDir
-                    }
+                project.copy {
+                    from portalProject.file("$rootJarTmpDir/${portalAppName}.jar")
+                    into distributionDir
                 }
             }
         }
@@ -374,7 +383,11 @@ class CubaUberJarBuilding extends DefaultTask {
         }
 
         def deployCore = coreProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
-        def deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+
+        def deployWeb = null
+        if (webProject) {
+            deployWeb = webProject.tasks.getByPath(CubaPlugin.DEPLOY_TASK_NAME)
+        }
 
         def deployPortal = null
         if (portalProject) {
@@ -382,7 +395,9 @@ class CubaUberJarBuilding extends DefaultTask {
         }
 
         coreJarNames = deployCore.getAllJarNames()
-        webJarNames = deployWeb.getAllJarNames()
+        if (webProject) {
+            webJarNames = deployWeb.getAllJarNames()
+        }
         if (portalProject) {
             portalJarNames = deployPortal.getAllJarNames()
         }
@@ -390,7 +405,11 @@ class CubaUberJarBuilding extends DefaultTask {
         rootJarTmpDir = "${project.buildDir}/tmp/uberJar"
 
         if (!appName) {
-            appName = deployWeb.appName
+            if (deployWeb) {
+                appName = deployWeb.appName
+            } else {
+                appName = deployCore.appName.replace('-core', '')
+            }
         }
         coreAppName = appName + '-core'
         portalAppName = appName + '-portal'
