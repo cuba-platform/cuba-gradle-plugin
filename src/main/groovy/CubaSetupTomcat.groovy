@@ -16,6 +16,7 @@
  */
 
 import org.apache.commons.io.FileUtils
+import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
@@ -26,6 +27,8 @@ import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 class CubaSetupTomcat extends DefaultTask {
+
+    public static final String VERSION_LOGGER_XML = '<Listener className="org.apache.catalina.startup.VersionLoggerListener" />'
 
     public static final List<String> TOMCAT_RESOURCES = Collections.unmodifiableList([
             "/tomcat/bin/call_and_exit.bat",
@@ -81,6 +84,9 @@ class CubaSetupTomcat extends DefaultTask {
             FileUtils.copyInputStreamToFile(getClass().getResourceAsStream(resourceName), targetFile)
         }
 
+        logger.debug("Disable VersionLoggerListener")
+        updateServerXmlLogging()
+
         if (project.cuba.tomcat.port || project.cuba.tomcat.shutdownPort || project.cuba.tomcat.ajpPort) {
             updateServerXml()
         }
@@ -92,6 +98,23 @@ class CubaSetupTomcat extends DefaultTask {
 
         ant.chmod(osfamily: 'unix', perm: 'a+x') {
             fileset(dir: "${tomcatRootDir}/bin", includes: '*.sh')
+        }
+    }
+
+    private def updateServerXmlLogging() {
+        Path serverXml = Paths.get(tomcatRootDir, 'conf', 'server.xml')
+        if (!Files.exists(serverXml)) {
+            logger.error('conf/server.xml has not been updated: cannot find server.xml file')
+            return
+        }
+        def serverXmlFile = serverXml.toFile()
+
+        // Disable version information in log by default
+        def replacement = '<!-- ' + VERSION_LOGGER_XML + ' -->'
+        def text = serverXmlFile.text
+
+        if (!text.contains(replacement)) {
+            serverXml.text = StringUtils.replace(text, VERSION_LOGGER_XML, replacement)
         }
     }
 
@@ -132,7 +155,7 @@ class CubaSetupTomcat extends DefaultTask {
             String newPortValue = project.cuba.tomcat.port
             if (!Objects.equals(currPortValue, newPortValue)) {
                 connectorNode.@port = newPortValue
-                changed = true;
+                changed = true
             }
         }
 
@@ -155,12 +178,12 @@ class CubaSetupTomcat extends DefaultTask {
             String newPortValue = project.cuba.tomcat.ajpPort
             if (!Objects.equals(currPortValue, newPortValue)) {
                 connectorNode.@port = newPortValue
-                changed = true;
+                changed = true
             }
         }
 
         if (changed) {
-            new XmlNodePrinter(new PrintWriter(new FileWriter(serverXml.toFile()))).print(serverNode)
+            new XmlNodePrinter(new PrintWriter(new FileWriter(serverXmlFile))).print(serverNode)
         }
     }
 
