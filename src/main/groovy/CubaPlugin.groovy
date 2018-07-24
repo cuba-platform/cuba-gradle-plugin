@@ -29,6 +29,7 @@ import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
@@ -92,6 +93,7 @@ class CubaPlugin implements Plugin<Project> {
             applyToRootProject(project, cubaExtension)
         } else {
             project.extensions.extraProperties.set("appModuleType", null)
+            project.extensions.create("entitiesEnhancing", CubaEnhancingExtension, project)
             applyToModuleProject(project)
         }
 
@@ -188,6 +190,8 @@ class CubaPlugin implements Plugin<Project> {
         addDependenciesFromAppComponents(project)
 
         defineExecutionOrderForSubProject(project)
+
+        setupEntitiesEnhancing(project)
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
@@ -447,6 +451,22 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
+    private void setupEntitiesEnhancing(Project project) {
+        if (project.plugins.findPlugin(JavaPlugin.class)) {
+            def mainEnhancing = project.entitiesEnhancing.main
+            if (mainEnhancing && mainEnhancing.enabled) {
+                project.tasks.findByName(JavaPlugin.COMPILE_JAVA_TASK_NAME)
+                        .doLast(new CubaEnhancingAction(project, 'main'))
+            }
+
+            def testEnhancing = project.entitiesEnhancing.test
+            if (testEnhancing && testEnhancing.enabled) {
+                project.tasks.findByName(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME)
+                        .doLast(new CubaEnhancingAction(project, 'test'))
+            }
+        }
+    }
+
     private void importBomFromDependencies(Project project, CubaPluginExtension cubaExtension) {
         def bomComponentConf = project.rootProject.configurations.findByName(BOM_CONFIGURATION_NAME)
         if (bomComponentConf == null) {
@@ -619,7 +639,7 @@ class CubaPlugin implements Plugin<Project> {
                         it instanceof Node && it.name() == 'orderEntry' && it.@type == 'module-library' &&
                                 it.library.CLASSES.root.@url.contains('file://$MODULE_DIR$/build/enhanced-classes/' + dir)
                     }
-                    if (!enhNode && project.name.endsWith('-global')) {
+                    if (!enhNode && enhancingEnabled(project)) {
                         enhNode = new Node(rootNode, 'orderEntry', [type: 'module-library', scope: 'RUNTIME'])
                         Node libraryNode = new Node(enhNode, 'library')
                         Node classesNode = new Node(libraryNode, 'CLASSES')
@@ -644,7 +664,7 @@ class CubaPlugin implements Plugin<Project> {
                 plusConfigurations += [project.configurations.provided]
                 file.whenMerged { classpath ->
                     classpath.entries.removeAll { entry ->
-                        entry.path.contains('build/enhanced-classes/main')
+                        entry.path.contains('build/enhanced-classes/')
                     }
                 }
             }
@@ -674,7 +694,7 @@ class CubaPlugin implements Plugin<Project> {
                     }
                 }
 
-                if (project.name.endsWith('-global')) {
+                if (enhancingEnabled(project)) {
                     Node entry = root.appendNode('classpathentry')
                     entry.@kind = 'lib'
                     entry.@path = "$project.buildDir/enhanced-classes/main"
@@ -685,6 +705,14 @@ class CubaPlugin implements Plugin<Project> {
                 }
             }
         }
+    }
+
+    private boolean enhancingEnabled(Project project) {
+        def mainEnh = project.entitiesEnhancing.main
+        def testEnh = project.entitiesEnhancing.test
+
+        return mainEnh && mainEnh.enabled ||
+                testEnh && testEnh.enabled
     }
 
     private void setJavaeeCdiNoScan(Project project) {

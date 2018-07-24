@@ -18,18 +18,14 @@
 import org.gradle.api.plugins.JavaPlugin
 
 /**
- * Enhances entity classes specified in persistence xml
+ * Enhances entity classes specified in persistence xml.
+ *
+ * @deprecated enhancing is performed by {@link CubaEnhancingAction} now
  */
+@Deprecated
 class CubaEnhancing extends CubaEnhancingTask {
 
     CubaEnhancing() {
-        setDescription('Enhances persistent classes')
-        setGroup('Compile')
-
-        srcRoot = 'src'
-        classesRoot = 'main'
-        sourceSet = project.sourceSets.main
-
         dependsOn(project.tasks.getByPath(JavaPlugin.COMPILE_JAVA_TASK_NAME))
         project.tasks.getByPath(JavaPlugin.CLASSES_TASK_NAME).dependsOn(this)
     }
