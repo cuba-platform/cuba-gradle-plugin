@@ -23,12 +23,14 @@ import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
+import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.plugins.BasePlugin
+import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
@@ -38,6 +40,7 @@ import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
+import org.gradle.plugins.ide.idea.model.IdeaModel
 
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
@@ -269,24 +272,14 @@ class CubaPlugin implements Plugin<Project> {
 
     private void applyIdeaConfigRootProject(Project project) {
         project.logger.info "[CubaPlugin] configuring IDEA project"
+
+        applyIdeaExtPluginSettings(project)
+
         project.idea.project.ipr {
             withXml { provider ->
                 def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
                 node.@languageLevel = 'JDK_1_8'
                 node.@'project-jdk-name' = '1.8'
-
-                if (project.cuba.ide.copyright) {
-                    node = provider.node.component.find { it.@name == 'CopyrightManager' }
-                    node.@default = 'default'
-
-                    node = node.appendNode('copyright')
-                    node.appendNode('option', [name: 'notice', value: project.cuba.ide.copyright])
-
-                    node.appendNode('option', [name: 'keyword', value: 'Copyright'])
-                    node.appendNode('option', [name: 'allowReplaceKeyword', value: ''])
-                    node.appendNode('option', [name: 'myName', value: 'default'])
-                    node.appendNode('option', [name: 'myLocal', value: 'true'])
-                }
 
                 if (project.cuba.ide.vcs)
                     provider.node.component.find {
@@ -380,6 +373,25 @@ class CubaPlugin implements Plugin<Project> {
             Node contentNode = componentNode.content.find { it.@url == 'file://$MODULE_DIR$/' } as Node
             if (contentNode)
                 contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
+        }
+    }
+
+    private void applyIdeaExtPluginSettings(Project project) {
+        def idea = project.extensions.findByName('idea') as IdeaModel
+        def settings = (idea.project as ExtensionAware).extensions.findByName('settings')
+
+        if (project.cuba.ide.copyright) {
+            def copyrightProfiles = settings.copyright.profiles as NamedDomainObjectContainer
+
+            def cubaCopyrightProfile = copyrightProfiles.create('default')
+
+            cubaCopyrightProfile.notice = project.cuba.ide.copyright
+            cubaCopyrightProfile.keyword = 'Copyright'
+            cubaCopyrightProfile.allowReplaceRegexp = ''
+
+            copyrightProfiles.add(cubaCopyrightProfile)
+
+            settings.copyright.useDefault = 'default'
         }
     }
 
