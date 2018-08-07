@@ -41,6 +41,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.jetbrains.gradle.ext.IdeaExtPlugin
 
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
@@ -90,6 +91,9 @@ class CubaPlugin implements Plugin<Project> {
         exportTaskTypes(project)
 
         if (project == project.rootProject) {
+            if (!project.plugins.findPlugin(IdeaExtPlugin.class)) {
+                new IdeaExtPlugin().apply(project)
+            }
             def cubaExtension = project.extensions.create("cuba", CubaPluginExtension, project)
             applyToRootProject(project, cubaExtension)
         } else {

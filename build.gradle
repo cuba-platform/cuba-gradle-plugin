@@ -65,6 +65,7 @@ dependencies {
     compile('com.jelastic:jelastic-public-j2se:5.0.6')
     compile('com.moowork.gradle:gradle-node-plugin:1.1.0')
     compile('org.apache.commons:commons-dbcp2:2.1.1')
+    compile('gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:0.2')
 
     compile(gradleApi())
     compile(localGroovy())
