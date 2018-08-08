@@ -42,6 +42,8 @@ import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaModel
 import org.jetbrains.gradle.ext.IdeaExtPlugin
+import org.jetbrains.gradle.ext.Remote
+import org.jetbrains.gradle.ext.RunConfigurationContainer
 
 import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
@@ -297,27 +299,6 @@ class CubaPlugin implements Plugin<Project> {
         }
 
         project.idea.workspace.iws.withXml { provider ->
-            def runManagerNode = provider.asNode().component.find { it.@name == 'RunManager' }
-
-            def listNode = runManagerNode.list.find { it }
-            if (listNode) {
-                // old IntelliJ Idea
-                if (listNode.@size == '0') {
-                    createIdeaRunConfigurationNode(project, runManagerNode)
-
-                    listNode.appendNode('item', [index: '0', class: 'java.lang.String', itemvalue: 'Remote.localhost:8787'])
-                    listNode.@size = 1
-                }
-            } else {
-                // Project were opened in IntelliJ idea 2017.2+
-                def remoteConfNode = runManagerNode.configuration.find {
-                    it.@name == 'localhost:8787' && it.@type == 'Remote'
-                }
-                if (remoteConfNode == null) {
-                    createIdeaRunConfigurationNode(project, runManagerNode)
-                }
-            }
-
             def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
             def ignored = changeListManagerNode.ignored.find { it }
             if (ignored == null) {
@@ -403,20 +384,15 @@ class CubaPlugin implements Plugin<Project> {
 
         ideaDelegationConfig.delegateBuildRunToGradle = cubaDelegationConfig.enabled
         ideaDelegationConfig.testRunner = cubaDelegationConfig.testRunner
-    }
 
-    private void createIdeaRunConfigurationNode(Project project, Node runManagerNode) {
-        project.logger.info("[CubaPlugin] Creating remote configuration")
+        def runConfigurationsContainer = settings.runConfigurations as RunConfigurationContainer
 
-        def confNode = runManagerNode.appendNode('configuration', [name: 'localhost:8787', type: 'Remote', factoryName: 'Remote'])
-        confNode.appendNode('option', [name: 'USE_SOCKET_TRANSPORT', value: 'true'])
-        confNode.appendNode('option', [name: 'SERVER_MODE', value: 'false'])
-        confNode.appendNode('option', [name: 'SHMEM_ADDRESS', value: 'javadebug'])
-        confNode.appendNode('option', [name: 'HOST', value: 'localhost'])
-        confNode.appendNode('option', [name: 'PORT', value: '8787'])
-        confNode.appendNode('method')
+        def remoteConfiguration = runConfigurationsContainer.create('localhost:8787', Remote)
+        remoteConfiguration.host = 'localhost'
+        remoteConfiguration.port = 8787
+        remoteConfiguration.sharedMemoryAddress = 'javadebug'
 
-        runManagerNode.@selected = 'Remote.localhost:8787'
+        runConfigurationsContainer.add(remoteConfiguration)
     }
 
     /**
