@@ -236,7 +236,7 @@ class CubaPlugin implements Plugin<Project> {
         dropTomcat.listeningPort = '8787'
 
         if (project.getPlugins().hasPlugin(IdeaPlugin.class)) {
-            applyIdeaConfigRootProject(project)
+            applyIdeaExtPluginSettings(project)
         }
 
         if (project.getPlugins().hasPlugin(EclipsePlugin.class)) {
@@ -274,91 +274,6 @@ class CubaPlugin implements Plugin<Project> {
         }
         def cleanTask = project.tasks.getByPath(BasePlugin.CLEAN_TASK_NAME)
         cleanTask.delete = ['build/libs', 'build/tmp']
-    }
-
-    private void applyIdeaConfigRootProject(Project project) {
-        project.logger.info "[CubaPlugin] configuring IDEA project"
-
-        applyIdeaExtPluginSettings(project)
-
-        project.idea.project.ipr {
-            withXml { provider ->
-                def node = provider.node.component.find { it.@name == 'ProjectRootManager' }
-                node.@languageLevel = 'JDK_1_8'
-                node.@'project-jdk-name' = '1.8'
-
-                if (project.cuba.ide.vcs)
-                    provider.node.component.find {
-                        it.@name == 'VcsDirectoryMappings'
-                    }.mapping.@vcs = project.cuba.ide.vcs //'svn'
-
-                def encodingNode = provider.node.component.find { it.@name == 'Encoding' }
-                encodingNode.@defaultCharsetForPropertiesFiles = 'UTF-8'
-                encodingNode.appendNode('file', [url: 'PROJECT', charset: 'UTF-8'])
-            }
-        }
-
-        project.idea.workspace.iws.withXml { provider ->
-            def changeListManagerNode = provider.asNode().component.find { it.@name == 'ChangeListManager' }
-            def ignored = changeListManagerNode.ignored.find { it }
-            if (ignored == null) {
-                project.logger.info("[CubaPlugin] Configure ignored files")
-                changeListManagerNode.appendNode('ignored', [mask: '*.ipr'])
-                changeListManagerNode.appendNode('ignored', [mask: '*.iml'])
-                changeListManagerNode.appendNode('ignored', [mask: '*.iws'])
-            }
-
-            def projectViewNode = provider.asNode().component.find { it.@name == 'ProjectView' }
-            if (!projectViewNode) {
-                projectViewNode = provider.asNode().appendNode('component', [name: 'ProjectView'])
-
-                def projectViewPanesNode = projectViewNode.appendNode('panes')
-                def projectPaneNode = projectViewPanesNode.appendNode('pane', [id: 'ProjectPane'])
-                projectPaneNode.appendNode('option', [name: 'show-excluded-files', value: 'false'])
-            }
-
-            // Set Highlighting level to Syntax only for files
-            List<String> disabledHintsPaths = project.cuba.ide.ideaOptions.disabledHintsPaths
-            if (!disabledHintsPaths.isEmpty()) {
-                project.logger.info("[CubaPlugin] Configure disabled hints for files")
-                Node daemonCodeAnalyzerNode = provider.asNode().component.find { it.@name == 'DaemonCodeAnalyzer' } as Node
-                if (daemonCodeAnalyzerNode == null) {
-                    daemonCodeAnalyzerNode = provider.asNode().appendNode('component', [name: 'DaemonCodeAnalyzer'])
-                }
-                Node disableHintsNode = daemonCodeAnalyzerNode.disable_hints[0] as Node
-                if (disableHintsNode == null) {
-                    disableHintsNode = daemonCodeAnalyzerNode.appendNode('disable_hints')
-                }
-
-                Node highlightSettingsPerFileNode = provider.asNode().component.find { it.@name == 'HighlightingSettingsPerFile' } as Node
-                if (highlightSettingsPerFileNode == null) {
-                    highlightSettingsPerFileNode = provider.asNode().appendNode('component', [name: 'HighlightingSettingsPerFile'])
-                }
-
-                for (String disabledHintsFile : disabledHintsPaths) {
-                    disableHintsNode.appendNode('file', [url: 'file://$PROJECT_DIR$/' + disabledHintsFile])
-
-                    highlightSettingsPerFileNode.appendNode('setting', [
-                            file: 'file://$PROJECT_DIR$/' + disabledHintsFile,
-                            root0: 'SKIP_INSPECTION',
-                    ])
-                }
-            }
-
-            // disable Gradle import popup
-            Node propertiesComponentNode = provider.asNode().component.find { it.@name == 'PropertiesComponent' } as Node
-            if (propertiesComponentNode == null) {
-                propertiesComponentNode = provider.asNode().appendNode('component', [name: 'PropertiesComponent'])
-            }
-            propertiesComponentNode.appendNode('property', [name: 'show.inlinked.gradle.project.popup', value: 'false'])
-        }
-
-        project.idea.module.iml.withXml { provider ->
-            Node componentNode = provider.node.component.find { it.@name == 'NewModuleRootManager' } as Node
-            Node contentNode = componentNode.content.find { it.@url == 'file://$MODULE_DIR$/' } as Node
-            if (contentNode)
-                contentNode.appendNode('excludeFolder', ['url': 'file://$MODULE_DIR$/deploy'])
-        }
     }
 
     private void applyIdeaExtPluginSettings(Project project) {

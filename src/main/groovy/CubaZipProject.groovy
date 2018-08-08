@@ -48,9 +48,7 @@ class CubaZipProject extends DefaultTask {
                 'deploy',
                 'bower_components',
                 'node_modules',
-                '.iml',
-                '.ipr',
-                '.iws'
+                '.iml'
         ]
         excludeFromZip += this.excludeFromZip
 

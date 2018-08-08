@@ -21,14 +21,7 @@ Open terminal and run the following command to build and install the plugin into
 
 ## Development
 
-We use IntelliJ Idea IDE for development.
-
-1. Generate IntelliJ Idea project files:
-```
-   gradlew idea
-```
-
-2. Open the .ipr file and start working on the project
+There is no any prerequisites so just import the project as Gradle project and start working.
 
 ## Debugging
 

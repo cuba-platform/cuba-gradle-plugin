@@ -3,7 +3,4 @@ out
 build
 test-run/
 *.iml
-*.ipr
-*.iws
-*.ids
 .idea
