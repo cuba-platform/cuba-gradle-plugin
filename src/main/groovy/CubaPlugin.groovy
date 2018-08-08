@@ -397,6 +397,12 @@ class CubaPlugin implements Plugin<Project> {
 
             settings.copyright.useDefault = 'default'
         }
+
+        def ideaDelegationConfig = settings.delegateActions
+        def cubaDelegationConfig = project.cuba.ide.buildRunDelegation
+
+        ideaDelegationConfig.delegateBuildRunToGradle = cubaDelegationConfig.enabled
+        ideaDelegationConfig.testRunner = cubaDelegationConfig.testRunner
     }
 
     private void createIdeaRunConfigurationNode(Project project, Node runManagerNode) {

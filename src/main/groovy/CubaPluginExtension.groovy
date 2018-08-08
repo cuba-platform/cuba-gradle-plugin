@@ -103,16 +103,29 @@ class CubaPluginExtension {
         String vcs
         String classComment
 
+        BuildRunDelegationConfiguration buildRunDelegation
+
         IdeaProjectConfiguration ideaOptions
 
         IdeConfiguration(Project project) {
             this.project = project
             this.ideaOptions = new IdeaProjectConfiguration(project)
+            this.buildRunDelegation = new BuildRunDelegationConfiguration()
         }
 
         void ideaOptions(Closure closure) {
             project.configure(ideaOptions, closure)
         }
+
+        void buildRunDelegation(Closure closure) {
+            project.configure(buildRunDelegation, closure)
+        }
+    }
+
+    class BuildRunDelegationConfiguration {
+
+        boolean enabled = true
+        String testRunner = 'Gradle'
     }
 
     class IdeaProjectConfiguration {
