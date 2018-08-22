@@ -923,11 +923,6 @@ class CubaPlugin implements Plugin<Project> {
     private void addDependencyToConfiguration(Project project, String dependency, String conf) {
         project.logger.info("[CubaPlugin] Adding dependency '$dependency' to configuration '$conf'")
         switch (conf) {
-            case 'testCompile':
-                project.dependencies {
-                    testCompile(dependency)
-                }
-                break
             case 'dbscripts':
                 project.configurations {
                     dbscripts
@@ -960,10 +955,15 @@ class CubaPlugin implements Plugin<Project> {
                     provided(dependency)
                 }
                 break
-            default:
+            case '':
                 project.dependencies {
                     compile(dependency)
                 }
+                break
+
+            default:
+                project.dependencies.add(conf, dependency)
+                break
         }
     }
 
