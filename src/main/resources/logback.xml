@@ -60,6 +60,10 @@
 
     <logger name="org.springframework" level="WARN"/>
 
+    <logger name="com.vaadin" level="WARN"/>
+
+    <logger name="org.atmosphere" level="WARN"/>
+
     <logger name="org.activiti" level="INFO"/>
     
     <logger name="freemarker" level="INFO"/>
