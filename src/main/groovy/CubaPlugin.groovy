@@ -19,6 +19,8 @@ import com.haulmont.gradle.javaeecdi.CubaBeansXml
 import com.haulmont.gradle.polymer.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
+import com.haulmont.gradle.task.widgetset.CubaWidgetSetBuilding
+import com.haulmont.gradle.task.widgetset.CubaWidgetSetDebug
 import com.haulmont.gradle.utils.BOMVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
@@ -117,6 +119,9 @@ class CubaPlugin implements Plugin<Project> {
     private void exportTaskTypes(Project project) {
         project.ext.CubaHsqlStop = CubaHsqlStop.class
         project.ext.CubaHsqlStart = CubaHsqlStart.class
+
+        project.ext.CubaWidgetSetBuilding = CubaWidgetSetBuilding.class
+        project.ext.CubaWidgetSetDebug = CubaWidgetSetDebug.class
     }
 
     private void doAfterEvaluateForAnyProject(Project project) {

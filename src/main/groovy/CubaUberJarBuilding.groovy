@@ -689,11 +689,13 @@ class CubaUberJarBuilding extends DefaultTask {
             if (theProject == webProject) {
                 def webToolkit = theProject.rootProject.subprojects.find { it -> it.name.endsWith('web-toolkit') }
                 if (webToolkit) {
-                    theProject.logger.info("[CubaUberJAR] Copying webcontent from ${webToolkit.buildDir}/web} for project ${theProject}")
-                    theProject.copy {
-                        from "${webToolkit.buildDir}/web"
-                        into "${getContentDir(theProject)}"
-                        exclude '**/gwt-unitCache/'
+                    theProject.logger.info("[CubaUberJAR] Copying widgetset JAR from from \"webArchive\" task output for project ${theProject}")
+                    def webArchiveTask = webToolkit.tasks.findByName('webArchive')
+                    if (webArchiveTask instanceof Jar) {
+                        theProject.copy {
+                            from webArchiveTask.outputs.files
+                            into "${getSharedLibsDir(theProject)}"
+                        }
                     }
                 }
             }

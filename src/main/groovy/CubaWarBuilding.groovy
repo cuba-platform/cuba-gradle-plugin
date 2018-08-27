@@ -762,11 +762,13 @@ class CubaWarBuilding extends DefaultTask {
                 }
                 def webToolkit = theProject.rootProject.subprojects.find { subprj -> subprj.name.endsWith('web-toolkit') }
                 if (webToolkit) {
-                    theProject.logger.info("[CubaWarBuilding] copying webcontent from ${webToolkit.buildDir}/web to ${warDir(theProject)}")
-                    theProject.copy {
-                        from "${webToolkit.buildDir}/web"
-                        into warDir(theProject)
-                        exclude '**/gwt-unitCache/'
+                    theProject.logger.info("[CubaWarBuilding] copying widgetset JAR from \"webArchive\" task output to ${warDir(theProject)}/WEB-INF/lib")
+                    def webArchiveTask = webToolkit.tasks.findByName('webArchive')
+                    if (webArchiveTask instanceof Jar) {
+                        theProject.copy {
+                            from webArchiveTask.outputs.files
+                            into "${warDir(theProject)}/WEB-INF/lib"
+                        }
                     }
                 }
             } else {
