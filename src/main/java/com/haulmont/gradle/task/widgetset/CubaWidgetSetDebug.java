@@ -58,7 +58,7 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
         }
 
         if (widgetSetsDir == null || widgetSetsDir.isEmpty()) {
-            widgetSetsDir = getDefaultBuildDir();
+            widgetSetsDir = getDefaultBuildDir().getAbsolutePath();
         }
 
         File widgetSetsDirectory = new File(widgetSetsDir);
@@ -81,50 +81,20 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
 
     @InputFiles
     @SkipWhenEmpty
-    FileCollection getSourceFiles() {
-        getProject().getLogger().info("Analyze source projects for widgetset building in %s", getProject().getName());
-
-        List<File> sources = new ArrayList<>();
-        List<File> files = new ArrayList<>();
-
-        SourceSet mainSourceSet = getSourceSet(getProject(), "main");
-
-        sources.addAll(mainSourceSet.getJava().getSrcDirs());
-        sources.addAll(getClassesDirs(mainSourceSet));
-        sources.add(mainSourceSet.getOutput().getResourcesDir());
-
-        for (Project dependencyProject : collectProjectsWithDependency("vaadin-client")) {
-            getProject().getLogger().info("\tFound source project %s for widgetset building", dependencyProject.getName());
-
-            SourceSet depMainSourceSet = getSourceSet(dependencyProject, "main");
-
-            sources.addAll(depMainSourceSet.getJava().getSrcDirs());
-            sources.addAll(getClassesDirs(depMainSourceSet));
-            sources.add(depMainSourceSet.getOutput().getResourcesDir());
-        }
-
-        sources.forEach(sourceDir -> {
-            if (sourceDir.exists()) {
-                getProject()
-                        .fileTree(sourceDir, f ->
-                                f.setExcludes(Collections.singleton("**/.*")))
-                        .forEach(files::add);
-            }
-        });
-
-        return getProject().files(files);
+    public FileCollection getSourceFiles() {
+        return super.getSourceFiles();
     }
 
     @OutputDirectory
     public File getOutputDirectory() {
         if (widgetSetsDir == null || widgetSetsDir.isEmpty()) {
-            return new File(getDefaultBuildDir());
+            return getDefaultBuildDir();
         }
         return new File(widgetSetsDir);
     }
 
-    protected String getDefaultBuildDir() {
-        return getProject().getBuildDir().toString() + "/web-debug/VAADIN/widgetsets";
+    protected File getDefaultBuildDir() {
+        return new File(getProject().getBuildDir(), "/web-debug/VAADIN/widgetsets");
     }
 
     protected List<File> collectClassPathEntries() {

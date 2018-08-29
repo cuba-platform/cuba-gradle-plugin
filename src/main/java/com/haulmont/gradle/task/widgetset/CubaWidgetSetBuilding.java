@@ -114,37 +114,7 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
     @InputFiles
     @SkipWhenEmpty
     public FileCollection getSourceFiles() {
-        getProject().getLogger().info("Analyze source projects for widgetset building in %s", getProject().getName());
-
-        List<File> sources = new ArrayList<>();
-        List<File> files = new ArrayList<>();
-
-        SourceSet mainSourceSet = getSourceSet(getProject(), "main");
-
-        sources.addAll(mainSourceSet.getJava().getSrcDirs());
-        sources.addAll(getClassesDirs(mainSourceSet));
-        sources.add(mainSourceSet.getOutput().getResourcesDir());
-
-        for (Project dependencyProject : collectProjectsWithDependency("vaadin-client")) {
-            getProject().getLogger().info("\tFound source project %s for widgetset building", dependencyProject.getName());
-
-            SourceSet depMainSourceSet = getSourceSet(dependencyProject, "main");
-
-            sources.addAll(depMainSourceSet.getJava().getSrcDirs());
-            sources.addAll(getClassesDirs(depMainSourceSet));
-            sources.add(depMainSourceSet.getOutput().getResourcesDir());
-        }
-
-        sources.forEach(sourceDir -> {
-            if (sourceDir.exists()) {
-                getProject()
-                        .fileTree(sourceDir, f ->
-                                f.setExcludes(Collections.singleton("**/.*")))
-                        .forEach(files::add);
-            }
-        });
-
-        return getProject().files(files);
+        return super.getSourceFiles();
     }
 
     @OutputDirectory
