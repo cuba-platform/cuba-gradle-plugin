@@ -72,7 +72,7 @@ class CubaEnhancingAction implements Action<Task> {
 
     protected List<String> enhanceClasses() {
         def outputDir = new File(enhancedDirPath)
-        List allClasses = []
+        List<String> allClasses = []
 
         def javaOutputDir = getEntityClassesDir()
 
@@ -122,7 +122,7 @@ class CubaEnhancingAction implements Action<Task> {
                     }
                 }
                 // delete empty dirs
-                def emptyDirs = []
+                List<File> emptyDirs = []
                 outputDir.eachDirRecurse { File dir ->
                     if (dir.listFiles({ File file -> !file.isDirectory() } as FileFilter).toList().isEmpty()) {
                         emptyDirs.add(dir)
@@ -137,9 +137,10 @@ class CubaEnhancingAction implements Action<Task> {
             allClasses.addAll(getTransientEntities())
 
             if (outputDir.exists()) {
-                allClasses.each { String className ->
+                for (className in allClasses) {
                     Path srcFile = Paths.get("$javaOutputDir/${className.replace('.', '/')}.class")
                     Path dstFile = Paths.get("$enhancedDirPath/${className.replace('.', '/')}.class")
+
                     Files.copy(srcFile, dstFile, StandardCopyOption.REPLACE_EXISTING)
                 }
             }
@@ -151,12 +152,26 @@ class CubaEnhancingAction implements Action<Task> {
 
             ClassPool pool = new ClassPool(null)
             pool.appendSystemPath()
-            sourceSet.compileClasspath.each { File file -> pool.insertClassPath(file.toString()) }
-            pool.insertClassPath(javaOutputDir.toString())
-            pool.insertClassPath(outputDir.toString())
 
-            def cubaEnhancer = new CubaEnhancer(pool, outputDir.toString())
-            allClasses.each { String name -> cubaEnhancer.run(name) }
+            for (file in sourceSet.compileClasspath) {
+                pool.insertClassPath(file.getAbsolutePath())
+            }
+
+            pool.insertClassPath(javaOutputDir.getAbsolutePath())
+            pool.insertClassPath(outputDir.getAbsolutePath())
+
+            def cubaEnhancer = new CubaEnhancer(pool, outputDir.getAbsolutePath())
+            cubaEnhancer.logger = project.logger
+
+            for (className in allClasses) {
+                def classFileName = className.replace('.', '/') + '.class'
+                def classFile = new File(javaOutputDir, classFileName)
+
+                if (classFile.exists()) {
+                    // skip files from dependencies, enhance only classes from `javaOutputDir`
+                    cubaEnhancer.run(className)
+                }
+            }
         }
 
         return allClasses
