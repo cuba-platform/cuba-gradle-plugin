@@ -28,7 +28,6 @@ import groovy.util.slurpersupport.GPathResult
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.plugins.BasePlugin
@@ -251,32 +250,7 @@ class CubaPlugin implements Plugin<Project> {
 
     private void applyEclipseConfigRootProject(Project project) {
         project.logger.info "[CubaPlugin] configuring Eclipse project"
-        project.eclipse.project.file.withXml { provider ->
-            def projectDescription = provider.asNode()
 
-            def filteredResources = projectDescription.children().find { it.name() == 'filteredResources' }
-            if (filteredResources != null) {
-                filteredResources.children().clear()
-            } else {
-                filteredResources = projectDescription.appendNode('filteredResources')
-            }
-            filteredResources.append(nestedProjectsFilter())
-        }
-        project.eclipse.classpath.file.withXml { provider ->
-            def classpath = provider.asNode()
-            for (String projectName : project.childProjects.keySet()) {
-                Node entry = classpath.appendNode('classpathentry')
-                entry.@kind = 'src'
-                if (projectName.startsWith("app")) {
-                    projectName = projectName.replace("app", project.name)
-                }
-                entry.@path = '/' + projectName
-                entry.@exported = 'true'
-
-                classpath.children().remove(entry)
-                classpath.children().add(0, entry)
-            }
-        }
         def cleanTask = project.tasks.getByPath(BasePlugin.CLEAN_TASK_NAME)
         cleanTask.delete = ['build/libs', 'build/tmp']
     }
@@ -428,19 +402,6 @@ class CubaPlugin implements Plugin<Project> {
         })
     }
 
-    private Node nestedProjectsFilter() {
-        def filter = new Node(null, 'filter')
-        filter.appendNode('id', new Date().getTime())   // Eclipse does the same
-        filter.appendNode('name', )
-        filter.appendNode('type', 26)                   // EXCLUDE_ALL = 2 | FOLDERS= 8 | INHERITABLE = 16
-        def node = filter.appendNode('matcher')
-
-        node.appendNode('id', 'org.eclipse.ui.ide.multiFilter')
-        node.appendNode('arguments', '1.0-projectRelativePath-matches-true-false-modules')
-
-        return filter
-    }
-
     private void applyToModuleProject(Project project) {
         project.sourceCompatibility = '1.8'
         project.targetCompatibility = '1.8'
@@ -518,61 +479,6 @@ class CubaPlugin implements Plugin<Project> {
             project.logger.info("[CubaPlugin] set web resources timestamp for project ${project.name}")
 
             project.ext.set('webResourcesTs', resourceBuildTimeStamp)
-        }
-
-        if (project.hasProperty('idea') && project.hasProperty('ideaModule')) {
-            project.logger.info "[CubaPlugin] configuring IDEA module $project.name"
-
-            def providedConfs = new ArrayList<Configuration>()
-            providedConfs.add(project.configurations.compile)
-            providedConfs.add(project.configurations.jdbc)
-
-            if (project.configurations.findByName('themes')) {
-                providedConfs.add(project.configurations.themes)
-            }
-
-            project.idea.module.scopes += [PROVIDED: [plus: providedConfs, minus: []]]
-
-            project.idea.module.inheritOutputDirs = true
-        }
-
-        if (project.hasProperty('eclipse')) {
-            project.logger.info "[CubaPlugin] configuring Eclipse module $project.name"
-
-            project.eclipse.project.file.withXml { provider ->
-                def projectDescription = provider.asNode()
-                def projectName = project.name.startsWith("app") ? project.name.replace("app", project.parent.name) : project.name
-                def name = projectDescription.children().find { it.name() == 'name' }
-                if (name != null) {
-                    name.value = projectName
-                } else {
-                    projectDescription.appendNode('name', projectName)
-                }
-            }
-
-            project.eclipse.classpath.file.withXml { provider ->
-                def root = provider.asNode()
-
-                for (Node classpath : root.children()) {
-
-                    if (classpath.@kind == "src") {
-                        def path = classpath.@path
-                        if (path.startsWith("/app")) {
-                            path = path.replace("/app", "/$project.parent.name")
-                            classpath.@path = path
-                        }
-                    }
-                }
-
-                if (project.name.endsWith('-global')) {
-                    Node entry = root.appendNode('classpathentry')
-                    entry.@kind = 'lib'
-                    entry.@exported = 'true'
-
-                    root.children().remove(entry)
-                    root.children().add(0, entry)
-                }
-            }
         }
     }
 
