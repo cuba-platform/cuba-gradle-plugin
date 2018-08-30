@@ -578,6 +578,8 @@ class CubaWarBuilding extends DefaultTask {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
 
         dependenciesFile.withWriter('UTF-8') { writer ->
+
+            List<String> libNames = new ArrayList<>()
             theProject.configurations.runtime.each { File lib ->
                 if (!lib.name.endsWith('.jar')) {
                     return false
@@ -588,7 +590,7 @@ class CubaWarBuilding extends DefaultTask {
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
                         && jarNames.contains(libraryName)) {
-                    writer << lib.name << '\n'
+                    libNames.add(lib.name)
                 }
             }
 
@@ -598,8 +600,13 @@ class CubaWarBuilding extends DefaultTask {
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
                         && jarNames.contains(libraryName)) {
-                    writer << lib.name << '\n'
+                    libNames.add(lib.name)
                 }
+            }
+
+            libNames = DependencyResolver.getResolvedLibsList(libNames)
+            libNames.forEach { String libName ->
+                writer << libName << '\n'
             }
         }
     }
