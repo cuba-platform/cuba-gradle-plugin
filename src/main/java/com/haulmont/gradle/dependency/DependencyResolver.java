@@ -263,4 +263,53 @@ public class DependencyResolver {
             }
         }
     }
+
+    public static List<String> getResolvedLibsList(List<String> libNames) {
+        // file names to remove
+        Set<String> removeSet = new HashSet<>();
+        // key - nameOfLib , value = list of matched versions
+        Map<String, List<String>> versionsMap = new HashMap<>();
+
+        for (String libraryName : libNames) {
+            LibraryDefinition curLibDef = getLibraryDefinition(libraryName);
+
+            String currentLibName = curLibDef.getName();
+            String currentLibVersion = curLibDef.getVersion();
+            //fill versionsMap
+            List<String> tempList = versionsMap.get(currentLibName);
+            if (tempList != null)
+                tempList.add(currentLibVersion);
+            else {
+                tempList = new LinkedList<>();
+                tempList.add(currentLibVersion);
+                versionsMap.put(currentLibName, tempList);
+            }
+        }
+
+        for (Map.Entry<String, List<String>> entry : versionsMap.entrySet()) {
+            String key = entry.getKey();
+            List<String> versionsList = entry.getValue();
+
+            for (int i = 0; i < versionsList.size(); i++) {
+                for (int j = i + 1; j < versionsList.size(); j++) {
+                    String iPlatform = getLibraryPlatform(versionsList.get(i));
+                    String jPlatform = getLibraryPlatform(versionsList.get(j));
+
+                    if (!Objects.equals(iPlatform, jPlatform)) {
+                        continue;
+                    }
+
+                    String versionToDelete = getLowestVersion(versionsList.get(i), versionsList.get(j));
+                    if (versionToDelete != null) {
+                        versionToDelete = key + "-" + versionToDelete + ".jar";
+                        removeSet.add(versionToDelete);
+                    }
+                }
+            }
+        }
+
+        List<String> resolvedLibNames = new ArrayList<>(libNames);
+        resolvedLibNames.removeAll(removeSet);
+        return resolvedLibNames;
+    }
 }
