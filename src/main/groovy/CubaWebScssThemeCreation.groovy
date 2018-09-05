@@ -196,14 +196,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
         }
 
-        def cssBuildTimeStamp = buildTimeStamp
-        if (StringUtils.isEmpty(buildTimeStamp) && project.ext.has('webResourcesTs')) {
-            // detect version automatically
-            cssBuildTimeStamp = project.ext.get('webResourcesTs')
-        }
-
         for (themeDirName in themes) {
-            buildTheme(themeDirName, stylesDirectory, vaadinThemesRoot, cssBuildTimeStamp)
+            buildTheme(themeDirName, stylesDirectory, vaadinThemesRoot)
         }
 
         copyResources(themesTmp, destinationDirectory)
@@ -313,7 +307,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
         }
     }
 
-    void buildTheme(String themeDirName, File stylesDirectory, File vaadinThemesRoot, String buildTimeStamp) {
+    void buildTheme(String themeDirName, File stylesDirectory, File vaadinThemesRoot) {
         project.logger.info("[CubaWebScssThemeCreation] build theme '{}'", themeDirName)
 
         def themeDir = new File(stylesDirectory, themeDirName)
@@ -350,11 +344,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
             performCssCompression(themeDir, cssFile)
         }
 
-        // update build timestamp for urls
-        if (StringUtils.isNotEmpty(buildTimeStamp)) {
-            performCssResourcesVersioning(themeDir, cssFile, buildTimeStamp)
-        }
-
         if (gzip) {
             project.logger.info("[CubaWebScssThemeCreation] compress css file 'styles.css'")
 
@@ -374,24 +363,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
         }
 
         project.logger.info("[CubaWebScssThemeCreation] successfully compiled theme '{}'", themeDir.name)
-    }
-
-    @CompileStatic
-    void performCssResourcesVersioning(File themeDir, File cssFile, String buildTimeStamp) {
-        project.logger.info("[CubaWebScssThemeCreation] add build timestamp to '${themeDir.name}'")
-        // read
-        def versionedFile = new File(cssFile.absolutePath + ".versioned")
-        def cssContent = cssFile.getText("UTF-8")
-        // find
-        def inspector = new CssUrlInspector()
-        // replace
-        for (String url : inspector.getUrls(cssContent)) {
-            cssContent = cssContent.replace(url, url + '?v=' + buildTimeStamp)
-        }
-        // write
-        versionedFile.write(cssContent, "UTF-8")
-        cssFile.delete()
-        versionedFile.renameTo(cssFile)
     }
 
     @CompileStatic
