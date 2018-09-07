@@ -211,7 +211,7 @@ class CubaDeployment extends DefaultTask {
             return false
         }
 
-        if (name.endsWith('-sources.jar') || name.endsWith('-tests.jar')) {
+        if (name.endsWith('-sources.jar') || name.endsWith('-tests.jar') || name.endsWith('-themes.jar')) {
             return false
         }
 

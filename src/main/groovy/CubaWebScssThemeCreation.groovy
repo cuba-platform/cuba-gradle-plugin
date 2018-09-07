@@ -15,14 +15,12 @@
  *
  */
 
-import com.haulmont.gradle.utils.CssUrlInspector
 import com.vaadin.sass.internal.ScssContext
 import com.vaadin.sass.internal.ScssStylesheet
 import com.vaadin.sass.internal.handler.SCSSDocumentHandlerImpl
 import com.vaadin.sass.internal.handler.SCSSErrorHandler
 import com.yahoo.platform.yui.compressor.CssCompressor
 import groovy.transform.CompileStatic
-import org.apache.commons.lang3.StringUtils
 import org.carrot2.labs.smartsprites.SmartSpritesParameters
 import org.carrot2.labs.smartsprites.SpriteBuilder
 import org.carrot2.labs.smartsprites.message.Message
@@ -76,8 +74,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     boolean cleanup = true
     @Input
     boolean gzip = true
-
-    String buildTimeStamp = ''
 
     List<String> excludedThemes = new ArrayList<String>()
     List<String> excludePaths = new ArrayList<String>()
@@ -164,8 +160,9 @@ class CubaWebScssThemeCreation extends DefaultTask {
         }
 
         def themesTmp = new File(project.buildDir, "themes-tmp")
-        if (themesTmp.exists())
+        if (themesTmp.exists()) {
             themesTmp.deleteDir()
+        }
         themesTmp.mkdir()
 
         def vaadinThemesRoot = new File(themesTmp, "VAADIN/themes")
@@ -180,6 +177,8 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     .listFiles(dirFilter)
                     .collect { it.name })
         }
+
+        addVaadinThemesDependency()
 
         unpackVaadinAddonsThemes(themesTmp)
         unpackThemesConfDependencies(themesTmp, vaadinThemesRoot)
@@ -220,6 +219,18 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             deleteQuietly(pathFile)
         }
+    }
+
+    void addVaadinThemesDependency() {
+        Configuration compileConf = project.configurations.findByName('compile')
+        String vaadinVersion = compileConf.getResolvedConfiguration().getResolvedArtifacts().stream()
+                .filter({ art -> (art.name == 'vaadin-shared') })
+                .map({ art -> art.getModuleVersion().getId().getVersion() })
+                .findFirst()
+                .orElseThrow({
+                    new GradleException("[CubaWebScssThemeCreation] Unable to find Vaadin version")})
+
+        project.dependencies.add('themes', "com.vaadin:vaadin-themes:${vaadinVersion}")
     }
 
     void unpackThemesConfDependencies(File themesTmp, File vaadinThemesRoot) {
@@ -819,7 +830,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 appComponentsIncludeBuilder.append("@import url(\"../../..$include\");\n")
             } else {
                 def mixin = include.substring(include.lastIndexOf("/") + 1,
-                        include.length() - '.scss'.length());
+                        include.length() - '.scss'.length())
 
                 appComponentsIncludeBuilder.append("@import \"../../..$include\";\n")
 
