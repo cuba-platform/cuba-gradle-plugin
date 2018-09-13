@@ -129,7 +129,7 @@ class CubaSetupTomcat extends DefaultTask {
 
         if (project.cuba.tomcat.shutdownPort) {
             String currPortValue = serverNode.@port
-            String newPortValue = project.cuba.tomcat.shutdownPort;
+            String newPortValue = project.cuba.tomcat.shutdownPort
             if (!Objects.equals(currPortValue, newPortValue)) {
                 serverNode.@port = newPortValue
                 changed = true
@@ -183,7 +183,7 @@ class CubaSetupTomcat extends DefaultTask {
         }
 
         if (changed) {
-            new XmlNodePrinter(new PrintWriter(new FileWriter(serverXmlFile))).print(serverNode)
+            new XmlNodePrinter(new PrintWriter(new FileWriter(serverXml.toFile()))).print(serverNode)
         }
     }
 
