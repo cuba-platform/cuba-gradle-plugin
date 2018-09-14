@@ -575,7 +575,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
                 resolvedLibs.add(details.file.name)
                 def libraryName = DependencyResolver.getLibraryDefinition(details.file.name).name
-                !jarNames.contains(libraryName)
+                !jarNames.contains(libraryName) || isWidgetSetClientJar(details.file.name)
             }
         }
     }
@@ -595,9 +595,13 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
                 resolvedLibs.add(details.file.name)
                 def libraryName = DependencyResolver.getLibraryDefinition(details.file.name).name
-                jarNames.contains(libraryName)
+                jarNames.contains(libraryName) && !isWidgetSetClientJar(details.file.name)
             }
         }
+    }
+
+    protected boolean isWidgetSetClientJar(String jarName) {
+        return jarName && jarName.contains('web-toolkit') && jarName.contains('-client')
     }
 
     protected void copyWebInfContent(Project theProject) {
