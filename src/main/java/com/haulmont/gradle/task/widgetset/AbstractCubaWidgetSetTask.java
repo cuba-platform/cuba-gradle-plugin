@@ -39,8 +39,16 @@ public abstract class AbstractCubaWidgetSetTask extends DefaultTask {
         excludes.addAll(Arrays.asList(artifacts));
     }
 
+    public List<String> getExcludes() {
+        return excludes;
+    }
+
     public void jvmArgs(String... jvmArgs) {
         compilerJvmArgs.addAll(Arrays.asList(jvmArgs));
+    }
+
+    public Set<String> getCompilerJvmArgs() {
+        return compilerJvmArgs;
     }
 
     protected Collection<File> getClassesDirs(SourceSet sourceSet) {

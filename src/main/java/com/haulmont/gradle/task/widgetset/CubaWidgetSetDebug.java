@@ -218,32 +218,65 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
         this.widgetSetsDir = widgetSetsDir;
     }
 
+    public String getWidgetSetsDir() {
+        return widgetSetsDir;
+    }
+
     public void setWidgetSetClass(String widgetSetClass) {
         this.widgetSetClass = widgetSetClass;
+    }
+
+    public String getWidgetSetClass() {
+        return widgetSetClass;
     }
 
     public void setCompilerArgs(Map<String, Object> compilerArgs) {
         this.compilerArgs = compilerArgs;
     }
 
+    public Map<String, Object> getCompilerArgs() {
+        return compilerArgs;
+    }
+
     public void setPrintCompilerClassPath(boolean printCompilerClassPath) {
         this.printCompilerClassPath = printCompilerClassPath;
+    }
+
+    public boolean isPrintCompilerClassPath() {
+        return printCompilerClassPath;
     }
 
     public void setLogLevel(String logLevel) {
         this.logLevel = logLevel;
     }
 
+    public String getLogLevel() {
+        return logLevel;
+    }
+
     public void setXmx(String xmx) {
         this.xmx = xmx;
+    }
+
+    public String getXmx() {
+        return xmx;
     }
 
     public void setXss(String xss) {
         this.xss = xss;
     }
 
+    public String getXss() {
+        return xss;
+    }
+
     @Deprecated
     public void setXxMPS(String xxMPS) {
         this.xxMPS = xxMPS;
+    }
+
+    @Deprecated
+    public String getXxMPS() {
+        return xxMPS;
     }
 }
