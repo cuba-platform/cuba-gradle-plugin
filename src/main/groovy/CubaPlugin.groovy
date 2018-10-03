@@ -469,7 +469,24 @@ class CubaPlugin implements Plugin<Project> {
         if (project.name.endsWith('-toolkit')) {
             // hibernate validator breaks GWT compilation
             project.configurations {
-                compile.exclude group: 'org.hibernate', module: 'hibernate-validator'
+                compile.exclude group: 'org.hibernate.validator', module: 'hibernate-validator'
+
+                // also remove spring and other unsupported dependencies by default
+                compile.exclude group: 'com.fasterxml.jackson.core'
+                compile.exclude group: 'com.fasterxml.jackson.dataformat'
+                compile.exclude group: 'org.apache.commons'
+                compile.exclude group: 'org.webjars'
+                compile.exclude group: 'commons-fileupload'
+                compile.exclude group: 'commons-io'
+                compile.exclude group: 'commons-cli'
+                compile.exclude group: 'commons-codec'
+
+                compile.exclude group: 'org.springframework'
+                compile.exclude group: 'org.springframework.security'
+                compile.exclude group: 'org.springframework.ldap'
+                compile.exclude group: 'org.eclipse.persistence'
+                compile.exclude group: 'org.codehaus.groovy'
+                compile.exclude group: 'org.apache.ant'
             }
         }
 
