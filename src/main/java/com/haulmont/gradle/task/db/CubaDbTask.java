@@ -440,4 +440,116 @@ public abstract class CubaDbTask extends DefaultTask {
                     .map(s -> s.replace(delimiter + delimiter, delimiter)).collect(Collectors.toList());
         }
     }
+
+    public String getDbms() {
+        return dbms;
+    }
+
+    public void setDbms(String dbms) {
+        this.dbms = dbms;
+    }
+
+    public String getDbmsVersion() {
+        return dbmsVersion;
+    }
+
+    public void setDbmsVersion(String dbmsVersion) {
+        this.dbmsVersion = dbmsVersion;
+    }
+
+    public String getDelimiter() {
+        return delimiter;
+    }
+
+    public void setDelimiter(String delimiter) {
+        this.delimiter = delimiter;
+    }
+
+    public String getHost() {
+        return host;
+    }
+
+    public void setHost(String host) {
+        this.host = host;
+    }
+
+    public String getDbFolder() {
+        return dbFolder;
+    }
+
+    public void setDbFolder(String dbFolder) {
+        this.dbFolder = dbFolder;
+    }
+
+    public String getConnectionParams() {
+        return connectionParams;
+    }
+
+    public void setConnectionParams(String connectionParams) {
+        this.connectionParams = connectionParams;
+    }
+
+    public String getDbName() {
+        return dbName;
+    }
+
+    public void setDbName(String dbName) {
+        this.dbName = dbName;
+    }
+
+    public String getDbUser() {
+        return dbUser;
+    }
+
+    public void setDbUser(String dbUser) {
+        this.dbUser = dbUser;
+    }
+
+    public String getDbPassword() {
+        return dbPassword;
+    }
+
+    public void setDbPassword(String dbPassword) {
+        this.dbPassword = dbPassword;
+    }
+
+    public String getDriverClasspath() {
+        return driverClasspath;
+    }
+
+    public void setDriverClasspath(String driverClasspath) {
+        this.driverClasspath = driverClasspath;
+    }
+
+    public String getDbUrl() {
+        return dbUrl;
+    }
+
+    public void setDbUrl(String dbUrl) {
+        this.dbUrl = dbUrl;
+    }
+
+    public String getDriver() {
+        return driver;
+    }
+
+    public void setDriver(String driver) {
+        this.driver = driver;
+    }
+
+    public String getTimeStampType() {
+        return timeStampType;
+    }
+
+    public void setTimeStampType(String timeStampType) {
+        this.timeStampType = timeStampType;
+    }
+
+    public File getDbDir() {
+        return dbDir;
+    }
+
+    public void setDbDir(File dbDir) {
+        this.dbDir = dbDir;
+    }
 }

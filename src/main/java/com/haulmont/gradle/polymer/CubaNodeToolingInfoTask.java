@@ -35,8 +35,8 @@ public class CubaNodeToolingInfoTask extends DefaultTask {
 
     public static final String NAME = "nodeToolingInfo";
 
-    private static final String BUILD_DIR  = "tooling";
-    private static final String INFO_FILE_NAME = "info.json";
+    protected static final String BUILD_DIR  = "tooling";
+    protected static final String INFO_FILE_NAME = "info.json";
 
     public CubaNodeToolingInfoTask() {
         setDescription("Provides info about node/npm tooling used in project");
@@ -60,20 +60,19 @@ public class CubaNodeToolingInfoTask extends DefaultTask {
     }
 
     @OutputDirectory
-    private File getOutputDirectory() {
+    protected File getOutputDirectory() {
         return new File(getProject().getBuildDir(), BUILD_DIR);
     }
 
     @InputFile
-    private File getInputFile() {
+    protected File getInputFile() {
         // build.gradle since node/npm versions specified there
         return new File(getProject().getRootProject().getProjectDir(), "build.gradle");
     }
 
-    private class Info {
-        private String nodeExec;
-        private String npmExec;
-
+    protected static class Info {
+        protected String nodeExec;
+        protected String npmExec;
 
         public Info(String nodeExec, String npmExec) {
             this.nodeExec = nodeExec;
