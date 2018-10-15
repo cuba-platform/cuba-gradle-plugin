@@ -16,7 +16,6 @@
 
 package com.haulmont.gradle.javaeecdi;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
@@ -25,6 +24,9 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+
+import static org.apache.commons.io.FileUtils.writeByteArrayToFile;
 
 public class CubaBeansXml extends DefaultTask {
 
@@ -49,7 +51,8 @@ public class CubaBeansXml extends DefaultTask {
         file.getParentFile().mkdirs();
 
         try {
-            FileUtils.write(file, IOUtils.toString(CubaBeansXml.class.getResource("/javaeecdi/beans.xml")));
+            URL resource = CubaBeansXml.class.getResource("/javaeecdi/beans.xml");
+            writeByteArrayToFile(file, IOUtils.toByteArray(resource));
         } catch (IOException e) {
             throw new GradleException("Unable to create beans.xml", e);
         }
