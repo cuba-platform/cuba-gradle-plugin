@@ -156,7 +156,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     void buildThemes() {
         def stylesDirectory = project.file(scssDir)
         if (!stylesDirectory.exists()) {
-            throw new FileNotFoundException("Unable to find SCSS themes root directory ${scssRoot.absolutePath}")
+            throw new FileNotFoundException("Unable to find SCSS themes root directory ${stylesDirectory.absolutePath}")
         }
 
         def themesTmp = new File(project.buildDir, "themes-tmp")
