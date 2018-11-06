@@ -729,6 +729,7 @@ class CubaPlugin implements Plugin<Project> {
                 }
                 project.dependencies {
                     themes(dependency)
+                    compileOnly(dependency)
                 }
                 break
             case '':

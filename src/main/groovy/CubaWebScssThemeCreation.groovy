@@ -178,8 +178,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
                     .collect { it.name })
         }
 
-        addVaadinThemesDependency()
-
         unpackVaadinAddonsThemes(themesTmp)
         unpackThemesConfDependencies(themesTmp, vaadinThemesRoot)
 
@@ -219,18 +217,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
             deleteQuietly(pathFile)
         }
-    }
-
-    void addVaadinThemesDependency() {
-        Configuration compileConf = project.configurations.findByName('compile')
-        String vaadinVersion = compileConf.getResolvedConfiguration().getResolvedArtifacts().stream()
-                .filter({ art -> (art.name == 'vaadin-shared') })
-                .map({ art -> art.getModuleVersion().getId().getVersion() })
-                .findFirst()
-                .orElseThrow({
-                    new GradleException("[CubaWebScssThemeCreation] Unable to find Vaadin version")})
-
-        project.dependencies.add('themes', "com.vaadin:vaadin-themes:${vaadinVersion}")
     }
 
     void unpackThemesConfDependencies(File themesTmp, File vaadinThemesRoot) {
