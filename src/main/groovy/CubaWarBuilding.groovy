@@ -28,6 +28,7 @@ import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -577,7 +578,7 @@ class CubaWarBuilding extends DefaultTask {
     protected void writeDependencies(Project theProject, String applicationType, def jarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
 
-        dependenciesFile.withWriter('UTF-8') { writer ->
+        dependenciesFile.withWriter(StandardCharsets.UTF_8.name()) { writer ->
 
             List<String> libNames = new ArrayList<>()
             theProject.configurations.runtime.each { File lib ->
@@ -589,6 +590,7 @@ class CubaWarBuilding extends DefaultTask {
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
+                        && !lib.name.endsWith('-themes.jar')
                         && jarNames.contains(libraryName)) {
                     libNames.add(lib.name)
                 }
@@ -599,6 +601,7 @@ class CubaWarBuilding extends DefaultTask {
 
                 if (!lib.name.endsWith('-sources.jar')
                         && !lib.name.endsWith('-tests.jar')
+                        && !lib.name.endsWith('-themes.jar')
                         && jarNames.contains(libraryName)) {
                     libNames.add(lib.name)
                 }
