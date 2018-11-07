@@ -533,7 +533,8 @@ class CubaWarBuilding extends DefaultTask {
                 into "${warDir(theProject)}/WEB-INF/lib"
                 include { details ->
                     String name = details.file.name
-                    if (!(name.endsWith('-sources.jar')) && name.endsWith(".jar")) {
+                    if (name.endsWith(".jar")
+                            && !(name.endsWith('-sources.jar') || name.endsWith("-themes.jar"))) {
                         copied.add(name)
                         return true
                     }

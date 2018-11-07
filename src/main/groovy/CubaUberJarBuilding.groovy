@@ -551,7 +551,8 @@ class CubaUberJarBuilding extends DefaultTask {
             from project.configurations.uberJar
             into getServerLibsDir()
             include { details ->
-                if (details.file.name.endsWith('-sources.jar')) {
+                if (details.file.name.endsWith('-sources.jar')
+                        || details.file.name.endsWith('-themes.jar')) {
                     return false
                 }
                 resolvedLibs.add(details.file.name)
@@ -570,7 +571,8 @@ class CubaUberJarBuilding extends DefaultTask {
                 if (!details.file.name.endsWith('.jar')) {
                     return false
                 }
-                if (details.file.name.endsWith('-sources.jar')) {
+                if (details.file.name.endsWith('-sources.jar')
+                    || details.file.name.endsWith('-themes.jar')) {
                     return false
                 }
                 resolvedLibs.add(details.file.name)
@@ -590,7 +592,8 @@ class CubaUberJarBuilding extends DefaultTask {
                 if (!details.file.name.endsWith(".jar")) {
                     return false
                 }
-                if (details.file.name.endsWith('-sources.jar')) {
+                if (details.file.name.endsWith('-sources.jar')
+                    || details.file.name.endsWith('-themes.jar')) {
                     return false
                 }
                 resolvedLibs.add(details.file.name)
