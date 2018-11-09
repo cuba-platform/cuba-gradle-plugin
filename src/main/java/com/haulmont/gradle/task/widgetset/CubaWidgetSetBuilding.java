@@ -65,6 +65,7 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         dependsOn(getProject().getTasks().getByPath(JavaPlugin.CLASSES_TASK_NAME));
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @TaskAction
     public void buildWidgetSet() {
         if (widgetSetClass == null || widgetSetClass.isEmpty()) {
@@ -99,11 +100,11 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         List<String> gwtCompilerArgs = collectCompilerArgs(gwtWidgetSetTemp.getAbsolutePath());
         List<String> gwtCompilerJvmArgs = collectCompilerJvmArgs(gwtJavaTmp);
 
-        getProject().javaexec(javaExecSpec -> {
-            javaExecSpec.setMain("com.google.gwt.dev.Compiler");
-            javaExecSpec.setClasspath(getProject().files(compilerClassPath));
-            javaExecSpec.setArgs(gwtCompilerArgs);
-            javaExecSpec.setJvmArgs(gwtCompilerJvmArgs);
+        getProject().javaexec(spec -> {
+            spec.setMain("com.google.gwt.dev.Compiler");
+            spec.setClasspath(getProject().files(compilerClassPath));
+            spec.setArgs(gwtCompilerArgs);
+            spec.setJvmArgs(gwtCompilerJvmArgs);
         });
 
         FileUtils.deleteQuietly(new File(gwtWidgetSetTemp, "WEB-INF"));
@@ -181,8 +182,8 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         return compilerClassPath;
     }
 
-    protected List collectCompilerArgs(String warPath) {
-        List args = new ArrayList();
+    protected List<String> collectCompilerArgs(String warPath) {
+        List<String> args = new ArrayList<>();
 
         args.add("-war");
         args.add(warPath);
@@ -199,18 +200,20 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
             args.add("-XdisableCastChecking");
         }
 
-        Map<String, Object> gwtCompilerArgs = new HashMap<>();
+        Map<String, String> gwtCompilerArgs = new HashMap<>();
 
         gwtCompilerArgs.put("-style", style);
         gwtCompilerArgs.put("-logLevel", logLevel);
-        gwtCompilerArgs.put("-localWorkers", workers);
-        gwtCompilerArgs.put("-optimize", optimize);
+        gwtCompilerArgs.put("-localWorkers", String.valueOf(workers));
+        gwtCompilerArgs.put("-optimize", String.valueOf(optimize));
 
         if (compilerArgs != null) {
-            gwtCompilerArgs.putAll(compilerArgs);
+            for (Map.Entry<String, String> entry : gwtCompilerArgs.entrySet()) {
+                gwtCompilerArgs.put(entry.getKey(), String.valueOf(entry.getValue()));
+            }
         }
 
-        for (Map.Entry<String, Object> entry : gwtCompilerArgs.entrySet()) {
+        for (Map.Entry<String, String> entry : gwtCompilerArgs.entrySet()) {
             args.add(entry.getKey());
             args.add(entry.getValue());
         }

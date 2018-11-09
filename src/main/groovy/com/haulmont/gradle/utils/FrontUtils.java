@@ -20,6 +20,7 @@ import org.apache.commons.io.IOUtils;
 import org.gradle.api.GradleException;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,21 +31,19 @@ public class FrontUtils {
     public static final String API_URL_VAR = "cubaFrontApiUrl";
 
     public static String rewriteBaseUrl(String html, String defaultValue) {
-        Matcher matcher = Pattern.compile(BASE_TAG_REGEXP).matcher(html);
-        StringBuffer result = new StringBuffer();
-        if (matcher.find()) {
-            String expression = "<#if " + BASE_URL_VAR + "??>\\${" + BASE_URL_VAR + "}<#else>" + (defaultValue == null ? matcher.group(1) : defaultValue) + "</#if>";
-            matcher.appendReplacement(result, matcher.group().replace(matcher.group(1), expression));
-        }
-        matcher.appendTail(result);
-        return result.toString();
+        return rewriteUrl(html, defaultValue, BASE_TAG_REGEXP, BASE_URL_VAR);
     }
 
     public static String rewriteApiUrl(String html, String defaultValue) {
-        Matcher matcher = Pattern.compile(API_URL_REGEXP).matcher(html);
+        return rewriteUrl(html, defaultValue, API_URL_REGEXP, API_URL_VAR);
+    }
+
+    protected static String rewriteUrl(String html, String defaultValue, String tagRegexp, String urlVar) {
+        Matcher matcher = Pattern.compile(tagRegexp).matcher(html);
         StringBuffer result = new StringBuffer();
         if (matcher.find()) {
-            String expression = "<#if " + API_URL_VAR + "??>\\${" + API_URL_VAR + "}<#else>" + (defaultValue == null ? matcher.group(1) : defaultValue) + "</#if>";
+            String expression = "<#if " + urlVar + "??>\\${" + urlVar + "}<#else>"
+                    + (defaultValue == null ? matcher.group(1) : defaultValue) + "</#if>";
             matcher.appendReplacement(result, matcher.group().replace(matcher.group(1), expression));
         }
         matcher.appendTail(result);
@@ -53,8 +52,8 @@ public class FrontUtils {
 
     public static String getFrontWebXml() {
         try {
-            return IOUtils.toString(
-                    FrontUtils.class.getClassLoader().getResourceAsStream("front-web.xml"));
+            ClassLoader classLoader = FrontUtils.class.getClassLoader();
+            return IOUtils.toString(classLoader.getResourceAsStream("front-web.xml"), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new GradleException("Web.xml not found", e);
         }

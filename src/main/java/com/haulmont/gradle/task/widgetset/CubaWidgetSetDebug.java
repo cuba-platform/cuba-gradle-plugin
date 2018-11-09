@@ -186,7 +186,7 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
 
         for (Map.Entry<String, Object> entry : gwtCompilerArgs.entrySet()) {
             args.add(entry.getKey());
-            args.add((String) entry.getValue());
+            args.add(String.valueOf(entry.getValue()));
         }
 
         args.add(widgetSetClass);
