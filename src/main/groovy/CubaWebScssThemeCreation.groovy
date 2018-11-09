@@ -21,23 +21,16 @@ import com.vaadin.sass.internal.handler.SCSSDocumentHandlerImpl
 import com.vaadin.sass.internal.handler.SCSSErrorHandler
 import com.yahoo.platform.yui.compressor.CssCompressor
 import groovy.transform.CompileStatic
-import org.carrot2.labs.smartsprites.SmartSpritesParameters
-import org.carrot2.labs.smartsprites.SpriteBuilder
-import org.carrot2.labs.smartsprites.message.Message
-import org.carrot2.labs.smartsprites.message.MessageLog
-import org.carrot2.labs.smartsprites.message.MessageSink
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.file.FileCollection
-import org.gradle.api.internal.file.collections.SimpleFileCollection
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
-import org.kohsuke.args4j.CmdLineParser
 import org.w3c.css.sac.CSSException
 import org.w3c.css.sac.CSSParseException
 
@@ -48,7 +41,6 @@ import java.util.jar.Manifest
 import java.util.zip.GZIPOutputStream
 
 import static org.apache.commons.io.FileUtils.deleteQuietly
-import static org.apache.commons.io.IOUtils.closeQuietly
 
 class CubaWebScssThemeCreation extends DefaultTask {
 
@@ -68,7 +60,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
     @Input
     boolean compress = true
-    @Input
+    @Deprecated
     boolean sprites = true
     @Input
     boolean cleanup = true
@@ -78,29 +70,10 @@ class CubaWebScssThemeCreation extends DefaultTask {
     List<String> excludedThemes = new ArrayList<String>()
     List<String> excludePaths = new ArrayList<String>()
     List<String> doNotUnpackPaths = [
-            'VAADIN/themes/base/*.css',
-            'VAADIN/themes/base/*.css.gz',
-            'VAADIN/themes/base/favicon.ico',
             'VAADIN/themes/valo/*.css',
             'VAADIN/themes/valo/*.css.gz',
             'VAADIN/themes/valo/favicon.ico',
-            'VAADIN/themes/reindeer/**',
-            'VAADIN/themes/chameleon/**',
-            'VAADIN/themes/runo/**',
-            'VAADIN/themes/liferay/**',
             'VAADIN/themes/valo/util/readme.txt',
-            'VAADIN/themes/valo/fonts/lato/*.eot',
-            'VAADIN/themes/valo/fonts/lato/*.ttf',
-            'VAADIN/themes/valo/fonts/lato/*.woff',
-            'VAADIN/themes/valo/fonts/lora/*.eot',
-            'VAADIN/themes/valo/fonts/lora/*.ttf',
-            'VAADIN/themes/valo/fonts/lora/*.woff',
-            'VAADIN/themes/valo/fonts/roboto/*.eot',
-            'VAADIN/themes/valo/fonts/roboto/*.ttf',
-            'VAADIN/themes/valo/fonts/roboto/*.woff',
-            'VAADIN/themes/valo/fonts/source-sans-pro/*.eot',
-            'VAADIN/themes/valo/fonts/source-sans-pro/*.ttf',
-            'VAADIN/themes/valo/fonts/source-sans-pro/*.woff',
             'META-INF/**',
     ]
 
@@ -125,7 +98,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
     FileCollection getSourceFiles() {
         def scssRoot = project.file(scssDir)
         if (!scssRoot.exists()) {
-            return new SimpleFileCollection()
+            return project.files()
         }
 
         def files = new ArrayList<File>()
@@ -149,7 +122,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
             }
         }
 
-        return new SimpleFileCollection(files)
+        return project.files(files)
     }
 
     @TaskAction
@@ -333,10 +306,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         compileScss(scssFile, cssFile)
 
-        if (sprites) {
-            performSpritesProcessing(themeDir, themeBuildDir, cssFile.absolutePath)
-        }
-
         if (compress) {
             performCssCompression(themeDir, cssFile)
         }
@@ -454,77 +423,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
     }
 
     @CompileStatic
-    void performSpritesProcessing(File themeDir, File themeBuildDir, String cssFilePath) {
-        project.logger.info("[CubaWebScssThemeCreation] compile sprites for theme '{}'", themeDir.name)
-
-        def compiledSpritesDir = new File(themeBuildDir, 'compiled')
-        if (!compiledSpritesDir.exists())
-            compiledSpritesDir.mkdir()
-
-        def processedFile = new File(themeBuildDir, 'styles-sprite.css')
-        def cssFile = new File(cssFilePath)
-
-        // process
-        def parameters = new SmartSpritesParameters()
-        def parser = new CmdLineParser(parameters)
-
-        parser.parseArgument('--root-dir-path', themeBuildDir.absolutePath)
-
-        def messageToString = { Message m ->
-            def stringBuilder = new StringBuilder("[CubaWebScssThemeCreation] ")
-            stringBuilder.append(m.getFormattedMessage())
-
-            if (m.cssPath != null) {
-                stringBuilder.append(" (")
-                stringBuilder.append(m.cssPath)
-                stringBuilder.append(", line: ")
-                stringBuilder.append(m.line + 1)
-                stringBuilder.append(")")
-            }
-
-            return stringBuilder.toString()
-        }
-
-        def messageLog = new MessageLog(new MessageSink() {
-            @Override
-            void add(Message message) {
-                switch (message.level) {
-                    case Message.MessageLevel.WARN:
-                        project.logger.warn(messageToString(message))
-                        break
-
-                    case Message.MessageLevel.INFO:
-                    case Message.MessageLevel.STATUS:
-                        project.logger.info(messageToString(message))
-                        break
-
-                    case Message.MessageLevel.ERROR:
-                        project.logger.error(messageToString(message))
-                        break
-
-                    default:
-                        break
-                }
-            }
-        })
-        new SpriteBuilder(parameters, messageLog).buildSprites()
-
-        def dirsToDelete = new ArrayList<File>()
-        // remove sprites directories
-        themeBuildDir.eachDirRecurse { if ('sprites' == it.name) dirsToDelete.add(it) }
-
-        for (dir in dirsToDelete) {
-            dir.deleteDir()
-        }
-
-        // replace file
-        if (processedFile.exists()) {
-            cssFile.delete()
-            processedFile.renameTo(cssFile)
-        }
-    }
-
-    @CompileStatic
     void prepareAppComponentsInclude(File themeBuildDir) {
         def appComponentConf = project.rootProject.configurations.getByName('appComponent')
         if (appComponentConf.dependencies.size() > 0) {
@@ -558,7 +456,7 @@ class CubaWebScssThemeCreation extends DefaultTask {
 
         walkDependenciesFromAppComponentsConfiguration(dependencies, addedArtifacts, { ResolvedArtifact artifact ->
             def jarFile = new JarFile(artifact.file)
-            try {
+            jarFile.withCloseable {
                 def manifest = jarFile.manifest
                 if (manifest == null) {
                     return
@@ -586,8 +484,6 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 }
 
                 includeComponentScss(themeBuildDir, compId, appComponentsIncludeBuilder, includeMixins)
-            } finally {
-                closeQuietly(jarFile)
             }
         })
 
@@ -856,5 +752,15 @@ class CubaWebScssThemeCreation extends DefaultTask {
                 apply(f)
             }
         }
+    }
+
+    boolean getSprites() {
+        return sprites
+    }
+
+    void setSprites(boolean sprites) {
+        this.sprites = sprites
+
+        project.logger.warn('[CubaWebScssThemeCreation] sprites option is not supported anymore')
     }
 }

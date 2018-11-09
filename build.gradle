@@ -78,9 +78,9 @@ dependencies {
     compile('org.apache.httpcomponents:httpcore:4.4.10')
     compile('org.javassist:javassist:3.24.0-GA')
     compile('commons-io:commons-io:2.6')
+    compile('org.apache.commons:commons-lang3:3.8.1')
 
     compile('com.yahoo.platform.yui:yuicompressor:2.4.6')
-    compile('com.carrotsearch:smartsprites:0.2.11')
     compile('com.vaadin:vaadin-sass-compiler:0.9.13') {
         exclude group: 'com.yahoo.platform.yui', module: 'yuicompressor'
     }
