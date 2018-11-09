@@ -76,7 +76,7 @@ configurations {
 dependencies {
     compile('org.apache.httpcomponents:httpmime:4.5.6')
     compile('org.apache.httpcomponents:httpcore:4.4.10')
-    compile('org.javassist:javassist:3.23.1-GA')
+    compile('org.javassist:javassist:3.24.0-GA')
     compile('commons-io:commons-io:2.6')
 
     compile('com.yahoo.platform.yui:yuicompressor:2.4.6')
