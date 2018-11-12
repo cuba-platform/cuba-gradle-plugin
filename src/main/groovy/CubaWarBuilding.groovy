@@ -15,7 +15,6 @@
  *
  */
 
-import com.google.common.base.Strings
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.utils.FrontUtils
@@ -866,18 +865,6 @@ class CubaWarBuilding extends DefaultTask {
             throw new GradleException("$webXml doesn't exists")
         }
 
-        if (theProject.ext.has('webResourcesTs')) {
-            theProject.logger.info("[CubaWarBuilding] update web resources timestamp")
-
-            // detect version automatically
-            String buildTimeStamp = theProject.ext.get('webResourcesTs').toString()
-
-            def webXmlText = Strings.nullToEmpty(webXml.text)
-            if (webXmlText.contains('${webResourcesTs}')) {
-                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp)
-            }
-            webXml.write(webXmlText)
-        }
         theProject.logger.info("[CubaWarBuilding] touch ${warDir(theProject)}/WEB-INF/web.xml")
         webXml.setLastModified(System.currentTimeMillis())
     }

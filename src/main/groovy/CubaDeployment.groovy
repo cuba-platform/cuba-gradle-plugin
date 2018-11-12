@@ -16,7 +16,6 @@
  */
 
 import com.haulmont.gradle.dependency.DependencyResolver
-import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
@@ -187,19 +186,6 @@ class CubaDeployment extends DefaultTask {
         }
 
         def webXml = new File("${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
-        if (project.ext.has('webResourcesTs')) {
-            project.logger.info("[CubaDeployment] update web resources timestamp")
-
-            // detect version automatically
-            def buildTimeStamp = project.ext.get('webResourcesTs')
-
-            def webXmlText = webXml.text
-            if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
-                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp.toString())
-            }
-            webXml.write(webXmlText)
-        }
-
         project.logger.info("[CubaDeployment] touch ${tomcatRootDir}/webapps/$appName/WEB-INF/web.xml")
         webXml.setLastModified(System.currentTimeMillis())
     }

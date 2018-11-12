@@ -846,19 +846,6 @@ class CubaUberJarBuilding extends DefaultTask {
         if (!webXml.exists()) {
             throw new GradleException("$webXml doesn't exists")
         }
-
-        if (theProject.ext.has('webResourcesTs')) {
-            theProject.logger.info("[CubaUberJAR] Update web resources timestamp")
-
-            // detect version automatically
-            String buildTimeStamp = theProject.ext.get('webResourcesTs').toString()
-
-            def webXmlText = webXml.text
-            if (StringUtils.contains(webXmlText, '${webResourcesTs}')) {
-                webXmlText = webXmlText.replace('${webResourcesTs}', buildTimeStamp)
-            }
-            webXml.write(webXmlText)
-        }
     }
 
     protected void writeLibsFile(Project theProject, Set<String> resolvedLibs) {

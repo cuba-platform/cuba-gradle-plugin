@@ -47,7 +47,6 @@ import org.jetbrains.gradle.ext.Remote
 import org.jetbrains.gradle.ext.RunConfigurationContainer
 
 import java.nio.charset.StandardCharsets
-import java.text.SimpleDateFormat
 import java.util.function.Consumer
 import java.util.jar.JarFile
 import java.util.jar.Manifest
@@ -488,14 +487,6 @@ class CubaPlugin implements Plugin<Project> {
                 compile.exclude group: 'org.codehaus.groovy'
                 compile.exclude group: 'org.apache.ant'
             }
-        }
-
-        // add web resources version for correct caching
-        if (project.name.endsWith('-web')) {
-            def resourceBuildTimeStamp = new SimpleDateFormat('yyyy_MM_dd_HH_mm').format(new Date())
-            project.logger.info("[CubaPlugin] set web resources timestamp for project ${project.name}")
-
-            project.ext.set('webResourcesTs', resourceBuildTimeStamp)
         }
     }
 
