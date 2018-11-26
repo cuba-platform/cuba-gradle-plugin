@@ -178,6 +178,7 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToRootProject(Project project, CubaPluginExtension cubaExtension) {
         project.configurations {
             appComponent
+            uberJar
         }
 
         enableBOMVersionResolver(project, cubaExtension.bom)
@@ -207,7 +208,6 @@ class CubaPlugin implements Plugin<Project> {
     private void doAfterEvaluateForRootProject(Project project) {
         project.configurations {
             tomcat
-            uberJar
             front
         }
         project.dependencies {

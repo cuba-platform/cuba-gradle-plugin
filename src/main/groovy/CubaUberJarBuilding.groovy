@@ -34,7 +34,7 @@ class CubaUberJarBuilding extends DefaultTask {
     private static final String LIBS_DIR = "libs"
     private static final String LIBS_SHARED_DIR = "libs_shared"
     private static final String CONTENT_DIR = "content"
-    private static final String MAIN_CLASS = "com.haulmont.cuba.uberjar.ServerRunner"
+    private static final String MAIN_CLASS = "com.haulmont.uberjar.ServerRunner"
 
     public static final String CORE_CONTENT_DIR_IN_JAR = "app-core"
     public static final String WEB_CONTENT_DIR_IN_JAR = "app"
@@ -115,6 +115,8 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> coreJarNames
     protected Collection<String> webJarNames
     protected Collection<String> portalJarNames
+
+    protected String uberJarVersion = '1.0.1'
 
     CubaUberJarBuilding() {
         setGroup('Deployment')
@@ -416,7 +418,7 @@ class CubaUberJarBuilding extends DefaultTask {
 
         String platformVersion = resolvePlatformVersion(coreProject)
         project.dependencies {
-            uberJar(group: 'com.haulmont.cuba', name: 'cuba-uberjar', version: platformVersion)
+            uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: uberJarVersion)
         }
         if (polymerProject) {
             project.dependencies {
