@@ -114,6 +114,7 @@ class CubaWarBuilding extends DefaultTask {
     String coreContextXml
 
     private String coreAppName
+    protected String frontServletVersion = '1.0.1'
 
     CubaWarBuilding() {
         setGroup('Deployment')
@@ -477,10 +478,9 @@ class CubaWarBuilding extends DefaultTask {
         if (logbackConfigurationFile) {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
         }
-        String platformVersion = resolvePlatformVersion(coreProject)
         if (polymerProject && singleWar) {
             project.dependencies {
-                front(group: 'com.haulmont.cuba', name: 'cuba-front', version: platformVersion)
+                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
             }
         }
     }
@@ -567,10 +567,10 @@ class CubaWarBuilding extends DefaultTask {
 
     protected void copyFrontLibs() {
         webProject.copy {
-            from project.configurations.front
+            from project.configurations.frontServlet
             into "${warDir(webProject)}/WEB-INF/lib"
             include { details ->
-                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
+                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('frontservlet')
             }
         }
     }
@@ -871,19 +871,5 @@ class CubaWarBuilding extends DefaultTask {
 
     protected void packWarFile(Project project, File destFile) {
         ant.jar(destfile: destFile, basedir: warDir(project))
-    }
-
-    protected String resolvePlatformVersion(Project project) {
-        Configuration dependencyCompile = project.configurations.findByName('compile')
-        if (dependencyCompile) {
-            def artifacts = dependencyCompile.resolvedConfiguration.getResolvedArtifacts()
-            def cubaGlobalArtifact = artifacts.find { ResolvedArtifact artifact ->
-                artifact.name == 'cuba-global'
-            }
-            if (cubaGlobalArtifact) {
-                return cubaGlobalArtifact.moduleVersion.id.version
-            }
-        }
-        throw new GradleException("[CubaWarBuilding] Platform version is undefined")
     }
 }

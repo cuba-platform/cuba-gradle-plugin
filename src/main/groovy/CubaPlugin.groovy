@@ -179,6 +179,7 @@ class CubaPlugin implements Plugin<Project> {
         project.configurations {
             appComponent
             uberJar
+            frontServlet
         }
 
         enableBOMVersionResolver(project, cubaExtension.bom)
@@ -208,7 +209,6 @@ class CubaPlugin implements Plugin<Project> {
     private void doAfterEvaluateForRootProject(Project project) {
         project.configurations {
             tomcat
-            front
         }
         project.dependencies {
             tomcat(group: 'org.apache.tomcat', name: 'tomcat', version: project.cuba.tomcat.version, ext: 'zip')

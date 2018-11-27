@@ -19,12 +19,9 @@ import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
-import org.apache.commons.lang3.StringUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 import org.gradle.language.base.plugins.LifecycleBasePlugin
@@ -117,6 +114,7 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> portalJarNames
 
     protected String uberJarVersion = '1.0.1'
+    protected String frontServletVersion = '1.0.1'
 
     CubaUberJarBuilding() {
         setGroup('Deployment')
@@ -416,13 +414,12 @@ class CubaUberJarBuilding extends DefaultTask {
         coreAppName = appName + '-core'
         portalAppName = appName + '-portal'
 
-        String platformVersion = resolvePlatformVersion(coreProject)
         project.dependencies {
             uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: uberJarVersion)
         }
         if (polymerProject) {
             project.dependencies {
-                front(group: 'com.haulmont.cuba', name: 'cuba-front', version: platformVersion)
+                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
             }
         }
     }
@@ -467,10 +464,10 @@ class CubaUberJarBuilding extends DefaultTask {
 
     protected void copyFrontLibsAndContent(Project theProject) {
         theProject.copy {
-            from project.configurations.front
+            from project.configurations.frontServlet
             into "${getAppLibsDir(theProject)}"
             include { details ->
-                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('cuba-front')
+                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('frontservlet')
             }
         }
         copySpecificWebContent(theProject)
@@ -868,19 +865,5 @@ class CubaUberJarBuilding extends DefaultTask {
         text = FrontUtils.rewriteApiUrl(text, null)
         indexTemplate.write(text)
         indexHtml.delete()
-    }
-
-    protected String resolvePlatformVersion(Project project) {
-        Configuration dependencyCompile = project.configurations.findByName('compile')
-        if (dependencyCompile) {
-            def artifacts = dependencyCompile.resolvedConfiguration.getResolvedArtifacts()
-            def cubaGlobalArtifact = artifacts.find { ResolvedArtifact artifact ->
-                artifact.name == 'cuba-global'
-            }
-            if (cubaGlobalArtifact) {
-                return cubaGlobalArtifact.moduleVersion.id.version
-            }
-        }
-        throw new GradleException("[CubaUberJAR] Platform version is undefined")
     }
 }
