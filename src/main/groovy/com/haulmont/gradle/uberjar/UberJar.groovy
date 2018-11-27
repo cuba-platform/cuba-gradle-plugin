@@ -178,6 +178,10 @@ class UberJar {
         }
         if (Files.notExists(toPath)) {
             if (isClassEntry(path) || !canTransformEntry(path)) {
+                Path parentPath = toPath.getParent()
+                if (parentPath != null && Files.notExists(parentPath)) {
+                    Files.createDirectories(parentPath)
+                }
                 Files.copy(path, toPath, StandardCopyOption.REPLACE_EXISTING)
             } else {
                 transformEntry(toPath, path)
