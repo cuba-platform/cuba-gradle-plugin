@@ -16,6 +16,8 @@
  */
 
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
+import com.haulmont.gradle.polymer.CubaInstallGeneratorsTask
+import com.haulmont.gradle.polymer.CubaListGeneratorsTask
 import com.haulmont.gradle.polymer.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
@@ -511,6 +513,8 @@ class CubaPlugin implements Plugin<Project> {
         nodeExtension.download = true
 
         project.task([type: CubaNodeToolingInfoTask], CubaNodeToolingInfoTask.NAME)
+        project.task([type: CubaInstallGeneratorsTask], CubaInstallGeneratorsTask.NAME)
+        project.task([type: CubaListGeneratorsTask], CubaListGeneratorsTask.NAME)
 
         project.getTasks().withType(JavaCompile) {
             enabled = false
