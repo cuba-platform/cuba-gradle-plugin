@@ -34,7 +34,6 @@ import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.ExtensionAware
-import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.SourceSet
@@ -344,25 +343,16 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void setupEntitiesEnhancing(Project project) {
-        def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
-        def groovyPlugin = project.plugins.findPlugin(GroovyPlugin.class)
-
-        if (javaPlugin || groovyPlugin) {
+        if (project.plugins.findPlugin(JavaPlugin.class)) {
             def mainEnhancing = project.entitiesEnhancing.main
             if (mainEnhancing && mainEnhancing.enabled) {
-                String compileTaskName = groovyPlugin ?
-                        'compileGroovy'
-                        : JavaPlugin.COMPILE_JAVA_TASK_NAME
-                project.tasks.findByName(compileTaskName)
+                project.tasks.findByName(JavaPlugin.COMPILE_JAVA_TASK_NAME)
                         .doLast(new CubaEnhancingAction(project, 'main'))
             }
 
             def testEnhancing = project.entitiesEnhancing.test
             if (testEnhancing && testEnhancing.enabled) {
-                String compileTestTaskName = groovyPlugin ?
-                        'compileTestGroovy'
-                        : JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME
-                project.tasks.findByName(compileTestTaskName)
+                project.tasks.findByName(JavaPlugin.COMPILE_TEST_JAVA_TASK_NAME)
                         .doLast(new CubaEnhancingAction(project, 'test'))
             }
         }
