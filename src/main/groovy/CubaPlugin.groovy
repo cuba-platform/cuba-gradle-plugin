@@ -16,9 +16,9 @@
  */
 
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
-import com.haulmont.gradle.polymer.CubaInstallGeneratorsTask
-import com.haulmont.gradle.polymer.CubaListGeneratorsTask
-import com.haulmont.gradle.polymer.CubaNodeToolingInfoTask
+import com.haulmont.gradle.task.front.CubaInstallGeneratorsTask
+import com.haulmont.gradle.task.front.CubaListGeneratorsTask
+import com.haulmont.gradle.task.front.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.db.CubaHsqlStart
 import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetBuilding
@@ -84,8 +84,9 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        if (project != project.rootProject && project.name.endsWith('-polymer-client')) {
-            applyToPolymerClientProject(project)
+        if (project != project.rootProject && project.name.endsWith('-polymer-client') || getModuleName(project) == 'front') {
+            project.extensions.extraProperties.set("appModuleType", null)
+            applyToFrontProject(project)
             project.afterEvaluate { p ->
                 doAfterEvaluateForAnyProject(p)
             }
@@ -506,7 +507,7 @@ class CubaPlugin implements Plugin<Project> {
         }
     }
 
-    private void applyToPolymerClientProject(Project project) {
+    private void applyToFrontProject(Project project) {
         project.plugins.apply(NodePlugin)
         def nodeExtension = project.extensions.getByType(NodeExtension)
         nodeExtension.version = '10.14.1'

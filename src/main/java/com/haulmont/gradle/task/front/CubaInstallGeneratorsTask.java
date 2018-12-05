@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.haulmont.gradle.polymer;
+package com.haulmont.gradle.task.front;
 
 import com.moowork.gradle.node.npm.NpmTask;
 import org.gradle.api.tasks.InputFile;
@@ -29,7 +29,7 @@ public class CubaInstallGeneratorsTask extends NpmTask {
     public static final String GENERATION_DIR = "generation";
 
     public CubaInstallGeneratorsTask() {
-        setDescription("Install front-end client generators");
+        setDescription("Install front client generators");
         setGroup("Node");
         setWorkingDir(new File(getProject().getProjectDir(), GENERATION_DIR));
         setArgs(Collections.singletonList("install"));

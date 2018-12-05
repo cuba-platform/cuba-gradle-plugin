@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.haulmont.gradle.polymer;
+package com.haulmont.gradle.task.front;
 
 import com.google.common.collect.Lists;
 import com.moowork.gradle.node.task.NodeTask;
@@ -22,7 +22,7 @@ import org.gradle.api.tasks.OutputFile;
 
 import java.io.File;
 
-import static com.haulmont.gradle.polymer.CubaInstallGeneratorsTask.GENERATION_DIR;
+import static com.haulmont.gradle.task.front.CubaInstallGeneratorsTask.GENERATION_DIR;
 
 public class CubaListGeneratorsTask extends NodeTask {
 

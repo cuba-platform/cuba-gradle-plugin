@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.haulmont.gradle.polymer;
+package com.haulmont.gradle.task.front;
 
 import com.moowork.gradle.node.NodeExtension;
 import com.moowork.gradle.node.npm.NpmSetupTask;
