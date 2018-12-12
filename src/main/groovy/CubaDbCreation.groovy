@@ -115,7 +115,11 @@ grant create session,
                     dropDbSql
             )
         } catch (Exception e) {
-            project.logger.warn(e.getMessage())
+            if (project.logger.isDebugEnabled()) {
+                project.logger.debug("Unable to drop database", e)
+            } else {
+                project.logger.warn(e.getMessage())
+            }
         }
 
         if (createDbSql) {
