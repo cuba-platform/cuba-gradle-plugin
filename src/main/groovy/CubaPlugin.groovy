@@ -80,8 +80,8 @@ class CubaPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.logger.info("[CubaPlugin] applying to project $project.name")
 
-        if (!project.hasProperty('copyScriptRepositories')
-                || Boolean.TRUE == project.property('copyScriptRepositories')) {
+        if (!project.rootProject.hasProperty('copyScriptRepositories')
+                || Boolean.TRUE == project.rootProject.property('copyScriptRepositories')) {
 
             copyScriptRepositories(project)
         }
