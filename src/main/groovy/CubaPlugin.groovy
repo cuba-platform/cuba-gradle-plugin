@@ -17,11 +17,11 @@
 
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
 import com.haulmont.gradle.project.Projects
+import com.haulmont.gradle.task.db.CubaHsqlStart
+import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.task.front.CubaInstallGeneratorsTask
 import com.haulmont.gradle.task.front.CubaListGeneratorsTask
 import com.haulmont.gradle.task.front.CubaNodeToolingInfoTask
-import com.haulmont.gradle.task.db.CubaHsqlStart
-import com.haulmont.gradle.task.db.CubaHsqlStop
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetBuilding
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetDebug
 import com.haulmont.gradle.utils.BOMVersions
@@ -33,6 +33,8 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository
+import org.gradle.api.internal.artifacts.repositories.DefaultMavenLocalArtifactRepository
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.JavaPlugin
@@ -78,17 +80,16 @@ class CubaPlugin implements Plugin<Project> {
     void apply(Project project) {
         project.logger.info("[CubaPlugin] applying to project $project.name")
 
-        project.repositories {
-            project.rootProject.buildscript.repositories.each {
-                project.logger.info("[CubaPlugin] using repository $it.name" + (it.hasProperty('url') ? " at $it.url" : ""))
-                project.repositories.add(it)
-            }
+        if (!project.hasProperty('copyScriptRepositories')
+                || Boolean.TRUE == project.property('copyScriptRepositories')) {
+
+            copyScriptRepositories(project)
         }
 
         if (project != project.rootProject && Projects.isFrontProject(project)) {
             project.extensions.extraProperties.set("appModuleType", null)
             applyToFrontProject(project)
-            project.afterEvaluate { p ->
+            project.afterEvaluate { Project p ->
                 doAfterEvaluateForAnyProject(p)
             }
             return
@@ -108,12 +109,44 @@ class CubaPlugin implements Plugin<Project> {
             applyToModuleProject(project)
         }
 
-        project.afterEvaluate { p ->
+        project.afterEvaluate { Project p ->
             doAfterEvaluateForAnyProject(p)
             if (p == project.rootProject) {
                 doAfterEvaluateForRootProject(p)
             } else {
                 doAfterEvaluateForModuleProject(p)
+            }
+        }
+    }
+
+    protected void copyScriptRepositories(Project project) {
+        for (repo in project.rootProject.buildscript.repositories) {
+            if (repo instanceof DefaultMavenLocalArtifactRepository) {
+                project.logger.info("[CubaPlugin] using repository mavenLocal()")
+
+                project.repositories {
+                    mavenLocal()
+                }
+            } else if (repo instanceof DefaultMavenArtifactRepository) {
+                DefaultMavenArtifactRepository mavenRepo = repo
+
+                project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url")
+
+                def mavenCredentials = mavenRepo.credentials
+
+                project.repositories {
+                    maven {
+                        url mavenRepo.url
+                        credentials {
+                            username(mavenCredentials.username ?: '')
+                            password(mavenCredentials.password ?: '')
+                        }
+                    }
+                }
+            } else {
+                project.logger.info("[CubaPlugin] using repository $repo.name" + (repo.hasProperty('url') ? " at $repo.url" : ""))
+                // fallback
+                project.repositories.add(repo)
             }
         }
     }
