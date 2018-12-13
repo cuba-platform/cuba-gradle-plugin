@@ -71,10 +71,10 @@ class CubaEnhancingAction implements Action<Task> {
     }
 
     protected List<String> enhanceClasses() {
-        def outputDir = new File(enhancedDirPath)
         List<String> allClasses = []
 
         def javaOutputDir = getEntityClassesDir()
+        def enhancedDir = new File(enhancedDirPath)
 
         project.logger.info('[CubaEnhancing] Entity classes directory: ' + javaOutputDir.absolutePath)
 
@@ -112,9 +112,9 @@ class CubaEnhancingAction implements Action<Task> {
             // AbstractInstance is not registered but shouldn't be deleted
             allClasses.add(ABSTRACT_INSTANCE_FQN)
 
-            if (outputDir.exists()) {
-                outputDir.eachFileRecurse(FileType.FILES) { File file ->
-                    Path path = outputDir.toPath().relativize(file.toPath())
+            if (enhancedDir.exists()) {
+                enhancedDir.eachFileRecurse(FileType.FILES) { File file ->
+                    Path path = enhancedDir.toPath().relativize(file.toPath())
                     String name = path.findAll().join('.')
                     name = name.substring(0, name.lastIndexOf('.'))
                     if (!allClasses.contains(name)) {
@@ -123,20 +123,21 @@ class CubaEnhancingAction implements Action<Task> {
                 }
                 // delete empty dirs
                 List<File> emptyDirs = []
-                outputDir.eachDirRecurse { File dir ->
+                enhancedDir.eachDirRecurse { File dir ->
                     if (dir.listFiles({ File file -> !file.isDirectory() } as FileFilter).toList().isEmpty()) {
                         emptyDirs.add(dir)
                     }
                 }
                 emptyDirs.reverse().each { File dir ->
-                    if (dir.listFiles().toList().isEmpty())
+                    if (dir.listFiles().toList().isEmpty()) {
                         dir.delete()
+                    }
                 }
             }
         } else {
             allClasses.addAll(getTransientEntities())
 
-            if (outputDir.exists()) {
+            if (enhancedDir.exists()) {
                 for (className in allClasses) {
                     Path srcFile = Paths.get("$javaOutputDir/${className.replace('.', '/')}.class")
                     Path dstFile = Paths.get("$enhancedDirPath/${className.replace('.', '/')}.class")
@@ -146,7 +147,7 @@ class CubaEnhancingAction implements Action<Task> {
             }
         }
 
-        if (outputDir.exists()) {
+        if (enhancedDir.exists()) {
             // run CUBA enhancing on all classes remaining in build/tmp/enhance-${classesRoot}
             project.logger.info("[CubaEnhancing] Start CUBA enhancing")
 
@@ -158,9 +159,9 @@ class CubaEnhancingAction implements Action<Task> {
             }
 
             pool.insertClassPath(javaOutputDir.getAbsolutePath())
-            pool.insertClassPath(outputDir.getAbsolutePath())
+            pool.insertClassPath(enhancedDir.getAbsolutePath())
 
-            def cubaEnhancer = new CubaEnhancer(pool, outputDir.getAbsolutePath())
+            def cubaEnhancer = new CubaEnhancer(pool, enhancedDir.getAbsolutePath())
             cubaEnhancer.logger = project.logger
 
             for (className in allClasses) {
