@@ -17,6 +17,7 @@
 
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
+import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
 import org.gradle.api.DefaultTask
@@ -48,7 +49,7 @@ class CubaUberJarBuilding extends DefaultTask {
     Project coreProject
     Project webProject
     Project portalProject
-    Project polymerProject
+    Project frontProject
     Project webToolkitProject
 
     @Input
@@ -155,12 +156,12 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
             }
 
-            if (!polymerProject) {
-                project.logger.info("[CubaUberJAR] Polymer client project is not set, trying to find it automatically")
+            if (!frontProject) {
+                project.logger.info("[CubaUberJAR] front client project is not set, trying to find it automatically")
                 for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
-                    if (entry.getKey().endsWith("-polymer-client")) {
-                        setPolymerProject(entry.getValue())
-                        project.logger.info("[CubaUberJAR] $polymerProject is set as Polymer client project")
+                    if (Projects.isFrontProject(entry.value)) {
+                        setFrontProject(entry.getValue())
+                        project.logger.info("[CubaUberJAR] $frontProject is set as front client project")
                         break
                     }
                 }
@@ -196,10 +197,10 @@ class CubaUberJarBuilding extends DefaultTask {
         this.dependsOn(assemblePortal)
     }
 
-    void setPolymerProject(Project polymerProject) {
-        this.polymerProject = polymerProject
-        def assemblePolymer = polymerProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
-        this.dependsOn(assemblePolymer)
+    void setFrontProject(Project frontProject) {
+        this.frontProject = frontProject
+        def assembleFront = frontProject.tasks.getByPath(LifecycleBasePlugin.ASSEMBLE_TASK_NAME)
+        this.dependsOn(assembleFront)
     }
 
     void setWebToolkitProject(Project webToolkitProject) {
@@ -217,7 +218,7 @@ class CubaUberJarBuilding extends DefaultTask {
     List<File> getInputFiles() {
         def dependencyFiles = new ArrayList<File>()
         def projects = Arrays.asList(coreProject, webProject, portalProject,
-                polymerProject, webToolkitProject)
+                frontProject, webToolkitProject)
         def allProjects = new LinkedHashSet<Project>()
 
         for (theProject in projects) {
@@ -276,8 +277,8 @@ class CubaUberJarBuilding extends DefaultTask {
         if (webProject) {
             copyLibsAndContent(webProject, webJarNames, webLibs)
         }
-        if (polymerProject) {
-            copyFrontLibsAndContent(polymerProject)
+        if (frontProject) {
+            copyFrontLibsAndContent(frontProject)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
@@ -291,8 +292,8 @@ class CubaUberJarBuilding extends DefaultTask {
             if (webProject) {
                 packLibsAndContent(webProject, jar, true)
             }
-            if (polymerProject) {
-                packFrontContent(polymerProject, jar)
+            if (frontProject) {
+                packFrontContent(frontProject, jar)
             }
             if (portalProject) {
                 packLibsAndContent(portalProject, jar, false)
@@ -324,8 +325,8 @@ class CubaUberJarBuilding extends DefaultTask {
                 UberJar webJar = createJarTask(appName)
                 packServerLibs(webJar)
                 packLibsAndContent(webProject, webJar, true)
-                if (polymerProject) {
-                    packFrontContent(polymerProject, webJar)
+                if (frontProject) {
+                    packFrontContent(frontProject, webJar)
                 }
                 packJettyFile(webProject, webJar)
                 packLogbackConfigurationFile(webJar)
@@ -417,7 +418,7 @@ class CubaUberJarBuilding extends DefaultTask {
         project.dependencies {
             uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: uberJarVersion)
         }
-        if (polymerProject) {
+        if (frontProject) {
             project.dependencies {
                 frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
             }
@@ -471,7 +472,7 @@ class CubaUberJarBuilding extends DefaultTask {
             }
         }
         copySpecificWebContent(theProject)
-        File webInf = new File("${getContentDir(polymerProject)}/WEB-INF/")
+        File webInf = new File("${getContentDir(frontProject)}/WEB-INF/")
         if (!webInf.exists()) {
             webInf.mkdir()
         }
@@ -706,8 +707,8 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
             }
         }
-        if (theProject == polymerProject) {
-            theProject.logger.info("[CubaUberJAR] Copy Polymer files for ${theProject}")
+        if (theProject == frontProject) {
+            theProject.logger.info("[CubaUberJAR] Copy Front files for ${theProject}")
             if (!polymerBuildDir) {
                 throw new GradleException("'polymerBuildDir' property should be required for Uber JAR building with Polymer")
             }
@@ -808,7 +809,7 @@ class CubaUberJarBuilding extends DefaultTask {
             return "$rootJarTmpDir/${LIBS_DIR}_web"
         } else if (theProject == portalProject) {
             return "$rootJarTmpDir/${LIBS_DIR}_portal"
-        } else if (theProject == polymerProject) {
+        } else if (theProject == frontProject) {
             return "$rootJarTmpDir/${LIBS_DIR}_front"
         }
         return null
@@ -821,7 +822,7 @@ class CubaUberJarBuilding extends DefaultTask {
             return "$rootJarTmpDir/${CONTENT_DIR}_web"
         } else if (theProject == portalProject) {
             return "$rootJarTmpDir/${CONTENT_DIR}_portal"
-        } else if (theProject == polymerProject) {
+        } else if (theProject == frontProject) {
             return "$rootJarTmpDir/${CONTENT_DIR}_front"
         }
         return null
@@ -834,7 +835,7 @@ class CubaUberJarBuilding extends DefaultTask {
             return "LIB-INF/$WEB_CONTENT_DIR_IN_JAR"
         } else if (theProject == portalProject) {
             return "LIB-INF/$PORTAL_CONTENT_DIR_IN_JAR"
-        } else if (theProject == polymerProject) {
+        } else if (theProject == frontProject) {
             return "LIB-INF/$FRONT_CONTENT_DIR_IN_JAR"
         }
         return null
@@ -857,10 +858,10 @@ class CubaUberJarBuilding extends DefaultTask {
     }
 
     protected void writeIndexHtmlTemplate() {
-        File templateDir = new File("${getContentDir(polymerProject)}/front")
+        File templateDir = new File("${getContentDir(frontProject)}/front")
         templateDir.mkdir()
         File indexTemplate = new File(templateDir, "index.ftl")
-        File indexHtml = new File("${getContentDir(polymerProject)}/index.html")
+        File indexHtml = new File("${getContentDir(frontProject)}/index.html")
         String text = FrontUtils.rewriteBaseUrl(indexHtml.text, null)
         text = FrontUtils.rewriteApiUrl(text, null)
         indexTemplate.write(text)

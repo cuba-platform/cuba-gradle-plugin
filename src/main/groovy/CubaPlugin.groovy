@@ -16,6 +16,7 @@
  */
 
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
+import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.task.front.CubaInstallGeneratorsTask
 import com.haulmont.gradle.task.front.CubaListGeneratorsTask
 import com.haulmont.gradle.task.front.CubaNodeToolingInfoTask
@@ -84,7 +85,7 @@ class CubaPlugin implements Plugin<Project> {
             }
         }
 
-        if (project != project.rootProject && project.name.endsWith('-polymer-client') || getModuleName(project) == 'front') {
+        if (project != project.rootProject && Projects.isFrontProject(project)) {
             project.extensions.extraProperties.set("appModuleType", null)
             applyToFrontProject(project)
             project.afterEvaluate { p ->
@@ -526,7 +527,7 @@ class CubaPlugin implements Plugin<Project> {
     }
 
     private void addDependenciesFromAppComponents(Project project) {
-        def moduleName = getModuleName(project)
+        def moduleName = Projects.getModuleNameByProject(project)
 
         project.logger.info("[CubaPlugin] Setting up dependencies for module $moduleName")
 
@@ -679,7 +680,7 @@ class CubaPlugin implements Plugin<Project> {
                     }
                 }
                 if (art.@skipIfExists != "") {
-                    if (!project.rootProject.allprojects.find { art.@skipIfExists == getModuleName(it) }) {
+                    if (!project.rootProject.allprojects.find { art.@skipIfExists == Projects.getModuleNameByProject(it) }) {
                         skippedDeps.add(new SkippedDep(new AppComponent(compId, xml), dep, art.@configuration.text()))
                     }
                 } else {
@@ -738,15 +739,6 @@ class CubaPlugin implements Plugin<Project> {
                 project.dependencies.add(conf, dependency)
                 break
         }
-    }
-
-    private String getModuleName(Project project) {
-        String moduleName
-        if (project.hasProperty('appModuleType') && project['appModuleType'] != null)
-            moduleName = project['appModuleType']
-        else
-            moduleName = project.projectDir.name
-        return moduleName
     }
 
     private void addJarNamesFromModule(Set jarNames, GPathResult xml, GPathResult module) {

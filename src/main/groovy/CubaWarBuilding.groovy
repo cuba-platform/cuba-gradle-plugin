@@ -17,12 +17,11 @@
 
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
+import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.utils.FrontUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
-import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.plugins.BasePlugin
 import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
@@ -36,7 +35,7 @@ class CubaWarBuilding extends DefaultTask {
     Project coreProject
     Project webProject
     Project portalProject
-    Project polymerProject
+    Project frontProject
     Project webToolkitProject
 
     @Input
@@ -155,12 +154,12 @@ class CubaWarBuilding extends DefaultTask {
                 }
             }
 
-            if (!polymerProject) {
-                project.logger.info("[CubaWarBuilding] Polymer client project is not set, trying to find it automatically")
+            if (!frontProject) {
+                project.logger.info("[CubaWarBuilding] front client project is not set, trying to find it automatically")
                 for (Map.Entry<String, Project> entry : childProjects.entrySet()) {
-                    if (entry.getKey().endsWith("-polymer-client")) {
-                        polymerProject = entry.getValue()
-                        project.logger.info("[CubaWarBuilding] $polymerProject is set as Polymer client project")
+                    if (Projects.isFrontProject(entry.value)) {
+                        frontProject = entry.getValue()
+                        project.logger.info("[CubaWarBuilding] $frontProject is set as front client project")
                         break
                     }
                 }
@@ -196,8 +195,8 @@ class CubaWarBuilding extends DefaultTask {
         this.dependsOn(assembleWeb)
     }
 
-    void setPolymerProject(Project polymerProject) {
-        this.polymerProject = polymerProject
+    void setFrontProject(Project polymerProject) {
+        this.frontProject = polymerProject
         def assemblePolymer = polymerProject.tasks.getByPath(BasePlugin.ASSEMBLE_TASK_NAME)
         this.dependsOn(assemblePolymer)
     }
@@ -217,7 +216,7 @@ class CubaWarBuilding extends DefaultTask {
     List<File> getInputFiles() {
         def dependencyFiles = new ArrayList<File>()
         def projects = Arrays.asList(coreProject, webProject, portalProject,
-                polymerProject, webToolkitProject)
+                frontProject, webToolkitProject)
         def allProjects = new LinkedHashSet<Project>()
 
         for (theProject in projects) {
@@ -260,7 +259,7 @@ class CubaWarBuilding extends DefaultTask {
         if (project == coreProject) return coreTmpWarDir
         else if (project == webProject) return webTmpWarDir
         else if (project == portalProject) return portalTmpWarDir
-        else if (project == polymerProject) return polymerTmpWarDir
+        else if (project == frontProject) return polymerTmpWarDir
         else return null
     }
 
@@ -307,17 +306,17 @@ class CubaWarBuilding extends DefaultTask {
             }
         }
 
-        if (polymerProject) {
+        if (frontProject) {
             if (!polymerBuildDir) {
                 throw new GradleException("'polymerBuildDir' property should be required for WAR building with Polymer")
             }
-            def dir = polymerProject.file("build/$polymerBuildDir")
+            def dir = frontProject.file("build/$polymerBuildDir")
             if (!dir.exists()) {
                 throw new GradleException("Polymer build directory $dir doesn't exists")
             }
-            polymerProject.copy {
-                from polymerProject.file("build/$polymerBuildDir")
-                into "${warDir(polymerProject)}"
+            frontProject.copy {
+                from frontProject.file("build/$polymerBuildDir")
+                into "${warDir(frontProject)}"
             }
         }
 
@@ -334,7 +333,7 @@ class CubaWarBuilding extends DefaultTask {
             writeLocalAppProperties(webProject, summaryProperties)
             writeDependencies(coreProject, 'core', coreJarNames)
             writeDependencies(webProject, 'web', webJarNames)
-            if (webProject && polymerProject) {
+            if (webProject && frontProject) {
                 copyFrontLibs()
                 writeIndexHtmlTemplate()
             }
@@ -371,9 +370,9 @@ class CubaWarBuilding extends DefaultTask {
             }
 
             File polymerWarFile = null
-            if (polymerProject) {
-                polymerWarFile = polymerProject.file("${warDir(polymerProject)}/${appName}-front.war")
-                packWarFile(polymerProject, polymerWarFile)
+            if (frontProject) {
+                polymerWarFile = frontProject.file("${warDir(frontProject)}/${appName}-front.war")
+                packWarFile(frontProject, polymerWarFile)
             }
 
             moveToDistributions(coreWarFile)
@@ -478,7 +477,7 @@ class CubaWarBuilding extends DefaultTask {
         if (logbackConfigurationFile) {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
         }
-        if (polymerProject && singleWar) {
+        if (frontProject && singleWar) {
             project.dependencies {
                 frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
             }
@@ -812,8 +811,8 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     protected void writeIndexHtmlTemplate() {
-        File indexTemplate = new File("${warDir(polymerProject)}/index.ftl")
-        File indexHtml = new File("${warDir(polymerProject)}/index.html")
+        File indexTemplate = new File("${warDir(frontProject)}/index.ftl")
+        File indexHtml = new File("${warDir(frontProject)}/index.html")
         def text = FrontUtils.rewriteBaseUrl(indexHtml.text, "/$appName/front/")
         text = FrontUtils.rewriteApiUrl(text, null)
         indexTemplate.write(text)
