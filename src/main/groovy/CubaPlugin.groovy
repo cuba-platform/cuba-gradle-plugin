@@ -385,17 +385,24 @@ class CubaPlugin implements Plugin<Project> {
         if (javaPlugin || groovyPlugin) {
             def mainEnhancing = project.entitiesEnhancing.main
             if (mainEnhancing && mainEnhancing.enabled) {
-                for (def task : ['compileJava', 'compileGroovy']) {
-                    project.tasks.findByName(task)
+                if (javaPlugin) {
+                    project.tasks.findByName('compileJava')
                             .doLast(new CubaEnhancingAction(project, 'main'))
                 }
-
+                if (groovyPlugin) {
+                    project.tasks.findByName('compileGroovy')
+                            .doLast(new CubaEnhancingAction(project, 'main'))
+                }
             }
 
             def testEnhancing = project.entitiesEnhancing.test
             if (testEnhancing && testEnhancing.enabled) {
-                for (def task : ['compileTestJava', 'compileTestGroovy']) {
-                    project.tasks.findByName(task)
+                if (javaPlugin) {
+                    project.tasks.findByName('compileTestJava')
+                            .doLast(new CubaEnhancingAction(project, 'test'))
+                }
+                if (groovyPlugin) {
+                    project.tasks.findByName('compileTestGroovy')
                             .doLast(new CubaEnhancingAction(project, 'test'))
                 }
             }
