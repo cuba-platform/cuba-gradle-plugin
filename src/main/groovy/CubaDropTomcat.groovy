@@ -48,7 +48,7 @@ class CubaDropTomcat extends DefaultTask {
                     arg(line: 'shutdown.sh')
                 }
                 // wait and delete
-                ant.waitfor(maxwait: 6, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
+                ant.waitfor(maxwait: 20, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
                     not {
                         socket(server: 'localhost', port: listeningPort)
                     }
