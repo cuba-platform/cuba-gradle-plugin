@@ -81,68 +81,55 @@ class CubaEnhancingAction implements Action<Task> {
         def ownMetadataXmlFiles = getOwnMetadataXmlFiles()
         project.logger.info("[CubaEnhancing] Metadata XML files: ${ownMetadataXmlFiles}")
 
-        if (!ownMetadataXmlFiles.isEmpty()) {
-            File fullPersistenceXml = createFullPersistenceXml()
+        File fullPersistenceXml = createFullPersistenceXml()
 
-            if (javaOutputDir.exists()) {
-                project.logger.info("[CubaEnhancing] Start EclipseLink enhancing")
-                project.javaexec {
-                    main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
-                    classpath(
-                            sourceSet.compileClasspath,
-                            javaOutputDir
-                    )
-                    args "-loglevel"
-                    args "INFO"
-                    args "-persistenceinfo"
-                    args "$project.buildDir/tmp/persistence"
-                    args "$javaOutputDir"
-                    args enhancedDirPath
-                    debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+        if (javaOutputDir.exists()) {
+            project.logger.info("[CubaEnhancing] Start EclipseLink enhancing")
+            project.javaexec {
+                main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
+                classpath(
+                        sourceSet.compileClasspath,
+                        javaOutputDir
+                )
+                args "-loglevel"
+                args "INFO"
+                args "-persistenceinfo"
+                args "$project.buildDir/tmp/persistence"
+                args "$javaOutputDir"
+                args enhancedDirPath
+                debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+            }
+        }
+
+        // EclipseLink enhancer copies all classes to build/tmp/enhance-${classesRoot},
+        // so we should delete files that are not in persistence.xml and metadata.xml
+        def persistence = new XmlParser().parse(fullPersistenceXml)
+        def persistenceUnit = persistence.'persistence-unit'[0]
+
+        allClasses.addAll(persistenceUnit.'class'.collect { it.value()[0] })
+        allClasses.addAll(getTransientEntities())
+        // AbstractInstance is not registered but shouldn't be deleted
+        allClasses.add(ABSTRACT_INSTANCE_FQN)
+
+        if (outputDir.exists()) {
+            outputDir.eachFileRecurse(FileType.FILES) { File file ->
+                Path path = outputDir.toPath().relativize(file.toPath())
+                String name = path.findAll().join('.')
+                name = name.substring(0, name.lastIndexOf('.'))
+                if (!allClasses.contains(name)) {
+                    file.delete()
                 }
             }
-
-            // EclipseLink enhancer copies all classes to build/tmp/enhance-${classesRoot},
-            // so we should delete files that are not in persistence.xml and metadata.xml
-            def persistence = new XmlParser().parse(fullPersistenceXml)
-            def persistenceUnit = persistence.'persistence-unit'[0]
-
-            allClasses.addAll(persistenceUnit.'class'.collect { it.value()[0] })
-            allClasses.addAll(getTransientEntities())
-            // AbstractInstance is not registered but shouldn't be deleted
-            allClasses.add(ABSTRACT_INSTANCE_FQN)
-
-            if (outputDir.exists()) {
-                outputDir.eachFileRecurse(FileType.FILES) { File file ->
-                    Path path = outputDir.toPath().relativize(file.toPath())
-                    String name = path.findAll().join('.')
-                    name = name.substring(0, name.lastIndexOf('.'))
-                    if (!allClasses.contains(name)) {
-                        file.delete()
-                    }
-                }
-                // delete empty dirs
-                List<File> emptyDirs = []
-                outputDir.eachDirRecurse { File dir ->
-                    if (dir.listFiles({ File file -> !file.isDirectory() } as FileFilter).toList().isEmpty()) {
-                        emptyDirs.add(dir)
-                    }
-                }
-                emptyDirs.reverse().each { File dir ->
-                    if (dir.listFiles().toList().isEmpty())
-                        dir.delete()
+            // delete empty dirs
+            List<File> emptyDirs = []
+            outputDir.eachDirRecurse { File dir ->
+                if (dir.listFiles({ File file -> !file.isDirectory() } as FileFilter).toList().isEmpty()) {
+                    emptyDirs.add(dir)
                 }
             }
-        } else {
-            allClasses.addAll(getTransientEntities())
-
-            if (outputDir.exists()) {
-                for (className in allClasses) {
-                    Path srcFile = Paths.get("$javaOutputDir/${className.replace('.', '/')}.class")
-                    Path dstFile = Paths.get("$enhancedDirPath/${className.replace('.', '/')}.class")
-
-                    Files.copy(srcFile, dstFile, StandardCopyOption.REPLACE_EXISTING)
-                }
+            emptyDirs.reverse().each { File dir ->
+                if (dir.listFiles().toList().isEmpty())
+                    dir.delete()
             }
         }
 
