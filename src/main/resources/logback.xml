@@ -61,6 +61,8 @@
     <logger name="org.springframework" level="WARN"/>
 
     <logger name="org.activiti" level="INFO"/>
+
+    <logger name="org.jgroups" level="INFO"/>
     
     <logger name="freemarker" level="INFO"/>
 
