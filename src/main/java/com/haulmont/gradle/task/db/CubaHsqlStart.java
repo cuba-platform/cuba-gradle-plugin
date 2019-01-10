@@ -18,8 +18,6 @@ package com.haulmont.gradle.task.db;
 
 import com.haulmont.gradle.hsql.CubaHSQLDBServer;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.SystemUtils;
-import org.apache.tools.ant.taskdefs.Execute;
 import org.apache.tools.ant.taskdefs.Java;
 import org.apache.tools.ant.taskdefs.WaitFor;
 import org.apache.tools.ant.taskdefs.WaitFor.Unit;
@@ -29,7 +27,6 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.awt.*;
 import java.io.File;
-import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -62,6 +59,15 @@ public class CubaHsqlStart extends CubaHsqlTask {
         //noinspection ResultOfMethodCallIgnored
         dbDataDir.mkdirs();
 
+        // check port if already in use
+        Socket socket = new Socket();
+        socket.setPort(dbPort);
+        socket.setServer("localhost");
+
+        if (socket.eval()) {
+            throw new GradleException(String.format("HSQL port %s already in use", dbPort));
+        }
+
         if (isShowUi() && !GraphicsEnvironment.isHeadless()) {
             getProject().getLogger().info("[CubaHsqlStart] Starting HSQL UI");
 
@@ -93,39 +99,21 @@ public class CubaHsqlStart extends CubaHsqlTask {
         } else {
             getProject().getLogger().info("[CubaHsqlStart] Starting HSQL headless");
 
-            Execute exec = new Execute();
-            exec.setAntRun(getProject().getAnt().getProject());
-            exec.setWorkingDirectory(dbDataDir);
+            Java java = new Java();
+            java.setProject(getProject().getAnt().getProject());
+            java.setClassname(HSQLDB_SERVER_MAIN);
+            java.createClasspath().setPath(driverClasspath);
+            java.setFork(true);
+            java.setSpawn(true);
+            java.setDir(dbDataDir);
 
-            if (SystemUtils.IS_OS_WINDOWS) {
-                exec.setCommandline(new String[]{
-                        "cmd.exe", "/C",
-                        "java.exe",
-                        "-cp", "\"" + driverClasspath + "\"",
-                        HSQLDB_SERVER_MAIN,
-                        "--port", String.valueOf(dbPort),
-                        "--database.0", "file:\"" + dbName + "\"",
-                        "--dbname.0", "\"" + dbName + "\""
-                });
-            } else {
-                exec.setCommandline(new String[]{
-                        "java",
-                        "-cp", driverClasspath,
-                        HSQLDB_SERVER_MAIN,
-                        "--port", String.valueOf(dbPort),
-                        "--database.0", "file:\"" + dbName + "\"",
-                        "--dbname.0", dbName
-                });
-            }
+            java.createArg()
+                    .setLine("--port " + dbPort + " --database.0 file:\"" + dbName + "\" --dbname.0 \"" + dbName + "\"");
 
-            getProject().getLogger().info("[CubaHsqlStart] Starting HSQL process: {}",
-                    StringUtils.join(exec.getCommandline()));
+            getProject().getLogger().info("[CubaHsqlStart] Starting HSQL process with {}",
+                    StringUtils.join(java.getCommandLine().getCommandline(), " "));
 
-            try {
-                exec.spawn();
-            } catch (IOException e) {
-                throw new GradleException("Unable to start HSQL server", e);
-            }
+            java.execute();
         }
 
         Unit UNIT_SECOND = (Unit) Unit.getInstance(Unit.class, "second");
@@ -137,12 +125,12 @@ public class CubaHsqlStart extends CubaHsqlTask {
         waitFor.setCheckEvery(1);
         waitFor.setCheckEveryUnit(UNIT_SECOND);
 
-        Socket socket = new Socket();
-        socket.setPort(dbPort);
-        socket.setServer("localhost");
-
         waitFor.addSocket(socket);
         waitFor.execute();
+
+        if (!socket.eval()) {
+            getProject().getLogger().warn("HSQL is not up in 10 seconds");
+        }
     }
 
     public boolean isShowUi() {
