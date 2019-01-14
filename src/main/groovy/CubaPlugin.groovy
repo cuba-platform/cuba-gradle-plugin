@@ -524,8 +524,6 @@ class CubaPlugin implements Plugin<Project> {
                 compile.exclude group: 'org.hibernate.validator', module: 'hibernate-validator'
 
                 // also remove spring and other unsupported dependencies by default
-                compile.exclude group: 'com.fasterxml.jackson.core'
-                compile.exclude group: 'com.fasterxml.jackson.dataformat'
                 compile.exclude group: 'org.apache.commons'
                 compile.exclude group: 'org.webjars'
                 compile.exclude group: 'commons-fileupload'
