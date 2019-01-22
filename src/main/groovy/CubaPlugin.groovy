@@ -131,18 +131,34 @@ class CubaPlugin implements Plugin<Project> {
             } else if (repo instanceof DefaultMavenArtifactRepository) {
                 DefaultMavenArtifactRepository mavenRepo = repo
 
-                project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url")
+                // we copy only http / https repositories using standard way:
+                if (mavenRepo.url.scheme == 'http' || mavenRepo.url.scheme == 'https') {
+                    project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url with credentials")
 
-                def mavenCredentials = mavenRepo.credentials
+                    def mavenCredentials = mavenRepo.credentials
 
-                project.repositories {
-                    maven {
-                        url mavenRepo.url
-                        credentials {
-                            username(mavenCredentials.username ?: '')
-                            password(mavenCredentials.password ?: '')
+                    project.repositories {
+                        maven {
+                            url mavenRepo.url
+                            credentials {
+                                username(mavenCredentials.username ?: '')
+                                password(mavenCredentials.password ?: '')
+                            }
                         }
                     }
+                } else if (mavenRepo.url.scheme == 'file') {
+                    project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url")
+
+                    // copy without authentication
+                    project.repositories {
+                        maven {
+                            url mavenRepo.url
+                        }
+                    }
+                } else {
+                    project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url as fallback")
+                    // fallback
+                    project.repositories.add(repo)
                 }
             } else {
                 project.logger.info("[CubaPlugin] using repository $repo.name" + (repo.hasProperty('url') ? " at $repo.url" : ""))
