@@ -428,6 +428,7 @@ class CubaUberJarBuilding extends DefaultTask {
     protected boolean initTransformers() {
         defaultTransformers.add(new ExcludeResourceTransformer(excludeResources))
         defaultTransformers.add(new MergeResourceTransformer(mergeResources))
+        defaultTransformers.add(new UiComponentsResourceTransformer())
     }
 
     protected UberJar createJarTask(String name) {
