@@ -266,7 +266,7 @@ class CubaWarBuilding extends DefaultTask {
     @TaskAction
     def build() {
         if (!webProject && singleWar) {
-            throw new GradleException("Web module should be exist for single WAR building.")
+            throw new GradleException("Web module must exist for single WAR building.")
         }
 
         init()
