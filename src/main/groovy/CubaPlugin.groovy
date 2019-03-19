@@ -486,7 +486,6 @@ class CubaPlugin implements Plugin<Project> {
                     compileClasspath = compileClasspath + project.configurations.jdbc
                 }
                 resources { srcDir 'src' }
-                output.dir("$project.buildDir/classes/java/main")
             }
             test {
                 java {
@@ -494,7 +493,6 @@ class CubaPlugin implements Plugin<Project> {
                     compileClasspath = compileClasspath + project.configurations.jdbc
                 }
                 resources { srcDir 'test' }
-                output.dir("$project.buildDir/classes/java/test")
             }
         }
 
