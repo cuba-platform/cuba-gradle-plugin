@@ -48,7 +48,9 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.jetbrains.gradle.ext.EncodingConfiguration
 import org.jetbrains.gradle.ext.IdeaExtPlugin
+import org.jetbrains.gradle.ext.ProjectSettings
 import org.jetbrains.gradle.ext.Remote
 import org.jetbrains.gradle.ext.RunConfigurationContainer
 
@@ -310,8 +312,18 @@ class CubaPlugin implements Plugin<Project> {
 
     private void applyIdeaExtPluginSettings(Project project) {
         def idea = project.extensions.findByName('idea') as IdeaModel
-        def settings = (idea.project as ExtensionAware).extensions.findByName('settings')
+        def settings = (idea.project as ExtensionAware).extensions.findByName('settings') as ProjectSettings
 
+        configureProjectCopyright(project, settings)
+
+        enableBuildRunDelegation(project, settings)
+
+        addRemoteDebugConfiguration(settings)
+
+        configureProjectEncoding(settings)
+    }
+
+    protected void configureProjectCopyright(Project project, ProjectSettings settings) {
         if (project.cuba.ide.copyright) {
             def copyrightProfiles = settings.copyright.profiles as NamedDomainObjectContainer
 
@@ -325,13 +337,17 @@ class CubaPlugin implements Plugin<Project> {
 
             settings.copyright.useDefault = 'default'
         }
+    }
 
+    protected void enableBuildRunDelegation(Project project, ProjectSettings settings) {
         def ideaDelegationConfig = settings.delegateActions
         def cubaDelegationConfig = project.cuba.ide.buildRunDelegation
 
         ideaDelegationConfig.delegateBuildRunToGradle = cubaDelegationConfig.enabled
         ideaDelegationConfig.testRunner = cubaDelegationConfig.testRunner
+    }
 
+    protected void addRemoteDebugConfiguration(ProjectSettings settings) {
         def runConfigurationsContainer = settings.runConfigurations as RunConfigurationContainer
 
         def remoteConfiguration = runConfigurationsContainer.create('localhost:8787', Remote)
@@ -340,6 +356,12 @@ class CubaPlugin implements Plugin<Project> {
         remoteConfiguration.sharedMemoryAddress = 'javadebug'
 
         runConfigurationsContainer.add(remoteConfiguration)
+    }
+
+    protected void configureProjectEncoding(ProjectSettings settings) {
+        def encoding = settings.encodings as EncodingConfiguration
+        encoding.encoding = StandardCharsets.UTF_8.name()
+        encoding.properties.encoding = StandardCharsets.UTF_8.name()
     }
 
     /**
