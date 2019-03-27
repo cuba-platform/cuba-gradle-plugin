@@ -269,10 +269,14 @@ public abstract class CubaDbTask extends DefaultTask {
             for (String moduleDir : moduleDirs) {
                 int dashIndex = moduleDir.indexOf('-');
                 if (dashIndex > 1) {
-                    Long number = Long.valueOf(moduleDir.substring(0, dashIndex));
-                    numberToDirMap.put(number, moduleDir);
+                    try {
+                        Long number = Long.valueOf(moduleDir.substring(0, dashIndex));
+                        numberToDirMap.put(number, moduleDir);
+                    } catch (NumberFormatException e) {
+                        throw new GradleException("Invalid DB scripts directory name: " + moduleDir);
+                    }
                 } else
-                    throw new RuntimeException("Invalid DB scripts directory name: " + moduleDir);
+                    throw new GradleException("Invalid DB scripts directory name: " + moduleDir);
             }
             return numberToDirMap.values();
         }
