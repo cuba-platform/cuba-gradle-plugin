@@ -378,7 +378,8 @@ public abstract class CubaDbTask extends DefaultTask {
                 return Collections.emptyList();
             }
             List<String> sortedDirs = Arrays.asList(moduleDirs);
-            sortedDirs.sort(Comparator.comparingLong(this::getModuleIndex));
+            sortedDirs.sort(Comparator.comparingLong(this::getModuleIndex)
+                    .thenComparing(String::compareTo));
             return sortedDirs;
         }
 
