@@ -257,7 +257,7 @@ public abstract class CubaDbTask extends DefaultTask {
             this.project = project;
         }
 
-        public Collection<String> getModuleDirs() {
+        public List<String> getModuleDirs() {
             if (!dbDir.exists()) {
                 return Collections.emptyList();
             }
@@ -265,20 +265,22 @@ public abstract class CubaDbTask extends DefaultTask {
             if (moduleDirs == null) {
                 return Collections.emptyList();
             }
-            Map<Long, String> numberToDirMap = new TreeMap<>();
-            for (String moduleDir : moduleDirs) {
-                int dashIndex = moduleDir.indexOf('-');
-                if (dashIndex > 1) {
-                    try {
-                        Long number = Long.valueOf(moduleDir.substring(0, dashIndex));
-                        numberToDirMap.put(number, moduleDir);
-                    } catch (NumberFormatException e) {
-                        throw new GradleException("Invalid DB scripts directory name: " + moduleDir);
-                    }
-                } else
-                    throw new GradleException("Invalid DB scripts directory name: " + moduleDir);
-            }
-            return numberToDirMap.values();
+            List<String> sortedDirs = Arrays.asList(moduleDirs);
+            sortedDirs.sort(Comparator.comparingLong(this::getModuleIndex)
+                    .thenComparing(String::compareTo));
+            return sortedDirs;
+        }
+
+        protected Long getModuleIndex(String moduleDir) {
+            int dashIndex = moduleDir.indexOf('-');
+            if (dashIndex > 1) {
+                try {
+                    return Long.valueOf(moduleDir.substring(0, dashIndex));
+                } catch (NumberFormatException e) {
+                    throw new GradleException(String.format("Invalid DB scripts directory name: %s", moduleDir));
+                }
+            } else
+                throw new GradleException(String.format("Invalid DB scripts directory name: %s", moduleDir));
         }
 
         // Copy of com.haulmont.cuba.core.sys.DbUpdaterEngine#getUpdateScripts
@@ -286,7 +288,7 @@ public abstract class CubaDbTask extends DefaultTask {
             if (!dbDir.exists()) {
                 return Collections.emptyList();
             }
-            Collection<String> moduleDirs = getModuleDirs();
+            List<String> moduleDirs = getModuleDirs();
             List<File> databaseScripts = new ArrayList<>();
             for (String moduleDirName : moduleDirs) {
                 if (StringUtils.isNotBlank(oneModuleDir) && !oneModuleDir.equals(moduleDirName)) {
@@ -348,7 +350,7 @@ public abstract class CubaDbTask extends DefaultTask {
                 logInfo("[CubaDbTask] [getInitScripts] " + dbDir + " doesn't exist");
                 return Collections.emptyList();
             }
-            Collection<String> moduleDirs = getModuleDirs();
+            List<String> moduleDirs = getModuleDirs();
             List<File> files = new ArrayList<>();
             logInfo("[CubaDbTask] [getInitScripts] modules: [" + StringUtils.join(moduleDirs, ", ") + "]");
             for (String moduleDirName : moduleDirs) {

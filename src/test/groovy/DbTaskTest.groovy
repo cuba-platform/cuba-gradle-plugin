@@ -84,6 +84,21 @@ class DbTaskTest extends GroovyTestCase {
         file.createNewFile();
         mssql2012InitFiles.add(file);
 
+        dir = new File(dbmsDir, "50-addon1/init/mssql");
+        dir.mkdirs();
+        file = new File(dir, "10.create-db.sql");
+        file.createNewFile();
+        mssqlInitFiles.add(file);
+        mssql2012InitFiles.add(file);
+        file = new File(dir, "20.create-db.sql");
+        file.createNewFile();
+        mssqlInitFiles.add(file);
+        mssql2012InitFiles.add(file);
+        file = new File(dir, "30.create-db.sql");
+        file.createNewFile();
+        mssqlInitFiles.add(file);
+        mssql2012InitFiles.add(file);
+
         dir = new File(dbmsDir, "100-app/init/mssql");
         dir.mkdirs();
         file = new File(dir, "10.create-db.sql");
@@ -133,6 +148,17 @@ class DbTaskTest extends GroovyTestCase {
         mssql2012UpdateFiles.add(file);
         file = new File(dir, "addon-update-2.sql");
         file.createNewFile();
+        mssql2012UpdateFiles.add(file);
+
+        dir = new File(dbmsDir, "50-addon1/update/mssql/14");
+        dir.mkdirs();
+        file = new File(dir, "addon-update-0.sql");
+        file.createNewFile();
+        mssqlUpdateFiles.add(file);
+        mssql2012UpdateFiles.add(file);
+        file = new File(dir, "addon-update-1.sql");
+        file.createNewFile();
+        mssqlUpdateFiles.add(file);
         mssql2012UpdateFiles.add(file);
 
         dir = new File(dbmsDir, "100-app/update/mssql/14");
