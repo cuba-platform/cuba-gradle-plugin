@@ -91,7 +91,7 @@ class CubaDbUpdate extends CubaDbTask {
 
         List<String> executedScripts = getExecutedScripts()
         ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'], project)
-        def dirs = scriptFinder.getModuleDirs()
+        Collection dirs = scriptFinder.getModuleDirs()
         if (dirs.size() > 1) {
             def lastDir = dirs[dirs.size() - 1]
             def dashIdx = lastDir.indexOf('-')
