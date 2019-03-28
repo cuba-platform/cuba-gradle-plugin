@@ -212,7 +212,7 @@ public abstract class CubaDbTask extends DefaultTask {
             } else if (MYSQL_DBMS.equals(dbms)) {
                 driver = "com.mysql.jdbc.Driver";
                 if (StringUtils.isBlank(connectionParams)) {
-                    connectionParams = "?useSSL=false&allowMultiQueries=true";
+                    connectionParams = "?useSSL=false&allowMultiQueries=true&serverTimezone=UTC";
                 }
                 dbUrl = "jdbc:mysql://" + host + "/" + dbName + connectionParams;
                 if (StringUtils.isBlank(timeStampType)) {
