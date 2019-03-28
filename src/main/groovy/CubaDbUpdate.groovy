@@ -162,7 +162,8 @@ class CubaDbUpdate extends CubaDbTask {
     protected boolean tableExistsInSchema(String tableName, String schemaName) {
         Connection connection = getSql().getConnection()
         DatabaseMetaData dbMetaData = connection.getMetaData()
-        ResultSet tables = dbMetaData.getTables(null, schemaName, "%", null)
+        String catalogName = dbms == 'mysql' ? connection.getCatalog() : null
+        ResultSet tables = dbMetaData.getTables(catalogName, schemaName, "%", null)
         while (tables.next()) {
             String tableNameFromDb = tables.getString("TABLE_NAME")
             if (tableName.equalsIgnoreCase(tableNameFromDb)) {
