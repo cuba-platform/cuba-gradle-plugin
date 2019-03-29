@@ -31,9 +31,16 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.util.logging.Level
 import java.util.logging.Logger
+import java.util.regex.Pattern
+import java.util.stream.Collectors
+
 import static com.haulmont.gradle.task.db.CubaDbTask.*
 
 class CubaDbUpdate extends CubaDbTask {
+
+    protected static final Pattern RESTAPI_REGEX = Pattern.compile("^\\d+-restapi.*\$")
+
+    protected static final Pattern[] EXCLUDED_ADDONS = [RESTAPI_REGEX]
 
     boolean executeGroovy = true
 
@@ -103,7 +110,12 @@ class CubaDbUpdate extends CubaDbTask {
             }
             dirs.each { String dirName ->
                 def anInitScriptHasBeenExecuted = false
+
                 List<File> initScripts = scriptFinder.getInitScripts(dirName)
+                        .stream()
+                        .filter({ script -> filterInitScript(script) })
+                        .collect(Collectors.toList())
+
                 if (!initScripts.isEmpty()) {
                     for (File file : initScripts) {
                         String script = getScriptName(file)
@@ -119,6 +131,13 @@ class CubaDbUpdate extends CubaDbTask {
                 }
             }
         }
+    }
+
+    protected boolean filterInitScript(File script) {
+        return Arrays.stream(EXCLUDED_ADDONS)
+                .noneMatch({ pattern ->
+                    pattern.matcher(getScriptName(script)).matches()
+                })
     }
 
     protected boolean initializedByOwnScript(List<String> executedScripts, String dirName) {

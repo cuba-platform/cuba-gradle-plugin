@@ -36,6 +36,7 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -260,10 +261,19 @@ public abstract class CubaDbTask extends DefaultTask {
     }
 
     protected void initDatabase(String oneModuleDir) {
+        initDatabase(oneModuleDir, any -> true);
+    }
+
+    protected void initDatabase(String oneModuleDir, Function<File, Boolean> scriptFilter) {
         Project project = getProject();
         try {
             ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, Collections.singletonList("sql"), project);
-            List<File> initScripts = scriptFinder.getInitScripts(oneModuleDir);
+
+            List<File> initScripts = scriptFinder.getInitScripts(oneModuleDir)
+                    .stream()
+                    .filter(scriptFilter::apply)
+                    .collect(Collectors.toList());
+
             initScripts.forEach(file -> {
                 project.getLogger().warn("Executing SQL script: " + file.getAbsolutePath());
                 executeSqlScript(file);
