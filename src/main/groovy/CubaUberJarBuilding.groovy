@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.project.Projects
@@ -114,7 +113,7 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> webJarNames
     protected Collection<String> portalJarNames
 
-    protected String uberJarVersion = '1.0.1'
+    protected String uberJarVersion = '1.1.0'
     protected String frontServletVersion = '1.0.1'
 
     CubaUberJarBuilding() {
