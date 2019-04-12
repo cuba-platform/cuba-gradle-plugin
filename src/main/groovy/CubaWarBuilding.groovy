@@ -112,6 +112,11 @@ class CubaWarBuilding extends DefaultTask {
     @Deprecated
     String coreContextXml
 
+    @Input
+    List<String> coreAdditionalJarNames = []
+    @Input
+    List<String> webAdditionalJarNames = []
+
     private String coreAppName
     protected String frontServletVersion = '1.0.1'
 
@@ -331,8 +336,8 @@ class CubaWarBuilding extends DefaultTask {
         if (singleWar) {
             def summaryProperties = coreProperties + webProperties
             writeLocalAppProperties(webProject, summaryProperties)
-            writeDependencies(coreProject, 'core', coreJarNames)
-            writeDependencies(webProject, 'web', webJarNames)
+            writeDependencies(coreProject, 'core', coreJarNames, coreAdditionalJarNames)
+            writeDependencies(webProject, 'web', webJarNames, webAdditionalJarNames)
             if (webProject && frontProject) {
                 copyFrontLibs()
                 writeIndexHtmlTemplate()
@@ -574,7 +579,7 @@ class CubaWarBuilding extends DefaultTask {
         }
     }
 
-    protected void writeDependencies(Project theProject, String applicationType, def jarNames) {
+    protected void writeDependencies(Project theProject, String applicationType, def jarNames, List<String> additionalJarNames) {
         File dependenciesFile = new File("${warDir(theProject)}/WEB-INF/${applicationType}.dependencies")
 
         dependenciesFile.withWriter(StandardCharsets.UTF_8.name()) { writer ->
@@ -604,6 +609,10 @@ class CubaWarBuilding extends DefaultTask {
                         && jarNames.contains(libraryName)) {
                     libNames.add(lib.name)
                 }
+            }
+
+            if (additionalJarNames != null && !additionalJarNames.isEmpty()) {
+                libNames.addAll(additionalJarNames)
             }
 
             libNames = DependencyResolver.getResolvedLibsList(libNames)
