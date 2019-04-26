@@ -737,7 +737,7 @@ class CubaUberJarBuilding extends DefaultTask {
                     'cuba.download.directories': '${cuba.tempDir};${cuba.logDir}',
                     'cuba.dbDir'               : 'web-inf:db',
                     'cuba.uberJar'             : 'true',
-                    'cuba.doNotExposeRemoteServices': 'true'
+                    'cuba.doNotExposeRemoteServices': singleJar ? 'true' : 'false'
             ]
             if (!singleJar) {
                 properties += [
