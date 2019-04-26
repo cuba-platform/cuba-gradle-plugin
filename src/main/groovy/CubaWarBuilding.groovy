@@ -501,7 +501,8 @@ class CubaWarBuilding extends DefaultTask {
             properties += [
                     'cuba.dataSourceJndiName'  : "jdbc/CubaDS",
                     'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}",
-                    'cuba.dbDir'               : "web-inf:db"
+                    'cuba.dbDir'               : "web-inf:db",
+                    'cuba.doNotExposeRemoteServices': singleWar ? 'true' : 'false'
             ]
         }
 
