@@ -40,7 +40,6 @@ import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -48,11 +47,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaModel
-import org.jetbrains.gradle.ext.EncodingConfiguration
-import org.jetbrains.gradle.ext.IdeaExtPlugin
-import org.jetbrains.gradle.ext.ProjectSettings
-import org.jetbrains.gradle.ext.Remote
-import org.jetbrains.gradle.ext.RunConfigurationContainer
+import org.jetbrains.gradle.ext.*
 
 import java.nio.charset.StandardCharsets
 import java.util.function.Consumer
@@ -213,7 +208,7 @@ class CubaPlugin implements Plugin<Project> {
                     deployerJars
                 }
                 project.dependencies {
-                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '2.12')
+                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '3.3.2')
                 }
 
                 project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
@@ -834,12 +829,6 @@ class CubaPlugin implements Plugin<Project> {
                 addJarNamesFromModule(jarNames, xml, depModule)
             }
         }
-    }
-
-    private static File getEntityClassesDir(Project project) {
-        SourceSet mainSourceSet = project.sourceSets.main
-
-        return mainSourceSet.java.outputDir
     }
 
     private static class AppComponent {

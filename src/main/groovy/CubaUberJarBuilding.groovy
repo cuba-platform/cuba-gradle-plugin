@@ -113,6 +113,7 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> webJarNames
     protected Collection<String> portalJarNames
 
+    // todo remove
     protected String uberJarVersion = '1.1.0'
     protected String frontServletVersion = '1.0.1'
 

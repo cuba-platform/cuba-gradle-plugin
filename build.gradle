@@ -1,3 +1,6 @@
+import groovy.xml.StreamingMarkupBuilder
+import groovy.xml.XmlUtil
+
 /*
  * Copyright (c) 2008-2016 Haulmont.
  *
@@ -71,14 +74,15 @@ targetCompatibility = '1.8'
 
 configurations {
     deployerJars
+    sdk
 }
 
 dependencies {
     compile('org.apache.httpcomponents:httpmime:4.5.6')
     compile('org.apache.httpcomponents:httpcore:4.4.10')
-    compile('org.javassist:javassist:3.24.0-GA')
+    compile('org.javassist:javassist:3.24.1-GA')
     compile('commons-io:commons-io:2.6')
-    compile('org.apache.commons:commons-lang3:3.8.1')
+    compile('org.apache.commons:commons-lang3:3.9')
 
     compile('com.yahoo.platform.yui:yuicompressor:2.4.6')
     compile('com.vaadin:vaadin-sass-compiler:0.9.13') {
@@ -86,7 +90,7 @@ dependencies {
     }
     compile('com.jelastic:jelastic-public-j2se:5.0.6')
     compile('com.moowork.gradle:gradle-node-plugin:1.1.0')
-    compile('org.apache.commons:commons-dbcp2:2.1.1')
+    compile('org.apache.commons:commons-dbcp2:2.6.0')
     compile('gradle.plugin.org.jetbrains.gradle.plugin.idea-ext:gradle-idea-ext:0.5')
 
     compile(gradleApi())
@@ -94,7 +98,14 @@ dependencies {
 
     testCompile('junit:junit:4.12')
 
-    deployerJars('org.apache.maven.wagon:wagon-http:2.12')
+    deployerJars('org.apache.maven.wagon:wagon-http:3.3.2')
+
+    // Optional dependencies of projects, requried for SDK build
+
+    sdk('com.haulmont.uberjar:uberjar:1.1.0')
+    sdk('com.haulmont.frontservlet:frontservlet:1.0.1')
+//    sdk('org.apache.tomcat:tomcat:9.0.14@zip') todo use property instead, as for Gradle
+    sdk('org.apache.maven.wagon:wagon-http:3.3.2')
 }
 
 task sourceJar(type: Jar) {
@@ -103,10 +114,64 @@ task sourceJar(type: Jar) {
     from sourceSets.main.resources
 
     classifier = 'sources'
-} 
+}
+
+def sdkDir = project.file("$project.buildDir/sdk")
+def sdkFile = project.file("$sdkDir/META-INF/sdk-pom.xml")
+
+task sdkPom(group: 'build', description: 'Creates POM with optional dependencies of SDK') {
+    outputs.file sdkFile
+    doLast {
+        def sdkDependencies = project.configurations.getByName('sdk').resolvedConfiguration.firstLevelModuleDependencies
+        def xml = new StreamingMarkupBuilder()
+
+        def result = xml.bind({ b ->
+            mkp.declareNamespace('': 'http://maven.apache.org/POM/4.0.0')
+            mkp.declareNamespace(xsi: 'http://www.w3.org/2001/XMLSchema-instance')
+
+            b.'project'('xsi:schemaLocation':
+                      'http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd') {
+
+                b.'modelVersion'('4.0.0')
+                b.'groupId'('com.haulmont.gradle')
+                b.'artifactId'('sdkbom')
+                b.'version'(artifactVersion)
+                b.'dependencies' {
+                    for (def d in sdkDependencies) {
+                        b.'dependency' {
+                            b.'groupId'(d.moduleGroup)
+                            b.'artifactId'(d.moduleName)
+                            b.'version'(d.moduleVersion)
+                        }
+                    }
+                }
+            }
+        }) as Writable
+
+        sdkFile.text = XmlUtil.serialize(result)
+
+        println(sdkFile.text)
+
+        // result.writeTo(writer)
+
+        // todo GradleVersion.current().version
+        // todo generate POM
+        // todo pack POM to resources
+        // todo Gradle version to properties
+    }
+}
+
+jar.dependsOn(sdkPom)
+jar {
+    from sdkDir
+}
 
 artifacts {
     archives sourceJar
+    add('archives', sdkFile) {
+        type "sdk"
+        builtBy(sdkPom)
+    }
 }
 
 def uploadUrl = project.hasProperty('uploadUrl') ? project.uploadUrl : null
