@@ -104,9 +104,13 @@ dependencies {
 
     sdk('com.haulmont.uberjar:uberjar:1.1.0')
     sdk('com.haulmont.frontservlet:frontservlet:1.0.1')
-//    sdk('org.apache.tomcat:tomcat:9.0.14@zip') todo use property instead, as for Gradle
     sdk('org.apache.maven.wagon:wagon-http:3.3.2')
 }
+
+def versionProperties = [
+        'tomcat.version': '9.0.19',
+        'gradle.version': GradleVersion.current().version
+]
 
 task sourceJar(type: Jar) {
     from sourceSets.main.groovy
@@ -136,6 +140,10 @@ task sdkPom(group: 'build', description: 'Creates POM with optional dependencies
                 b.'groupId'('com.haulmont.gradle')
                 b.'artifactId'('sdkbom')
                 b.'version'(artifactVersion)
+                b.'properties' {
+                    b.'tomcat.version'(versionProperties['tomcat.version'])
+                    b.'gradle.version'(versionProperties['gradle.version'])
+                }
                 b.'dependencies' {
                     for (def d in sdkDependencies) {
                         b.'dependency' {
@@ -149,15 +157,6 @@ task sdkPom(group: 'build', description: 'Creates POM with optional dependencies
         }) as Writable
 
         sdkFile.text = XmlUtil.serialize(result)
-
-        println(sdkFile.text)
-
-        // result.writeTo(writer)
-
-        // todo GradleVersion.current().version
-        // todo generate POM
-        // todo pack POM to resources
-        // todo Gradle version to properties
     }
 }
 

@@ -19,6 +19,7 @@ import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
+import com.haulmont.gradle.utils.SdkVersions
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -112,10 +113,6 @@ class CubaUberJarBuilding extends DefaultTask {
     protected Collection<String> coreJarNames
     protected Collection<String> webJarNames
     protected Collection<String> portalJarNames
-
-    // todo remove
-    protected String uberJarVersion = '1.1.0'
-    protected String frontServletVersion = '1.0.1'
 
     CubaUberJarBuilding() {
         setGroup('Deployment')
@@ -415,12 +412,14 @@ class CubaUberJarBuilding extends DefaultTask {
         coreAppName = appName + '-core'
         portalAppName = appName + '-portal'
 
+        SdkVersions sdk = project.rootProject.cuba.sdk
+
         project.dependencies {
-            uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: uberJarVersion)
+            uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: sdk.uberJarVersion)
         }
         if (frontProject) {
             project.dependencies {
-                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
+                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: sdk.frontServletVersion)
             }
         }
     }

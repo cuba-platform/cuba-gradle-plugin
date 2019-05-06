@@ -25,6 +25,7 @@ import com.haulmont.gradle.task.front.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetBuilding
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetDebug
 import com.haulmont.gradle.utils.BOMVersions
+import com.haulmont.gradle.utils.SdkVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
@@ -207,8 +208,9 @@ class CubaPlugin implements Plugin<Project> {
                 project.configurations {
                     deployerJars
                 }
+                SdkVersions sdk = project.rootProject.cuba.sdk
                 project.dependencies {
-                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '3.3.2')
+                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: sdk.wagonHttpVersion)
                 }
 
                 project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
