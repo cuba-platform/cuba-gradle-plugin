@@ -15,6 +15,8 @@
  *
  */
 
+
+import com.haulmont.gradle.utils.SdkVersions
 import com.haulmont.gradle.utils.BOMVersions
 import org.gradle.api.Project
 
@@ -32,6 +34,8 @@ class CubaPluginExtension {
 
     BOMVersions bom
 
+    SdkVersions sdk
+
     CubaPluginExtension(Project project) {
         this.project = project
 
@@ -41,7 +45,9 @@ class CubaPluginExtension {
         uploadRepository = new UploadRepositoryConfiguration(project)
         bom = new BOMVersions(project.logger)
 
-        tomcat.version = '9.0.14'
+        sdk = new SdkVersions(project)
+
+        tomcat.version = sdk.getTomcatVersion()
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
         uploadRepository.password = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
@@ -79,7 +85,7 @@ class CubaPluginExtension {
     @Override
     String toString() {
         def SEP = "^^"
-        String res = "cuba.tomcat.dir: " + tomcat.dir + SEP;
+        String res = "cuba.tomcat.dir: " + tomcat.dir + SEP
         return res
     }
 
@@ -130,11 +136,6 @@ class CubaPluginExtension {
 
     class IdeaProjectConfiguration {
         Project project
-        List<String> disabledHintsPaths = [
-                'build.gradle',
-                'settings.gradle',
-                'extra.gradle'
-        ]
 
         IdeaProjectConfiguration(Project project) {
             this.project = project

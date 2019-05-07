@@ -19,6 +19,7 @@ import com.haulmont.gradle.dependency.DependencyResolver
 import com.haulmont.gradle.dependency.ProjectCollector
 import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.utils.FrontUtils
+import com.haulmont.gradle.utils.SdkVersions
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -118,7 +119,6 @@ class CubaWarBuilding extends DefaultTask {
     List<String> webAdditionalJarNames = []
 
     private String coreAppName
-    protected String frontServletVersion = '1.0.1'
 
     CubaWarBuilding() {
         setGroup('Deployment')
@@ -483,8 +483,10 @@ class CubaWarBuilding extends DefaultTask {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
         }
         if (frontProject && singleWar) {
+            SdkVersions sdk = project.rootProject.cuba.sdk
+            def frontGav = sdk.frontServletGav
             project.dependencies {
-                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: frontServletVersion)
+                frontServlet(group: frontGav.groupId, name: frontGav.artifactId, version: frontGav.version)
             }
         }
     }

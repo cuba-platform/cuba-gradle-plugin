@@ -25,6 +25,7 @@ import com.haulmont.gradle.task.front.CubaNodeToolingInfoTask
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetBuilding
 import com.haulmont.gradle.task.widgetset.CubaWidgetSetDebug
 import com.haulmont.gradle.utils.BOMVersions
+import com.haulmont.gradle.utils.SdkVersions
 import com.moowork.gradle.node.NodeExtension
 import com.moowork.gradle.node.NodePlugin
 import groovy.util.slurpersupport.GPathResult
@@ -40,7 +41,6 @@ import org.gradle.api.plugins.ExtensionAware
 import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
-import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
@@ -48,11 +48,7 @@ import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
 import org.gradle.plugins.ide.idea.model.IdeaModel
-import org.jetbrains.gradle.ext.EncodingConfiguration
-import org.jetbrains.gradle.ext.IdeaExtPlugin
-import org.jetbrains.gradle.ext.ProjectSettings
-import org.jetbrains.gradle.ext.Remote
-import org.jetbrains.gradle.ext.RunConfigurationContainer
+import org.jetbrains.gradle.ext.*
 
 import java.nio.charset.StandardCharsets
 import java.util.function.Consumer
@@ -212,8 +208,10 @@ class CubaPlugin implements Plugin<Project> {
                 project.configurations {
                     deployerJars
                 }
+                SdkVersions sdk = project.rootProject.cuba.sdk
+                def wagonHttpGav = sdk.wagonHttpGav
                 project.dependencies {
-                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: '2.12')
+                    deployerJars(group: wagonHttpGav.groupId, name: wagonHttpGav.artifactId, version: wagonHttpGav.version)
                 }
 
                 project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
@@ -478,12 +476,10 @@ class CubaPlugin implements Plugin<Project> {
                 def bomEntry = jarFile.getEntry(bomPath)
                 if (bomEntry != null) {
                     def bomInputStream = jarFile.getInputStream(bomEntry)
-                    try {
+                    bomInputStream.withCloseable {
                         project.logger.info("[CubaPlugin] Found BOM info in ${artifact.file.absolutePath}")
 
                         cubaExtension.bom.load(bomInputStream)
-                    } finally {
-                        closeQuietly(bomInputStream)
                     }
                 }
             } finally {
@@ -698,13 +694,11 @@ class CubaPlugin implements Plugin<Project> {
                     project.ext.resolvedAppComponents.add(compId + ':' + compVersion)
 
                     def descriptorInputStream = jarFile.getInputStream(descriptorEntry)
-                    try {
+                    descriptorInputStream.withCloseable {
                         project.logger.info("[CubaPlugin] Found app-component info in ${artifact.file.absolutePath}")
                         def xml = new XmlSlurper().parseText(descriptorInputStream.getText(StandardCharsets.UTF_8.name()))
 
                         applyAppComponentXml(xml, moduleName, compGroup, compVersion, project, skippedDeps, compId, jarNames)
-                    } finally {
-                        closeQuietly(descriptorInputStream)
                     }
                 }
             } finally {
@@ -834,12 +828,6 @@ class CubaPlugin implements Plugin<Project> {
                 addJarNamesFromModule(jarNames, xml, depModule)
             }
         }
-    }
-
-    private static File getEntityClassesDir(Project project) {
-        SourceSet mainSourceSet = project.sourceSets.main
-
-        return mainSourceSet.java.outputDir
     }
 
     private static class AppComponent {
