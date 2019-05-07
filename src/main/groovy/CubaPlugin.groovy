@@ -209,8 +209,9 @@ class CubaPlugin implements Plugin<Project> {
                     deployerJars
                 }
                 SdkVersions sdk = project.rootProject.cuba.sdk
+                def wagonHttpGav = sdk.wagonHttpGav
                 project.dependencies {
-                    deployerJars(group: 'org.apache.maven.wagon', name: 'wagon-http', version: sdk.wagonHttpVersion)
+                    deployerJars(group: wagonHttpGav.groupId, name: wagonHttpGav.artifactId, version: wagonHttpGav.version)
                 }
 
                 project.logger.info("[CubaPlugin] upload repository: $uploadUrl ($uploadUser:$uploadPassword)")
@@ -475,12 +476,10 @@ class CubaPlugin implements Plugin<Project> {
                 def bomEntry = jarFile.getEntry(bomPath)
                 if (bomEntry != null) {
                     def bomInputStream = jarFile.getInputStream(bomEntry)
-                    try {
+                    bomInputStream.withCloseable {
                         project.logger.info("[CubaPlugin] Found BOM info in ${artifact.file.absolutePath}")
 
                         cubaExtension.bom.load(bomInputStream)
-                    } finally {
-                        closeQuietly(bomInputStream)
                     }
                 }
             } finally {
@@ -695,13 +694,11 @@ class CubaPlugin implements Plugin<Project> {
                     project.ext.resolvedAppComponents.add(compId + ':' + compVersion)
 
                     def descriptorInputStream = jarFile.getInputStream(descriptorEntry)
-                    try {
+                    descriptorInputStream.withCloseable {
                         project.logger.info("[CubaPlugin] Found app-component info in ${artifact.file.absolutePath}")
                         def xml = new XmlSlurper().parseText(descriptorInputStream.getText(StandardCharsets.UTF_8.name()))
 
                         applyAppComponentXml(xml, moduleName, compGroup, compVersion, project, skippedDeps, compId, jarNames)
-                    } finally {
-                        closeQuietly(descriptorInputStream)
                     }
                 }
             } finally {

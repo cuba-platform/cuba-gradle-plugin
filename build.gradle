@@ -145,7 +145,7 @@ task sdkPom(group: 'build', description: 'Creates POM with optional dependencies
                     b.'gradle.version'(versionProperties['gradle.version'])
                 }
                 b.'dependencies' {
-                    for (def d in sdkDependencies) {
+                    for (d in sdkDependencies) {
                         b.'dependency' {
                             b.'groupId'(d.moduleGroup)
                             b.'artifactId'(d.moduleName)

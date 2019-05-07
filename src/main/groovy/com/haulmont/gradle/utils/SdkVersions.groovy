@@ -16,6 +16,8 @@
 
 package com.haulmont.gradle.utils
 
+import org.gradle.api.Project
+
 import java.nio.charset.StandardCharsets
 
 class SdkVersions {
@@ -24,28 +26,32 @@ class SdkVersions {
 
     private String tomcatVersion
 
-    SdkVersions() {
-        init()
+    SdkVersions(Project project) {
+        init(project)
     }
 
-    private void init() {
+    private void init(Project project) {
         def sdkPomStream = SdkVersions.class.getResourceAsStream('/META-INF/sdk-pom.xml')
+
+        project.logger.debug("Loading SDK dependencies from /META-INF/sdk-pom.xml")
 
         sdkPomStream.withCloseable {
             def slurper = new XmlSlurper()
 
-            def project = slurper.parse(new InputStreamReader(sdkPomStream, StandardCharsets.UTF_8))
-
-            def properties = project.'properties'
+            def projectRoot = slurper.parse(new InputStreamReader(sdkPomStream, StandardCharsets.UTF_8))
+            def properties = projectRoot.'properties'
 
             this.tomcatVersion = properties.'tomcat.version'.text()
 
-            def dependencies = project.'dependencies'
+            project.logger.debug("Loaded tomcat version: $tomcatVersion")
 
-            dependencies.each { d ->
+            def dependencies = projectRoot.'dependencies'.'dependency'
+            for (d in dependencies) {
                 String groupId = d.'groupId'.text()
                 String artifactId = d.'artifactId'.text()
                 String version = d.'version'.text()
+
+                project.logger.debug("Loaded SDK dependency: $groupId:$artifactId:$version")
 
                 versions.put(groupId + ':' + artifactId, new VersionInfo(groupId, artifactId, version))
             }
@@ -56,16 +62,16 @@ class SdkVersions {
         return tomcatVersion
     }
 
-    String getUberJarVersion() {
-        return versions.get('com.haulmont.uberjar:uberjar').version
+    VersionInfo getUberJarGav() {
+        return versions.get('com.haulmont.uberjar:uberjar')
     }
 
-    String getFrontServletVersion() {
-        return versions.get('com.haulmont.frontservlet:frontservlet').version
+    VersionInfo getFrontServletGav() {
+        return versions.get('com.haulmont.frontservlet:frontservlet')
     }
 
-    String getWagonHttpVersion() {
-        return versions.get('org.apache.maven.wagon:wagon-http').version
+    VersionInfo getWagonHttpGav() {
+        return versions.get('org.apache.maven.wagon:wagon-http')
     }
 
     static class VersionInfo {

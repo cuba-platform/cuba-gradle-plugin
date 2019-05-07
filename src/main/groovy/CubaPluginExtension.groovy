@@ -45,7 +45,7 @@ class CubaPluginExtension {
         uploadRepository = new UploadRepositoryConfiguration(project)
         bom = new BOMVersions(project.logger)
 
-        sdk = new SdkVersions()
+        sdk = new SdkVersions(project)
 
         tomcat.version = sdk.getTomcatVersion()
         tomcat.dir = project.rootDir.absolutePath + '/../tomcat'

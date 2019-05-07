@@ -484,9 +484,9 @@ class CubaWarBuilding extends DefaultTask {
         }
         if (frontProject && singleWar) {
             SdkVersions sdk = project.rootProject.cuba.sdk
-
+            def frontGav = sdk.frontServletGav
             project.dependencies {
-                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: sdk.frontServletVersion)
+                frontServlet(group: frontGav.groupId, name: frontGav.artifactId, version: frontGav.version)
             }
         }
     }

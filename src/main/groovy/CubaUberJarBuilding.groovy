@@ -414,12 +414,15 @@ class CubaUberJarBuilding extends DefaultTask {
 
         SdkVersions sdk = project.rootProject.cuba.sdk
 
+        def uberJarGav = sdk.uberJarGav
+
         project.dependencies {
-            uberJar(group: 'com.haulmont.uberjar', name: 'uberjar', version: sdk.uberJarVersion)
+            uberJar(group: uberJarGav.groupId, name: uberJarGav.artifactId, version: uberJarGav.version)
         }
         if (frontProject) {
+            def frontGav = sdk.frontServletGav
             project.dependencies {
-                frontServlet(group: 'com.haulmont.frontservlet', name: 'frontservlet', version: sdk.frontServletVersion)
+                frontServlet(group: frontGav.groupId, name: frontGav.artifactId, version: frontGav.version)
             }
         }
     }
