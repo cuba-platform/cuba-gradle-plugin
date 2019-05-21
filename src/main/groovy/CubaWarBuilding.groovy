@@ -284,9 +284,9 @@ class CubaWarBuilding extends DefaultTask {
         def tmpDir = new File(project.buildDir, 'tmp/' + getName())
         tmpDir.deleteDir()
 
-        List<String> copied = copyLibs(coreProject)
-        copied.addAll(copyLibs(webProject))
-        copyLibs(portalProject)
+        List<String> copied = copyLibs(coreProject, '/WEB-INF/lib-core', coreJarNames)
+        copied.addAll(copyLibs(webProject, '/WEB-INF/lib-web', webJarNames))
+        copyLibs(portalProject, '/WEB-INF/lib', portalJarNames)
 
         if (singleWar) {
             def resolver = new DependencyResolver(new File(coreTmpWarDir), logger)
@@ -336,8 +336,6 @@ class CubaWarBuilding extends DefaultTask {
         if (singleWar) {
             def summaryProperties = coreProperties + webProperties
             writeLocalAppProperties(webProject, summaryProperties)
-            writeDependencies(coreProject, 'core', coreJarNames, coreAdditionalJarNames)
-            writeDependencies(webProject, 'web', webJarNames, webAdditionalJarNames)
             if (webProject && frontProject) {
                 copyFrontLibs()
                 writeIndexHtmlTemplate()
@@ -501,9 +499,9 @@ class CubaWarBuilding extends DefaultTask {
 
         if (theProject == coreProject) {
             properties += [
-                    'cuba.dataSourceJndiName'  : "jdbc/CubaDS",
-                    'cuba.download.directories': "\${cuba.tempDir};\${cuba.logDir}",
-                    'cuba.dbDir'               : "web-inf:db",
+                    'cuba.dataSourceJndiName'       : "jdbc/CubaDS",
+                    'cuba.download.directories'     : "\${cuba.tempDir};\${cuba.logDir}",
+                    'cuba.dbDir'                    : "web-inf:db",
                     'cuba.doNotExposeRemoteServices': singleWar ? 'true' : 'false'
             ]
         }
@@ -528,23 +526,62 @@ class CubaWarBuilding extends DefaultTask {
         properties
     }
 
-    protected List<String> copyLibs(Project theProject) {
+    protected List<String> copyLibs(Project theProject, String libDir, def jarNames) {
         if (theProject) {
             List<String> copied = []
             theProject.logger.info("[CubaWarBuilding] copying libs from configurations.runtime")
 
-            theProject.copy {
-                from theProject.configurations.runtime
-                from theProject.libsDir
-                into "${warDir(theProject)}/WEB-INF/lib"
-                include { details ->
-                    String name = details.file.name
-                    if (name.endsWith(".jar")
-                            && !(name.endsWith('-sources.jar') || name.endsWith("-themes.jar"))) {
-                        copied.add(name)
-                        return true
+            if (singleWar) {
+                theProject.copy {
+                    from theProject.configurations.runtime
+                    from theProject.libsDir
+                    into "${warDir(theProject)}$libDir"
+                    include { details ->
+                        String name = details.file.name
+                        if (name.endsWith(".jar")
+                                && !(name.endsWith('-sources.jar') || name.endsWith("-themes.jar"))) {
+                            for (String jarName : jarNames)
+                                if (name.startsWith(jarName)) {
+                                    copied.add(name)
+                                    return true
+                                }
+                        }
+                        return false
                     }
-                    return false
+                }
+
+                theProject.copy {
+                    from theProject.configurations.runtime
+                    from theProject.libsDir
+                    into "${warDir(theProject)}/WEB-INF/lib"
+                    include { details ->
+                        String name = details.file.name
+                        if (name.endsWith(".jar")
+                                && !(name.endsWith('-sources.jar') || name.endsWith("-themes.jar"))) {
+                            for (String jarName : jarNames)
+                                if (name.startsWith(jarName)) {
+                                    return false
+                                }
+                            copied.add(name)
+                            return true
+                        }
+                        return false
+                    }
+                }
+            } else {
+                theProject.copy {
+                    from theProject.configurations.runtime
+                    from theProject.libsDir
+                    into "${warDir(theProject)}/WEB-INF/lib"
+                    include { details ->
+                        String name = details.file.name
+                        if (name.endsWith(".jar")
+                                && !(name.endsWith('-sources.jar') || name.endsWith("-themes.jar"))) {
+                            copied.add(name)
+                            return true
+                        }
+                        return false
+                    }
                 }
             }
 
