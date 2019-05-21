@@ -98,8 +98,16 @@ class CubaPlugin implements Plugin<Project> {
 
         if (project == project.rootProject) {
             if (!project.plugins.findPlugin(IdeaExtPlugin.class)) {
-                new IdeaExtPlugin().apply(project)
+                project.plugins.apply(IdeaExtPlugin)
             }
+
+            // disable idea IPR generation tasks
+
+            project.tasks.findByName('idea')?.enabled = false
+            project.tasks.findByName('ideaProject')?.enabled = false
+            project.tasks.findByName('ideaModule')?.enabled = false
+            project.tasks.findByName('ideaWorkspace')?.enabled = false
+
             def cubaExtension = project.extensions.create("cuba", CubaPluginExtension, project)
             applyToRootProject(project, cubaExtension)
         } else {
