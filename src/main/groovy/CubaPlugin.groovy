@@ -42,6 +42,7 @@ import org.gradle.api.plugins.GroovyPlugin
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
 import org.gradle.language.jvm.tasks.ProcessResources
@@ -524,6 +525,10 @@ class CubaPlugin implements Plugin<Project> {
 
         project.tasks.withType(JavaCompile) {
             options.compilerArgs << "-Xlint:-options"
+            options.encoding = StandardCharsets.UTF_8.name()
+        }
+
+        project.tasks.withType(GroovyCompile) {
             options.encoding = StandardCharsets.UTF_8.name()
         }
 
