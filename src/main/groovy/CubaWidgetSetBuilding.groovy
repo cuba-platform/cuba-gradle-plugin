@@ -293,6 +293,15 @@ class CubaWidgetSetBuilding extends DefaultTask {
         compilerClassPath.addAll(
                 mainSourceSet.compileClasspath.findAll {
                     !excludedArtifact(it.name) && !compilerClassPath.contains(it)
+                }.sort { file1, file2 ->
+                    // Due to cuba-platform/cuba#2146 we must ensure that
+                    // 'vaadin-client' that contains the fix has priority,
+                    // so we put it to the first place in ClassPath entries
+                    if (isVaadinClientClassPathEntry(file1 as File)) {
+                        return -1
+                    } else {
+                        return isVaadinClientClassPathEntry(file2 as File) ? 1 : 0
+                    }
                 }
         )
 
@@ -313,5 +322,9 @@ class CubaWidgetSetBuilding extends DefaultTask {
         }
 
         return compilerClassPath
+    }
+
+    protected boolean isVaadinClientClassPathEntry(File file) {
+        return file.name.contains("vaadin-client") && !file.name.contains("vaadin-client-compiler")
     }
 }
