@@ -1,5 +1,6 @@
 import groovy.xml.StreamingMarkupBuilder
 import groovy.xml.XmlUtil
+import org.gradle.util.GradleVersion
 
 /*
  * Copyright (c) 2008-2016 Haulmont.
