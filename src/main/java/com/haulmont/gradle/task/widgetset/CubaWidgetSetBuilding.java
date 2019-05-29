@@ -155,6 +155,16 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         List<File> compileClassPathArtifacts = StreamSupport
                 .stream(mainSourceSet.getCompileClasspath().spliterator(), false)
                 .filter(f -> includedArtifact(f.getName()) && !compilerClassPath.contains(f))
+                // Due to cuba-platform/cuba#2146 we must ensure that
+                // 'vaadin-client' that contains the fix has priority,
+                // so we put it to the first place in ClassPath entries
+                .sorted((file1, file2) -> {
+                    if (isVaadinClientClassPathEntry(file1)) {
+                        return -1;
+                    } else {
+                        return isVaadinClientClassPathEntry(file2) ? 1 : 0;
+                    }
+                })
                 .collect(Collectors.toList());
         compilerClassPath.addAll(compileClassPathArtifacts);
 
@@ -180,6 +190,11 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         }
 
         return compilerClassPath;
+    }
+
+    protected boolean isVaadinClientClassPathEntry(File file) {
+        return file.getName().contains("vaadin-client")
+                && !file.getName().contains("vaadin-client-compiler");
     }
 
     protected List<String> collectCompilerArgs(String warPath) {
