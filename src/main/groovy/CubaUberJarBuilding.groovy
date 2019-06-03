@@ -268,6 +268,7 @@ class CubaUberJarBuilding extends DefaultTask {
         Set<String> coreLibs = new LinkedHashSet<>()
         Set<String> webLibs = new LinkedHashSet<>()
         Set<String> portalLibs = new LinkedHashSet<>()
+        Set<String> frontLibs = new LinkedHashSet<>()
 
         copyServerLibs(serverLibs)
         copyLibsAndContent(coreProject, coreJarNames, coreLibs)
@@ -275,14 +276,14 @@ class CubaUberJarBuilding extends DefaultTask {
             copyLibsAndContent(webProject, webJarNames, webLibs)
         }
         if (frontProject) {
-            copyFrontLibsAndContent(frontProject)
+            copyFrontLibsAndContent(frontProject, frontLibs)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
         }
 
         if (singleJar) {
-            resolveSharedLibConflicts(coreLibs, webLibs, portalLibs)
+            resolveSharedLibConflicts(coreLibs, webLibs, portalLibs, frontLibs)
             UberJar jar = createJarTask(appName)
             packServerLibs(jar)
             packLibsAndContent(coreProject, jar, webProject == null)
@@ -305,6 +306,7 @@ class CubaUberJarBuilding extends DefaultTask {
                 into distributionDir
             }
         } else {
+            resolveWebSharedLibConflicts(webLibs, frontLibs)
             UberJar coreJar = createJarTask(coreAppName)
             packServerLibs(coreJar)
             packLibsAndContent(coreProject, coreJar, true)
@@ -437,13 +439,25 @@ class CubaUberJarBuilding extends DefaultTask {
         return new UberJar(project.logger, project.file(rootJarTmpDir).toPath(), "${name}.jar", defaultTransformers)
     }
 
-    protected void resolveSharedLibConflicts(Set<String> coreLibs, Set<String> webLibs, Set<String> portalLibs) {
+    protected void resolveSharedLibConflicts(Set<String> coreLibs, Set<String> webLibs, Set<String> portalLibs,
+                                             Set<String> frontLibs) {
         Set<String> allLibs = new LinkedHashSet<>();
         allLibs.addAll(coreLibs)
         allLibs.addAll(webLibs)
         allLibs.addAll(portalLibs)
+        allLibs.addAll(frontLibs)
 
         def libsDir = project.file(getSharedLibsDir(project))
+        def resolver = new DependencyResolver(libsDir, logger)
+        resolver.resolveDependencies(libsDir, new ArrayList<String>(allLibs))
+    }
+
+    protected void resolveWebSharedLibConflicts(Set<String> webLibs, Set<String> frontLibs) {
+        Set<String> allLibs = new LinkedHashSet<>()
+        allLibs.addAll(webLibs)
+        allLibs.addAll(frontLibs)
+
+        def libsDir = webProject.file(getSharedLibsDir(webProject))
         def resolver = new DependencyResolver(libsDir, logger)
         resolver.resolveDependencies(libsDir, new ArrayList<String>(allLibs))
     }
@@ -466,12 +480,27 @@ class CubaUberJarBuilding extends DefaultTask {
         touchWebXml(theProject)
     }
 
-    protected void copyFrontLibsAndContent(Project theProject) {
+    protected void copyFrontLibsAndContent(Project theProject, Set<String> resolvedLibs) {
         theProject.copy {
             from project.configurations.frontServlet
             into "${getAppLibsDir(theProject)}"
             include { details ->
-                !details.file.name.endsWith('-sources.jar') && details.file.name.contains('frontservlet')
+                if (details.file.name.endsWith('-sources.jar') || !details.file.name.contains('frontservlet')) {
+                    return false
+                }
+                resolvedLibs.add(details.file.name)
+                return true
+            }
+        }
+        theProject.copy {
+            from project.configurations.frontServlet
+            into "${getSharedLibsDir(theProject)}"
+            include { details ->
+                if (details.file.name.endsWith('-sources.jar') || details.file.name.contains('frontservlet')) {
+                    return false
+                }
+                resolvedLibs.add(details.file.name)
+                return true
             }
         }
         copySpecificWebContent(theProject)
@@ -797,7 +826,7 @@ class CubaUberJarBuilding extends DefaultTask {
         if (!singleJar) {
             if (theProject == coreProject) {
                 return "$rootJarTmpDir/${LIBS_SHARED_DIR}_core"
-            } else if (theProject == webProject) {
+            } else if (theProject == webProject || theProject == frontProject) {
                 return "$rootJarTmpDir/${LIBS_SHARED_DIR}_web"
             } else if (theProject == portalProject) {
                 return "$rootJarTmpDir/${LIBS_SHARED_DIR}_portal"
