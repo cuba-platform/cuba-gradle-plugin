@@ -108,11 +108,6 @@ dependencies {
     sdk('org.apache.maven.wagon:wagon-http:3.3.2')
 }
 
-def versionProperties = [
-        'tomcat.version': '9.0.19',
-        'gradle.version': GradleVersion.current().version
-]
-
 task sourceJar(type: Jar) {
     from sourceSets.main.groovy
     from sourceSets.main.java
@@ -121,55 +116,64 @@ task sourceJar(type: Jar) {
     classifier = 'sources'
 }
 
-def sdkDir = project.file("$project.buildDir/sdk")
-def sdkFile = project.file("$sdkDir/META-INF/sdk-pom.xml")
+artifacts {
+    archives sourceJar
+}
 
-task sdkPom(group: 'build', description: 'Creates POM with optional dependencies of SDK') {
-    outputs.file sdkFile
-    doLast {
-        def sdkDependencies = project.configurations.getByName('sdk').resolvedConfiguration.firstLevelModuleDependencies
-        def xml = new StreamingMarkupBuilder()
+if (rootProject == project) {
+    // do not build SDK in project-all
+    def versionProperties = [
+            'tomcat.version': '9.0.19',
+            'gradle.version': GradleVersion.current().version
+    ]
 
-        def result = xml.bind({ b ->
-            mkp.declareNamespace('': 'http://maven.apache.org/POM/4.0.0')
-            mkp.declareNamespace(xsi: 'http://www.w3.org/2001/XMLSchema-instance')
+    def sdkDir = project.file("$project.buildDir/sdk")
+    def sdkFile = project.file("$sdkDir/META-INF/sdk-pom.xml")
 
-            b.'project'('xsi:schemaLocation':
-                      'http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd') {
+    task sdkPom(group: 'build', description: 'Creates POM with optional dependencies of SDK') {
+        outputs.file sdkFile
+        doLast {
+            def sdkDependencies = project.configurations.getByName('sdk').resolvedConfiguration.firstLevelModuleDependencies
+            def xml = new StreamingMarkupBuilder()
 
-                b.'modelVersion'('4.0.0')
-                b.'groupId'('com.haulmont.gradle')
-                b.'artifactId'('sdkbom')
-                b.'version'(artifactVersion)
-                b.'properties' {
-                    b.'tomcat.version'(versionProperties['tomcat.version'])
-                    b.'gradle.version'(versionProperties['gradle.version'])
-                }
-                b.'dependencies' {
-                    for (d in sdkDependencies) {
-                        b.'dependency' {
-                            b.'groupId'(d.moduleGroup)
-                            b.'artifactId'(d.moduleName)
-                            b.'version'(d.moduleVersion)
+            def result = xml.bind({ b ->
+                mkp.declareNamespace('': 'http://maven.apache.org/POM/4.0.0')
+                mkp.declareNamespace(xsi: 'http://www.w3.org/2001/XMLSchema-instance')
+
+                b.'project'('xsi:schemaLocation':
+                        'http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd') {
+
+                    b.'modelVersion'('4.0.0')
+                    b.'groupId'('com.haulmont.gradle')
+                    b.'artifactId'('sdkbom')
+                    b.'version'(artifactVersion)
+                    b.'properties' {
+                        b.'tomcat.version'(versionProperties['tomcat.version'])
+                        b.'gradle.version'(versionProperties['gradle.version'])
+                    }
+                    b.'dependencies' {
+                        for (d in sdkDependencies) {
+                            b.'dependency' {
+                                b.'groupId'(d.moduleGroup)
+                                b.'artifactId'(d.moduleName)
+                                b.'version'(d.moduleVersion)
+                            }
                         }
                     }
                 }
-            }
-        }) as Writable
+            }) as Writable
 
-        sdkFile.text = XmlUtil.serialize(result)
+            sdkFile.text = XmlUtil.serialize(result)
+        }
     }
-}
 
-jar.dependsOn(sdkPom)
-jar {
-    from sdkDir
-}
+    jar.dependsOn(sdkPom)
+    jar {
+        from sdkDir
+    }
 
-artifacts {
-    archives sourceJar
-    add('archives', sdkFile) {
-        type "sdk"
+    artifacts.add('archives', sdkFile) {
+        type 'sdk'
         builtBy(sdkPom)
     }
 }
