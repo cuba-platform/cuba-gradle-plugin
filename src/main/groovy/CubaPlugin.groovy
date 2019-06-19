@@ -603,8 +603,6 @@ class CubaPlugin implements Plugin<Project> {
     private void applyToFrontProject(Project project) {
         project.plugins.apply(NodePlugin)
         def nodeExtension = project.extensions.getByType(NodeExtension)
-        nodeExtension.version = '10.14.1'
-        nodeExtension.download = true
 
         project.task([type: CubaNodeToolingInfoTask], CubaNodeToolingInfoTask.NAME)
         project.task([type: CubaInstallGeneratorsTask], CubaInstallGeneratorsTask.NAME)
