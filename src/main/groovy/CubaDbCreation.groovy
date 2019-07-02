@@ -50,9 +50,7 @@ class CubaDbCreation extends AbstractCubaDbCreation {
             configureHsql()
         } else if (dbms == MYSQL_DBMS) {
             configureMySql()
-        }
-
-        if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
+        } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
             throw new UnsupportedOperationException("[CubaDbCreation] DBMS '$dbms' is not supported. " +
                     "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
                     "or specify one of supported DBMS in the 'dbms' property")
