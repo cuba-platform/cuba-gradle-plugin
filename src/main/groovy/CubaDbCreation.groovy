@@ -17,15 +17,19 @@
 
 import com.haulmont.gradle.task.db.AbstractCubaDbCreation
 import org.apache.commons.lang3.StringUtils
+import org.codehaus.groovy.tools.GroovyClass
 import org.gradle.api.tasks.TaskAction
+
+import java.sql.DriverManager
 
 class CubaDbCreation extends AbstractCubaDbCreation {
 
     def dropDbSql
     def createDbSql
     def masterUrl
-    def oracleSystemUser = 'system'
-    def oracleSystemPassword = 'manager'
+
+    def oracleSysUser = 'system'
+    def oracleSysPassword = 'manager'
 
     @TaskAction
     @Override
@@ -35,42 +39,103 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
     @Override
     void dropAndCreateDatabase() {
-        String createSchemaSql
-        if (dbms == 'postgres') {
-            if (!masterUrl)
-                masterUrl = "jdbc:postgresql://$host/postgres$connectionParams"
-            if (!dropDbSql)
-                dropDbSql = "drop database if exists \"$dbName\";"
-            if (!createDbSql) {
-                createDbSql = "create database \"$dbName\" with template=template0 encoding='UTF8';"
-                if (connectionParams) {
-                    def paramsMap = parseDatabaseParams(connectionParams)
-                    String currentSchema = cleanSchemaName(paramsMap.get(CURRENT_SCHEMA_PARAM))
-                    if (StringUtils.isNotEmpty(currentSchema)) {
-                        createSchemaSql = "create schema \"$currentSchema\";"
-                    }
+        String createPostgresSchemeSql
+        if (dbms == POSTGRES_DBMS) {
+            createPostgresSchemeSql = configurePostgres()
+        } else if (dbms == MSSQL_DBMS) {
+            configureMsSql()
+        } else if (dbms == ORACLE_DBMS) {
+            configureOracle()
+        } else if (dbms == HSQL_DBMS) {
+            configureHsql()
+        } else if (dbms == MYSQL_DBMS) {
+            configureMySql()
+        }
+
+        if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
+            throw new UnsupportedOperationException("[CubaDbCreation] DBMS '$dbms' is not supported. " +
+                    "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
+                    "or specify one of supported DBMS in the 'dbms' property")
+        }
+
+        def user = dbms == 'oracle' ? oracleSysUser : dbUser
+        def password = dbms == 'oracle' ? oracleSysPassword : dbPassword
+
+        project.logger.debug("[CubaDbCreation] Using database URL: '$masterUrl', user: '$user'")
+
+        def dbConnection = null
+        try {
+            GroovyClass.forName(driver)
+
+            dbConnection = DriverManager.getConnection((String) masterUrl, user, password)
+            def statement = dbConnection.createStatement()
+
+            project.logger.debug("[CubaDbCreation] Executing SQL: $dropDbSql")
+
+            statement.executeUpdate((String) dropDbSql)
+
+            if (createDbSql) {
+                project.logger.debug("[CubaDbCreation] Executing SQL: $createDbSql")
+                statement.executeUpdate((String) createDbSql)
+            }
+
+            if (createPostgresSchemeSql) {
+                project.logger.debug("[CubaDbCreation] Executing SQL: $createPostgresSchemeSql")
+                statement.executeUpdate(createPostgresSchemeSql)
+            }
+        } catch (Exception e) {
+            project.logger.warn('[CubaDbCreation] An error occurred while initializing DB', e)
+        } finally {
+            if (dbConnection) {
+                dbConnection.close()
+            }
+        }
+    }
+
+    protected String configurePostgres() {
+        if (!masterUrl) {
+            masterUrl = "jdbc:postgresql://$host/postgres$connectionParams"
+        }
+        if (!dropDbSql) {
+            dropDbSql = "drop database if exists \"$dbName\";"
+        }
+        if (!createDbSql) {
+            createDbSql = "create database \"$dbName\" with template=template0 encoding='UTF8';"
+            if (connectionParams) {
+                def params = parseDatabaseParams(connectionParams)
+                String currentSchema = cleanSchemaName(params.get(CURRENT_SCHEMA_PARAM))
+                if (StringUtils.isNotEmpty(currentSchema)) {
+                    return "create schema \"$currentSchema\";"
                 }
             }
-        } else if (dbms == 'mssql') {
-            if (!masterUrl) {
-                if (dbmsVersion == MS_SQL_2005) {
-                    masterUrl = "jdbc:jtds:sqlserver://$host/master$connectionParams"
-                } else {
-                    masterUrl = "jdbc:sqlserver://$host;databaseName=master$connectionParams"
-                }
-            }
-            if (!dropDbSql)
-                dropDbSql = "drop database $dbName;"
-            if (!createDbSql)
-                createDbSql = "create database $dbName;"
-        } else if (dbms == 'oracle') {
-            if (!masterUrl)
-                masterUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
-            if (!dropDbSql)
-                dropDbSql = "drop user $dbUser cascade;"
-            if (!createDbSql)
-                createDbSql =
-"""create user $dbUser identified by $dbPassword default tablespace users;
+        }
+        return null
+    }
+
+    protected void configureMsSql() {
+        if (!masterUrl) {
+            masterUrl = dbmsVersion == MS_SQL_2005
+                    ? "jdbc:jtds:sqlserver://$host/master$connectionParams"
+                    : "jdbc:sqlserver://$host;databaseName=master$connectionParams"
+        }
+        if (!dropDbSql) {
+            dropDbSql = "drop database $dbName;"
+        }
+        if (!createDbSql) {
+            createDbSql = "create database $dbName;"
+        }
+    }
+
+    protected void configureOracle() {
+        if (!masterUrl) {
+            masterUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
+        }
+        if (!dropDbSql) {
+            dropDbSql = "drop user $dbUser cascade;"
+        }
+        if (!createDbSql) {
+            createDbSql =
+                    """create user $dbUser identified by $dbPassword default tablespace users;
 alter user $dbUser quota unlimited on users;
 grant create session,
     create table, create view, create procedure, create trigger, create sequence,
@@ -78,76 +143,31 @@ grant create session,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
     to $dbUser;"""
-        } else if (dbms == 'hsql') {
-            if (!masterUrl)
-                masterUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
-            if (!dropDbSql)
-                dropDbSql = "drop schema public cascade;"
+        }
+    }
 
-        } else if (dbms == 'mysql') {
-            if (!masterUrl) {
-                if (!connectionParams) connectionParams = '?useSSL=false&allowMultiQueries=true'
-                masterUrl = "jdbc:mysql://$host$connectionParams"
+    protected void configureHsql() {
+
+        if (!masterUrl) {
+            masterUrl = "jdbc:hsqldb:hsql://$host/$dbName$connectionParams"
+        }
+        if (!dropDbSql) {
+            dropDbSql = "drop schema public cascade;"
+        }
+    }
+
+    protected void configureMySql() {
+        if (!masterUrl) {
+            if (!connectionParams) {
+                connectionParams = '?useSSL=false&allowMultiQueries=true'
             }
-            if (!createDbSql)
-                createDbSql = "create database $dbName;"
-            if (!dropDbSql)
-                dropDbSql = "drop database $dbName;"
-        } else if (!masterUrl || !dropDbSql || !createDbSql || !timeStampType) {
-            throw new UnsupportedOperationException("DBMS $dbms not supported. " +
-                    "You should either provide 'masterUrl', 'dropDbSql', 'createDbSql' and 'timeStampType' properties, " +
-                    "or specify one of supported DBMS in 'dbms' property")
+            masterUrl = "jdbc:mysql://$host$connectionParams"
         }
-
-        def user = dbms == 'oracle' ? (oracleSystemUser ? oracleSystemUser : 'system') : dbUser
-        project.logger.warn("Using database URL: $masterUrl, user: $user")
-
-        project.logger.warn("Executing SQL: $dropDbSql")
-        try {
-            project.ant.sql(
-                    classpath: driverClasspath,
-                    driver: driver,
-                    url: masterUrl,
-                    userid: user,
-                    password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
-                    autocommit: true,
-                    encoding: "UTF-8",
-                    dropDbSql
-            )
-        } catch (Exception e) {
-            if (project.logger.isDebugEnabled()) {
-                project.logger.debug("Unable to drop database", e)
-            } else {
-                project.logger.warn(e.getMessage())
-            }
+        if (!createDbSql) {
+            createDbSql = "create database $dbName;"
         }
-
-        if (createDbSql) {
-            project.logger.warn("Executing SQL: $createDbSql")
-            project.ant.sql(
-                    classpath: driverClasspath,
-                    driver: driver,
-                    url: masterUrl,
-                    userid: user,
-                    password: dbms == 'oracle' ? oracleSystemPassword : dbPassword,
-                    autocommit: true,
-                    encoding: "UTF-8",
-                    createDbSql
-            )
-        }
-
-        if (createSchemaSql) {
-            project.logger.warn("Executing SQL: $createSchemaSql")
-            project.ant.sql(
-                    classpath: driverClasspath,
-                    driver: driver,
-                    url: dbUrl,
-                    userid: dbUser,
-                    password: dbPassword,
-                    autocommit: true,
-                    encoding: "UTF-8",
-                    createSchemaSql
-            )
+        if (!dropDbSql) {
+            dropDbSql = "drop database $dbName;"
         }
     }
 }
