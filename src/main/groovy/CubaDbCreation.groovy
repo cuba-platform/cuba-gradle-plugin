@@ -28,8 +28,8 @@ class CubaDbCreation extends AbstractCubaDbCreation {
     def createDbSql
     def masterUrl
 
-    def oracleSysUser = 'system'
-    def oracleSysPassword = 'manager'
+    def oracleSystemUser = 'system'
+    def oracleSystemPassword = 'manager'
 
     @TaskAction
     @Override
@@ -56,8 +56,8 @@ class CubaDbCreation extends AbstractCubaDbCreation {
                     "or specify one of supported DBMS in the 'dbms' property")
         }
 
-        def user = dbms == 'oracle' ? oracleSysUser : dbUser
-        def password = dbms == 'oracle' ? oracleSysPassword : dbPassword
+        def user = dbms == 'oracle' ? oracleSystemUser : dbUser
+        def password = dbms == 'oracle' ? oracleSystemPassword : dbPassword
 
         project.logger.debug("[CubaDbCreation] Using database URL: '$masterUrl', user: '$user'")
 
