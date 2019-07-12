@@ -37,9 +37,10 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         super.createDb()
     }
 
+    @SuppressWarnings("GroovyAssignabilityCheck")
     @Override
     void dropAndCreateDatabase() {
-        String createPostgresSchemeSql
+        String createPostgresSchemeSql = null
         if (dbms == POSTGRES_DBMS) {
             createPostgresSchemeSql = configurePostgres()
         } else if (dbms == MSSQL_DBMS) {
@@ -61,33 +62,56 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
         project.logger.debug("[CubaDbCreation] Using database URL: '$masterUrl', user: '$user'")
 
-        def dbConnection = null
-        try {
-            GroovyClass.forName(driver)
+        GroovyClass.forName(driver)
 
-            dbConnection = DriverManager.getConnection((String) masterUrl, user, password)
-            def statement = dbConnection.createStatement()
+        executeSql(user, password, dropDbSql)
 
-            project.logger.debug("[CubaDbCreation] Executing SQL: $dropDbSql")
+        if (createDbSql) {
+            project.logger.debug('[CubaDbCreation] Creating database')
 
-            statement.executeUpdate((String) dropDbSql)
-
-            if (createDbSql) {
-                project.logger.debug("[CubaDbCreation] Executing SQL: $createDbSql")
-                statement.executeUpdate((String) createDbSql)
-            }
-
-            if (createPostgresSchemeSql) {
-                project.logger.debug("[CubaDbCreation] Executing SQL: $createPostgresSchemeSql")
-                statement.executeUpdate(createPostgresSchemeSql)
-            }
-        } catch (Exception e) {
-            project.logger.warn('[CubaDbCreation] An error occurred while initializing DB', e)
-        } finally {
-            if (dbConnection) {
-                dbConnection.close()
+            def executed = executeSql(user, password, createDbSql)
+            if (!executed) {
+                throw new RuntimeException('[CubaDbCreation] Failed to create database')
             }
         }
+
+        if (createPostgresSchemeSql) {
+            project.logger.debug('[CubaDbCreation] Creating Postgres scheme')
+
+            def executed = executeSql(user, password, createPostgresSchemeSql)
+            if (!executed) {
+                throw new RuntimeException('[CubaDbCreation] Failed to create Postgres scheme')
+            }
+        }
+    }
+
+    protected boolean executeSql(String user, String password, String sql) {
+        def executed = true
+
+        def conn = null
+        def statement = null
+
+        try {
+            conn = DriverManager.getConnection((String) masterUrl, user, password)
+            statement = conn.createStatement()
+
+            project.logger.debug("[CubaDbCreation] Executing SQL: $sql")
+
+            statement.execute(sql)
+        } catch (Exception e) {
+            project.logger.warn('[CubaDbCreation] Failed to execute SQL', e)
+
+            executed = false
+        } finally {
+            if (statement) {
+                statement.close()
+            }
+            if (conn) {
+                conn.close()
+            }
+        }
+
+        executed
     }
 
     protected String configurePostgres() {
