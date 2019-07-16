@@ -1,4 +1,4 @@
-import static com.haulmont.gradle.task.db.CubaDbTask.*
+import com.haulmont.gradle.task.db.ScriptSplitter
 
 /*
  * Copyright (c) 2008-2016 Haulmont.
