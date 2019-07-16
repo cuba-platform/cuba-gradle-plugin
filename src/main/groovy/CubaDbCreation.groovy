@@ -15,7 +15,9 @@
  *
  */
 
+
 import com.haulmont.gradle.task.db.AbstractCubaDbCreation
+import com.haulmont.gradle.task.db.ScriptSplitter
 import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.tools.GroovyClass
 import org.gradle.api.tasks.TaskAction
@@ -95,12 +97,21 @@ class CubaDbCreation extends AbstractCubaDbCreation {
             conn = DriverManager.getConnection((String) masterUrl, user, password)
             statement = conn.createStatement()
 
+            ScriptSplitter splitter = new ScriptSplitter(delimiter)
+            List<String> commands = splitter.split(sql)
             project.logger.debug("[CubaDbCreation] Executing SQL: $sql")
 
-            statement.execute(sql)
+            for (String command : commands) {
+                if (!isEmpty(command)) {
+                    statement.execute(command)
+                }
+            }
         } catch (Exception e) {
-            project.logger.warn('[CubaDbCreation] Failed to execute SQL', e)
-
+            if (project.logger.isInfoEnabled()) {
+                project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
+            } else {
+                project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+            }
             executed = false
         } finally {
             if (statement) {
@@ -153,18 +164,18 @@ class CubaDbCreation extends AbstractCubaDbCreation {
             masterUrl = "jdbc:oracle:thin:@//$host/$dbName$connectionParams"
         }
         if (!dropDbSql) {
-            dropDbSql = "drop user $dbUser cascade;"
+            dropDbSql = "drop user $dbUser cascade$delimiter"
         }
         if (!createDbSql) {
             createDbSql =
-                    """create user $dbUser identified by $dbPassword default tablespace users;
-alter user $dbUser quota unlimited on users;
+                    """create user $dbUser identified by $dbPassword default tablespace users$delimiter
+alter user $dbUser quota unlimited on users$delimiter
 grant create session,
     create table, create view, create procedure, create trigger, create sequence,
     alter any table, alter any procedure, alter any trigger,
     delete any table,
     drop any table, drop any procedure, drop any trigger, drop any view, drop any sequence
-    to $dbUser;"""
+    to $dbUser$delimiter"""
         }
     }
 

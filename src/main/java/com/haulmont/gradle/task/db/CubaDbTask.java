@@ -542,19 +542,4 @@ public abstract class CubaDbTask extends DefaultTask {
     protected String cleanSchemaName(String schemaName) {
         return StringUtils.isNotEmpty(schemaName) ? schemaName.replace("\"", "") : schemaName;
     }
-
-    public static class ScriptSplitter {
-        protected String delimiter;
-
-        public ScriptSplitter(String delimiter) {
-            this.delimiter = delimiter;
-        }
-
-        public List<String> split(String script) {
-            String qd = Pattern.quote(delimiter);
-            String[] commands = script.split("(?<!" + qd + ")" + qd + "(?!" + qd + ")"); // regex for ^: (?<!\^)\^(?!\^)
-            return Arrays.stream(commands)
-                    .map(s -> s.replace(delimiter + delimiter, delimiter)).collect(Collectors.toList());
-        }
-    }
 }
