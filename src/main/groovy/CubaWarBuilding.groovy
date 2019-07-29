@@ -834,7 +834,6 @@ class CubaWarBuilding extends DefaultTask {
                 theProject.copy {
                     from new File(project.project(':cuba-web').projectDir, 'web')
                     from new File(project.project(':charts-web').projectDir, 'web')
-                    from new File(project.project(':workflow-web').projectDir, 'web')
                     from new File(project.project(':reports-web').projectDir, 'web')
                     from new File(project.project(':refapp-web').buildDir, 'web')
                     from new File(project.project(':refapp-web-toolkit').buildDir, 'web')
