@@ -22,9 +22,13 @@ import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.tools.GroovyClass
 import org.gradle.api.tasks.TaskAction
 
+import java.lang.reflect.Field
 import java.sql.DriverManager
+import java.sql.SQLException
 
 class CubaDbCreation extends AbstractCubaDbCreation {
+
+    protected static final String VENDOR_CODE_FIELD = "vendorCode"
 
     def dropDbSql
     def createDbSql
@@ -66,7 +70,9 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
         GroovyClass.forName(driver)
 
-        executeSql(user, password, dropDbSql)
+        if (!executeSql(user, password, dropDbSql)) {
+            throw new RuntimeException('[CubaDbCreation] Failed to drop database')
+        }
 
         if (createDbSql) {
             project.logger.debug('[CubaDbCreation] Creating database')
@@ -107,12 +113,14 @@ class CubaDbCreation extends AbstractCubaDbCreation {
                 }
             }
         } catch (Exception e) {
-            if (project.logger.isInfoEnabled()) {
-                project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
-            } else {
-                project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+            if (!isAcceptableException(e)) {
+                if (project.logger.isInfoEnabled()) {
+                    project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
+                } else {
+                    project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+                }
+                executed = false
             }
-            executed = false
         } finally {
             if (statement) {
                 statement.close()
@@ -201,6 +209,62 @@ grant create session,
         }
         if (!dropDbSql) {
             dropDbSql = "drop database $dbName;"
+        }
+    }
+
+    protected boolean isAcceptableException(Exception e) {
+        def acceptableDbms = dbms == ORACLE_DBMS || dbms == MYSQL_DBMS || dbms == MSSQL_DBMS
+        if (!acceptableDbms) {
+            return false
+        }
+
+        def vendorCode = getVendorCode(e)
+
+        dbNotExistsError(dbms, vendorCode)
+    }
+
+    /**
+     * Obtains exception vendor code via reflection from the given exception.
+     *
+     * @param e exception
+     *
+     * @return vendor specific error code
+     */
+    @SuppressWarnings("GroovyAccessibility")
+    protected static int getVendorCode(Exception e) {
+        Field vendorCodeField = null
+
+        def fields = SQLException.class.privateGetDeclaredFields(false)
+        for (int i = 0; i < fields.length; i++) {
+            def f = fields[i]
+            if (VENDOR_CODE_FIELD == f.getName()) {
+                vendorCodeField = f
+                break
+            }
+        }
+
+        vendorCodeField.setAccessible(true)
+        vendorCodeField.get(e) as int
+    }
+
+    /**
+     * Checks whether the given {@code errorCode} relates to exception
+     * caused by performing DB drop when DB does not exist.
+     *
+     * @param dbms       DBMS type
+     * @param vendorCode vendor error code
+     */
+    protected static boolean dbNotExistsError(String dbms, int vendorCode) {
+        switch (dbms) {
+            case MYSQL_DBMS:
+                return vendorCode == 1008
+            case MS_SQL_2005:
+            case MSSQL_DBMS:
+                return vendorCode == 3701
+            case ORACLE_DBMS:
+                return vendorCode == 1918
+            default:
+                return false
         }
     }
 }
