@@ -16,6 +16,7 @@
 
 package com.haulmont.gradle.task.db;
 
+import com.haulmont.gradle.utils.AppPropertiesLoader;
 import groovy.lang.GroovyObject;
 import groovy.sql.Sql;
 import org.apache.commons.io.FileUtils;
@@ -25,9 +26,7 @@ import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -36,11 +35,14 @@ import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.*;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.function.Function;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public abstract class CubaDbTask extends DefaultTask {
+
     public static final String POSTGRES_DBMS = "postgres";
     public static final String MSSQL_DBMS = "mssql";
     public static final String ORACLE_DBMS = "oracle";
@@ -51,6 +53,8 @@ public abstract class CubaDbTask extends DefaultTask {
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema";
     protected static final String MS_SQL_2005 = "2005";
 
+    protected AppPropertiesLoader appPropertiesLoader = new AppPropertiesLoader();
+    protected Properties properties;
     protected String storeName = Stores.MAIN;
     protected String dbms;
     protected String dbmsVersion;
@@ -65,8 +69,11 @@ public abstract class CubaDbTask extends DefaultTask {
     protected String dbUrl;
     protected String driver;
     protected String timeStampType;
+    protected String appHomeDir;
     protected File dbDir;
     protected Sql sqlInstance;
+
+    private final Logger log = LoggerFactory.getLogger(CubaDbTask.class);
 
     public String getStoreName() {
         return storeName;
@@ -188,54 +195,32 @@ public abstract class CubaDbTask extends DefaultTask {
         this.dbDir = dbDir;
     }
 
+    public void setAppHomeDir(String appHomeDir) {
+        this.appHomeDir = appHomeDir;
+    }
+
+    protected void initAppHomeDir() {
+    }
+
     protected void init() {
-        if (StringUtils.isBlank(driver) || StringUtils.isBlank(dbUrl)) {
-            if (POSTGRES_DBMS.equals(dbms)) {
-                driver = "org.postgresql.Driver";
-                dbUrl = "jdbc:postgresql://" + host + "/" + dbName + connectionParams;
-                if (StringUtils.isBlank(timeStampType)) {
-                    timeStampType = "timestamp";
-                }
-            } else if (MSSQL_DBMS.equals(dbms)) {
-                if (MS_SQL_2005.equals(dbmsVersion)) {
-                    driver = "net.sourceforge.jtds.jdbc.Driver";
-                    dbUrl = "jdbc:jtds:sqlserver://" + host + "/" + dbName + connectionParams;
-                } else {
-                    driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
-                    dbUrl = "jdbc:sqlserver://" + host + ";databaseName=" + dbName + connectionParams;
-                }
-                if (StringUtils.isBlank(timeStampType)) {
-                    timeStampType = "datetime";
-                }
-            } else if (ORACLE_DBMS.equals(dbms)) {
-                driver = "oracle.jdbc.OracleDriver";
-                dbUrl = "jdbc:oracle:thin:@//" + host + "/" + dbName + connectionParams;
-                if (StringUtils.isBlank(timeStampType)) {
-                    timeStampType = "timestamp";
-                }
-            } else if (HSQL_DBMS.equals(dbms)) {
-                driver = "org.hsqldb.jdbc.JDBCDriver";
-                dbUrl = "jdbc:hsqldb:hsql://" + host + "/" + dbName + connectionParams;
-                if (StringUtils.isBlank(timeStampType)) {
-                    timeStampType = "timestamp";
-                }
-            } else if (MYSQL_DBMS.equals(dbms)) {
-                driver = "com.mysql.jdbc.Driver";
-                if (StringUtils.isBlank(connectionParams)) {
-                    connectionParams = "?useSSL=false&allowMultiQueries=true&serverTimezone=UTC";
-                }
-                dbUrl = "jdbc:mysql://" + host + "/" + dbName + connectionParams;
-                if (StringUtils.isBlank(timeStampType)) {
-                    timeStampType = "datetime";
-                }
-            } else
-                throw new UnsupportedOperationException("DBMS " + dbms + " is not supported. " +
-                        "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property");
+        initAppHomeDir();
+        properties = appPropertiesLoader.initProperties(getProject(), appHomeDir);
+        String dataSourceProvider = properties.getProperty("cuba.dataSourceProvider" + getStorePostfix());
+        if (dataSourceProvider == null || "jndi".equals(dataSourceProvider)) {
+            initJndiConnectionParams();
+        } else if ("application".equals(dataSourceProvider)) {
+            initApplicationConnectionParams();
+        } else {
+            throw new RuntimeException(String.format("DataSource provider '%s' is unsupported! Available: 'jndi', 'application'", dataSourceProvider));
         }
 
         Project project = getProject();
         dbDir = new File(project.getBuildDir(), dbFolder);
 
+        initDriverClasspath(project);
+    }
+
+    protected void initDriverClasspath(Project project) {
         ClassLoader classLoader = GroovyObject.class.getClassLoader();
         if (StringUtils.isBlank(driverClasspath)) {
             driverClasspath = project.getConfigurations().getByName("jdbc").fileCollection(dependency -> true).getAsPath();
@@ -252,7 +237,7 @@ public abstract class CubaDbTask extends DefaultTask {
 
                     });
         } else {
-            StringTokenizer tokenizer = new StringTokenizer(driverClasspath, File.pathSeparator);
+            java.util.StringTokenizer tokenizer = new java.util.StringTokenizer(driverClasspath, File.pathSeparator);
             while (tokenizer.hasMoreTokens()) {
                 try {
                     URL url = new File(tokenizer.nextToken()).toURI().toURL();
@@ -266,7 +251,83 @@ public abstract class CubaDbTask extends DefaultTask {
             }
         }
         project.getLogger().info("[CubaDbTask] driverClasspath: " + driverClasspath);
+    }
 
+    protected void initJndiConnectionParams() {
+        if (StringUtils.isBlank(driver) || StringUtils.isBlank(dbUrl)) {
+            initConnectionParams(false);
+        }
+    }
+
+    protected void initApplicationConnectionParams() {
+        dbms = properties.getProperty("cuba.dbmsType" + getStorePostfix());
+        dbmsVersion = properties.getProperty("cuba.dbmsVersion" + getStorePostfix());
+
+        String cubaDataSourcePrefix = "cuba.dataSource" + getStorePostfix();
+        dbUrl = properties.getProperty(cubaDataSourcePrefix + ".jdbcUrl");
+        dbUser = properties.getProperty(cubaDataSourcePrefix + ".username");
+        dbPassword = properties.getProperty(cubaDataSourcePrefix + ".password");
+        dbName = properties.getProperty(cubaDataSourcePrefix + ".dbName");
+        host = properties.getProperty(cubaDataSourcePrefix + ".hostname") + ":" + properties.getProperty(cubaDataSourcePrefix + ".port");
+        connectionParams = properties.getProperty(cubaDataSourcePrefix + ".connectionParams");
+
+        if (!StringUtils.isBlank(dbUrl)) {
+            initConnectionParams(true);
+        } else {
+            initConnectionParams(false);
+        }
+    }
+
+    protected String getStorePostfix() {
+        if (Stores.MAIN.equals(storeName)) {
+            return "";
+        }
+        return "_".concat(storeName);
+    }
+
+    protected void initConnectionParams(boolean dbUrlProvided) {
+        connectionParams = StringUtils.defaultIfEmpty(connectionParams, "");
+        if (POSTGRES_DBMS.equals(dbms)) {
+            driver = "org.postgresql.Driver";
+            dbUrl = dbUrlProvided ? dbUrl : "jdbc:postgresql://" + host + "/" + dbName + connectionParams;
+            if (StringUtils.isBlank(timeStampType)) {
+                timeStampType = "timestamp";
+            }
+        } else if (MSSQL_DBMS.equals(dbms)) {
+            if (MS_SQL_2005.equals(dbmsVersion)) {
+                driver = "net.sourceforge.jtds.jdbc.Driver";
+                dbUrl = dbUrlProvided ? dbUrl : "jdbc:jtds:sqlserver://" + host + "/" + dbName + connectionParams;
+            } else {
+                driver = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+                dbUrl = dbUrlProvided ? dbUrl : "jdbc:sqlserver://" + host + ";databaseName=" + dbName + connectionParams;
+            }
+            if (StringUtils.isBlank(timeStampType)) {
+                timeStampType = "datetime";
+            }
+        } else if (ORACLE_DBMS.equals(dbms)) {
+            driver = "oracle.jdbc.OracleDriver";
+            dbUrl = dbUrlProvided ? dbUrl : "jdbc:oracle:thin:@//" + host + "/" + dbName + connectionParams;
+            if (StringUtils.isBlank(timeStampType)) {
+                timeStampType = "timestamp";
+            }
+        } else if (HSQL_DBMS.equals(dbms)) {
+            driver = "org.hsqldb.jdbc.JDBCDriver";
+            dbUrl = dbUrlProvided ? dbUrl : "jdbc:hsqldb:hsql://" + host + "/" + dbName + connectionParams;
+            if (StringUtils.isBlank(timeStampType)) {
+                timeStampType = "timestamp";
+            }
+        } else if (MYSQL_DBMS.equals(dbms)) {
+            driver = "com.mysql.jdbc.Driver";
+            if (StringUtils.isBlank(connectionParams)) {
+                connectionParams = "?useSSL=false&allowMultiQueries=true&serverTimezone=UTC";
+            }
+            dbUrl = dbUrlProvided ? dbUrl : "jdbc:mysql://" + host + "/" + dbName + connectionParams;
+            if (StringUtils.isBlank(timeStampType)) {
+                timeStampType = "datetime";
+            }
+        } else
+            throw new UnsupportedOperationException("DBMS " + dbms + " is not supported. " +
+                    "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property");
     }
 
     protected void initDatabase(String oneModuleDir) {

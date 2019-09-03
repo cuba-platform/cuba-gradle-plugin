@@ -84,6 +84,7 @@ dependencies {
     compile('org.javassist:javassist:3.24.1-GA')
     compile('commons-io:commons-io:2.6')
     compile('org.apache.commons:commons-lang3:3.9')
+    compile('org.apache.commons:commons-text:1.6')
 
     compile('com.yahoo.platform.yui:yuicompressor:2.4.6')
     compile('com.vaadin:vaadin-sass-compiler:0.9.13') {

@@ -93,6 +93,11 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         }
     }
 
+    @Override
+    protected void initAppHomeDir() {
+        setAppHomeDir(project.cuba.appHome);
+    }
+
     protected boolean executeSql(String user, String password, String sql) {
         def executed = true
 

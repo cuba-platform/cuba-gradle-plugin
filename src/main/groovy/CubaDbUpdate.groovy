@@ -133,6 +133,11 @@ class CubaDbUpdate extends CubaDbTask {
         }
     }
 
+    @Override
+    protected void initAppHomeDir() {
+        setAppHomeDir(project.cuba.appHome);
+    }
+
     protected boolean filterInitScript(File script) {
         return Arrays.stream(EXCLUDED_ADDONS)
                 .noneMatch({ pattern ->
