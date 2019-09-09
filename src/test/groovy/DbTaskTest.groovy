@@ -15,6 +15,8 @@
  *
  */
 
+
+import com.haulmont.gradle.task.db.Stores
 import org.apache.commons.io.FileUtils
 
 import java.nio.file.Paths
@@ -29,9 +31,11 @@ class DbTaskTest extends GroovyTestCase {
     private File dbmsDir;
 
     private List<File> mssqlInitFiles = new ArrayList<>();
+    private List<File> mssqlInitAddStoreFiles = new ArrayList<>();
     private List<File> mssql2012InitFiles = new ArrayList<>();
     private List<File> mssqlUpdateFiles = new ArrayList<>();
     private List<File> mssql2012UpdateFiles = new ArrayList<>();
+    private List<File> mssqlUpdateAddStoreFiles = new ArrayList<>();
 
     @Override
     void setUp() {
@@ -53,6 +57,12 @@ class DbTaskTest extends GroovyTestCase {
         file = new File(dir, "create-db.sql");
         file.createNewFile();
         mssqlInitFiles.add(file);
+
+        dir = new File(dbmsDir, "10-cuba/init_addstore/mssql");
+        dir.mkdirs();
+        file = new File(dir, "create-db.sql");
+        file.createNewFile();
+        mssqlInitAddStoreFiles.add(file);
 
         dir = new File(dbmsDir, "10-cuba/init/mssql-2012");
         dir.mkdirs();
@@ -179,25 +189,46 @@ class DbTaskTest extends GroovyTestCase {
         file = new File(dir, "app-update-2.sql");
         file.createNewFile();
         mssql2012UpdateFiles.add(file);
+
+        dir = new File(dbmsDir, "100-app/update_addstore/mssql");
+        dir.mkdirs();
+        file = new File(dir, "app-update-1.sql");
+        file.createNewFile();
+        mssqlUpdateAddStoreFiles.add(file);
+        file = new File(dir, "app-update-2.sql");
+        file.createNewFile();
+        mssqlUpdateAddStoreFiles.add(file);
     }
 
     public void testGetInitScripts() throws Exception {
-        ScriptFinder scriptFinder = new ScriptFinder('mssql', null, dbmsDir, [], null)
+        ScriptFinder scriptFinder = new ScriptFinder(Stores.MAIN,'mssql', null, dbmsDir, [], null)
         List<File> scripts = scriptFinder.getInitScripts(null)
         assertEquals(mssqlInitFiles, scripts)
 
-        scriptFinder = new ScriptFinder('mssql', '2012', dbmsDir, [], null)
+        scriptFinder = new ScriptFinder(Stores.MAIN,'mssql', '2012', dbmsDir, [], null)
         scripts = scriptFinder.getInitScripts(null);
         assertEquals(mssql2012InitFiles, scripts);
     }
 
+    public void testGetInitScriptsForAdditionalStore() throws Exception {
+        ScriptFinder scriptFinder = new ScriptFinder('addStore','mssql', null, dbmsDir, [], null)
+        List<File> scripts = scriptFinder.getInitScripts(null)
+        assertEquals(mssqlInitAddStoreFiles, scripts)
+    }
+
     public void testGetUpdateScripts() throws Exception {
-        ScriptFinder scriptFinder = new ScriptFinder('mssql', null, dbmsDir, ['sql'], null)
+        ScriptFinder scriptFinder = new ScriptFinder(Stores.MAIN,'mssql', null, dbmsDir, ['sql'], null)
         List<File> scripts = scriptFinder.getUpdateScripts(null)
         assertEquals(mssqlUpdateFiles, scripts)
 
-        scriptFinder = new ScriptFinder('mssql', '2012', dbmsDir, ['sql'], null)
+        scriptFinder = new ScriptFinder(Stores.MAIN,'mssql', '2012', dbmsDir, ['sql'], null)
         scripts = scriptFinder.getUpdateScripts(null)
         assertEquals(mssql2012UpdateFiles, scripts)
+    }
+
+    public void testGetUpdateScriptsForAdditionalDatastore() throws Exception {
+        ScriptFinder scriptFinder = new ScriptFinder('addStore','mssql', null, dbmsDir, ['sql'], null)
+        List<File> scripts = scriptFinder.getUpdateScripts(null)
+        assertEquals(mssqlUpdateAddStoreFiles, scripts)
     }
 }

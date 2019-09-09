@@ -55,7 +55,7 @@ class CubaDbUpdate extends CubaDbTask {
         try {
             runRequiredInitScripts()
 
-            ScriptFinder scriptFinder = new ScriptFinder(
+            ScriptFinder scriptFinder = new ScriptFinder(storeName,
                     dbms, dbmsVersion, dbDir, executeGroovy ? ['sql', 'upgrade.groovy'] : ['sql'], project)
             List<File> files = scriptFinder.getUpdateScripts(null)
 
@@ -97,7 +97,7 @@ class CubaDbUpdate extends CubaDbTask {
         }
 
         List<String> executedScripts = getExecutedScripts()
-        ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, ['sql'], project)
+        ScriptFinder scriptFinder = new ScriptFinder(storeName, dbms, dbmsVersion, dbDir, ['sql'], project)
         def dirs = scriptFinder.getModuleDirs()
         if (dirs.size() > 1) {
             def lastDir = dirs[dirs.size() - 1]

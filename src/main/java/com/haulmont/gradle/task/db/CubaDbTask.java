@@ -51,6 +51,7 @@ public abstract class CubaDbTask extends DefaultTask {
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema";
     protected static final String MS_SQL_2005 = "2005";
 
+    protected String storeName = Stores.MAIN;
     protected String dbms;
     protected String dbmsVersion;
     protected String delimiter = "^";
@@ -66,6 +67,14 @@ public abstract class CubaDbTask extends DefaultTask {
     protected String timeStampType;
     protected File dbDir;
     protected Sql sqlInstance;
+
+    public String getStoreName() {
+        return storeName;
+    }
+
+    public void setStoreName(String storeName) {
+        this.storeName = storeName;
+    }
 
     public String getDbms() {
         return dbms;
@@ -267,7 +276,7 @@ public abstract class CubaDbTask extends DefaultTask {
     protected void initDatabase(String oneModuleDir, Function<File, Boolean> scriptFilter) {
         Project project = getProject();
         try {
-            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, Collections.singletonList("sql"), project);
+            ScriptFinder scriptFinder = new ScriptFinder(storeName, dbms, dbmsVersion, dbDir, Collections.singletonList("sql"), project);
 
             List<File> initScripts = scriptFinder.getInitScripts(oneModuleDir)
                     .stream()
@@ -282,7 +291,7 @@ public abstract class CubaDbTask extends DefaultTask {
             });
         } finally {
             // mark all update scripts as executed even in case of createDb failure
-            ScriptFinder scriptFinder = new ScriptFinder(dbms, dbmsVersion, dbDir, Arrays.asList("sql", "groovy"), project);
+            ScriptFinder scriptFinder = new ScriptFinder(storeName, dbms, dbmsVersion, dbDir, Arrays.asList("sql", "groovy"), project);
             List<File> updateScripts = scriptFinder.getUpdateScripts(oneModuleDir);
             updateScripts.forEach(file -> {
                 String name = getScriptName(file);
@@ -365,13 +374,15 @@ public abstract class CubaDbTask extends DefaultTask {
 
     public static class ScriptFinder {
 
+        protected String storeName;
         protected String dbmsType;
         protected String dbmsVersion;
         protected File dbDir;
         protected List<String> extensions;
         private Project project;
 
-        public ScriptFinder(String dbmsType, String dbmsVersion, File dbDir, List<String> extensions, Project project) {
+        public ScriptFinder(String storeName, String dbmsType, String dbmsVersion, File dbDir, List<String> extensions, Project project) {
+            this.storeName = storeName;
             this.dbmsType = dbmsType;
             this.dbmsVersion = dbmsVersion;
             this.dbDir = dbDir;
@@ -418,7 +429,7 @@ public abstract class CubaDbTask extends DefaultTask {
                 }
 
                 File moduleDir = new File(dbDir, moduleDirName);
-                File initDir = new File(moduleDir, "update");
+                File initDir = new File(moduleDir, getUpdateDirName());
                 File scriptDir = new File(initDir, dbmsType);
                 if (scriptDir.exists()) {
                     String[] extensionsArr = extensions.toArray(new String[extensions.size()]);
@@ -480,7 +491,7 @@ public abstract class CubaDbTask extends DefaultTask {
                     continue;
                 }
                 File moduleDir = new File(dbDir, moduleDirName);
-                File initDir = new File(moduleDir, "init");
+                File initDir = new File(moduleDir, getInitDirName());
                 File scriptDir = new File(initDir, dbmsType);
                 if (!scriptDir.exists()) {
                     logInfo("[CubaDbTask] [getInitScripts] " + scriptDir + " doesn't exist");
@@ -528,6 +539,14 @@ public abstract class CubaDbTask extends DefaultTask {
             if (project != null) {
                 project.getLogger().info(msg);
             }
+        }
+
+        protected String getInitDirName() {
+            return Stores.MAIN.equals(storeName) ? "init" : "init_" + storeName.toLowerCase(Locale.ROOT);
+        }
+
+        protected String getUpdateDirName() {
+            return Stores.MAIN.equals(storeName) ? "update" : "update_" + storeName.toLowerCase(Locale.ROOT);
         }
     }
 
