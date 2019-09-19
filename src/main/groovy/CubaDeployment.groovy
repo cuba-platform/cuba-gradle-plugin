@@ -180,6 +180,15 @@ class CubaDeployment extends DefaultTask {
             resolver.resolveDependencies(appLibDir, copiedToAppLib)
         }
 
+        File logbackConfig = new File(project.rootProject.rootDir, 'etc/logback.xml')
+        if (logbackConfig.exists()) {
+            project.logger.info("[CubaDeployment] copying etc/logback.xml to ${project.cuba.appHome}")
+            project.copy {
+                from logbackConfig
+                into project.cuba.appHome
+            }
+        }
+
         if (doAfter) {
             project.logger.info("[CubaDeployment] calling doAfter")
             doAfter.call()

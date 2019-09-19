@@ -40,8 +40,12 @@ class CubaSetupTomcat extends DefaultTask {
             "/tomcat/bin/setenv.bat",
             "/tomcat/bin/setenv.sh",
             "/tomcat/conf/catalina.properties",
-            "/tomcat/conf/logging.properties",
-            "/tomcat/conf/logback.xml"
+            "/tomcat/conf/logging.properties"
+    ])
+
+    public static final List<String> APP_HOME_RESOURCES = Collections.unmodifiableList([
+            "/app_home/logback.xml",
+            "/app_home/local.app.properties"
     ])
 
     def tomcatRootDir = project.cuba.tomcat.dir
@@ -79,6 +83,16 @@ class CubaSetupTomcat extends DefaultTask {
             def resourceSubPath = resourcePath.subpath(1, resourcePath.getNameCount())
 
             def targetFile = project.file(tomcatRootDir).toPath().resolve(resourceSubPath).toFile()
+            logger.debug("Copy ${resourceName} to ${targetFile.getAbsolutePath()}")
+
+            FileUtils.copyInputStreamToFile(getClass().getResourceAsStream(resourceName), targetFile)
+        }
+
+        APP_HOME_RESOURCES.each { resourceName ->
+            def resourcePath = Paths.get(resourceName)
+            def resourceSubPath = resourcePath.subpath(1, resourcePath.getNameCount())
+
+            def targetFile = project.file(project.cuba.appHome).toPath().resolve(resourceSubPath).toFile()
             logger.debug("Copy ${resourceName} to ${targetFile.getAbsolutePath()}")
 
             FileUtils.copyInputStreamToFile(getClass().getResourceAsStream(resourceName), targetFile)

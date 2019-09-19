@@ -26,6 +26,6 @@ class LogbackResourceLocator implements ResourceLocator {
 
     @Override
     Path relocate(Path toRootPath, Path fromPath) {
-        return toRootPath.resolve("logback.xml")
+        return toRootPath.resolve("app-logback.xml")
     }
 }

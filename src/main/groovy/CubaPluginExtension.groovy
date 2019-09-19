@@ -36,8 +36,12 @@ class CubaPluginExtension {
 
     SdkVersions sdk
 
+    String appHome
+
     CubaPluginExtension(Project project) {
         this.project = project
+
+        appHome = project.rootDir.absolutePath + '/deploy/app_home'
 
         tomcat = new TomcatConfiguration(project)
         ide = new IdeConfiguration(project)

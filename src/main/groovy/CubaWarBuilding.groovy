@@ -39,8 +39,11 @@ class CubaWarBuilding extends DefaultTask {
     Project frontProject
     Project webToolkitProject
 
+    @Deprecated
     @Input
-    String appHome
+    @Optional
+    String appHome = '${app.home}'
+
     @Input
     @Optional
     String appName
@@ -479,6 +482,11 @@ class CubaWarBuilding extends DefaultTask {
 
         if (logbackConfigurationFile) {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
+        } else {
+            File logbackConfigInEtc = new File(project.rootProject.rootDir, 'etc/logback.xml')
+            if (logbackConfigInEtc.exists()) {
+                logbackConfigurationFile = logbackConfigInEtc.absolutePath
+            }
         }
         if (frontProject && singleWar) {
             SdkVersions sdk = project.rootProject.cuba.sdk
@@ -490,12 +498,7 @@ class CubaWarBuilding extends DefaultTask {
     }
 
     protected Map<String, Object> collectProperties(Project theProject) {
-        def properties = [
-                'cuba.logDir' : "$appHome/logs",
-                'cuba.confDir': "$appHome/\${cuba.webContextName}/conf",
-                'cuba.tempDir': "$appHome/\${cuba.webContextName}/temp",
-                'cuba.dataDir': "$appHome/\${cuba.webContextName}/work"
-        ]
+        def properties = [:]
 
         if (theProject == coreProject) {
             properties += [
@@ -876,7 +879,7 @@ class CubaWarBuilding extends DefaultTask {
                 from new File(logbackConfigurationFile)
                 into "${warDir(theProject)}/WEB-INF/classes"
                 rename { String fileName ->
-                    "logback.xml"
+                    "app-logback.xml"
                 }
             }
         } else if (useDefaultLogbackConfiguration) {
@@ -887,7 +890,7 @@ class CubaWarBuilding extends DefaultTask {
             try {
                 Path classesDir = theProject.file("${warDir(theProject)}/WEB-INF/classes").toPath()
                 Files.createDirectories(classesDir)
-                Files.copy(inputStream, classesDir.resolve("logback.xml"),
+                Files.copy(inputStream, classesDir.resolve("app-logback.xml"),
                         StandardCopyOption.REPLACE_EXISTING)
             } finally {
                 try {
