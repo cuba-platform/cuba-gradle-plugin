@@ -482,11 +482,6 @@ class CubaWarBuilding extends DefaultTask {
 
         if (logbackConfigurationFile) {
             logbackConfigurationFile = "$project.rootDir/$logbackConfigurationFile"
-        } else {
-            File logbackConfigInEtc = new File(project.rootProject.rootDir, 'etc/logback.xml')
-            if (logbackConfigInEtc.exists()) {
-                logbackConfigurationFile = logbackConfigInEtc.absolutePath
-            }
         }
         if (frontProject && singleWar) {
             SdkVersions sdk = project.rootProject.cuba.sdk
