@@ -15,6 +15,7 @@
  *
  */
 
+
 import com.haulmont.gradle.javaeecdi.CubaBeansXml
 import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.task.db.CubaHsqlStart
@@ -32,6 +33,7 @@ import groovy.util.slurpersupport.GPathResult
 import org.gradle.api.NamedDomainObjectContainer
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.UnknownTaskException
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
 import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository
@@ -267,6 +269,28 @@ class CubaPlugin implements Plugin<Project> {
         defineExecutionOrderForSubProject(project)
 
         setupEntitiesEnhancing(project)
+
+        setupKotlinOutputDir(project)
+    }
+
+    /**
+     * Kotlin classes output dir should be the same as java output dir. Otherwise the current implementation of entities enhancing doesn't work
+     * properly
+     */
+    private void setupKotlinOutputDir(Project project) {
+        def kotlinPlugin = project.plugins.findPlugin('org.jetbrains.kotlin.jvm')
+        if (kotlinPlugin) {
+            //see https://youtrack.jetbrains.com/issue/KT-23807
+            try {
+                project.tasks.getByName('compileKotlin', {
+                    destinationDir = project.sourceSets.main.java.outputDir
+                })
+                project.tasks.getByName('compileTestKotlin', {
+                    destinationDir = project.sourceSets.test.java.outputDir
+                })
+            } catch (UnknownTaskException ignored) {
+            }
+        }
     }
 
     private void doAfterEvaluateForRootProject(Project project) {
@@ -378,7 +402,7 @@ class CubaPlugin implements Plugin<Project> {
      */
     protected void defineExecutionOrderForSubProject(Project subProject) {
         def deploymentTasks = subProject.tasks.withType(CubaDeployment.class)
-        def deployNameTasks = subProject.tasks.matching({ it.name == DEPLOY_TASK_NAME})
+        def deployNameTasks = subProject.tasks.matching({ it.name == DEPLOY_TASK_NAME })
         def dbCreationTasks = subProject.tasks.withType(CubaDbCreation.class)
         def dbUpdateTasks = subProject.tasks.withType(CubaDbUpdate.class)
         def hsqlStartTasks = subProject.tasks.withType(CubaHsqlStart.class)
@@ -426,30 +450,37 @@ class CubaPlugin implements Plugin<Project> {
     private void setupEntitiesEnhancing(Project project) {
         def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
         def groovyPlugin = project.plugins.findPlugin(GroovyPlugin.class)
+        def kotlinPlugin = project.plugins.findPlugin("org.jetbrains.kotlin.jvm")
 
-        if (javaPlugin || groovyPlugin) {
-            def mainEnhancing = project.entitiesEnhancing.main
-            if (mainEnhancing && mainEnhancing.enabled) {
-                if (javaPlugin) {
-                    project.tasks.findByName('compileJava')
-                            .doLast(new CubaEnhancingAction(project, 'main'))
-                }
-                if (groovyPlugin) {
-                    project.tasks.findByName('compileGroovy')
-                            .doLast(new CubaEnhancingAction(project, 'main'))
-                }
+        def mainEnhancing = project.entitiesEnhancing.main
+        if (mainEnhancing && mainEnhancing.enabled) {
+            if (javaPlugin) {
+                project.tasks.findByName('compileJava')
+                        .doLast(new CubaEnhancingAction(project, 'main'))
             }
+            if (groovyPlugin) {
+                project.tasks.findByName('compileGroovy')
+                        .doLast(new CubaEnhancingAction(project, 'main'))
+            }
+            if (kotlinPlugin) {
+                project.tasks.findByName('compileKotlin')
+                        .doLast(new CubaEnhancingAction(project, 'main'))
+            }
+        }
 
-            def testEnhancing = project.entitiesEnhancing.test
-            if (testEnhancing && testEnhancing.enabled) {
-                if (javaPlugin) {
-                    project.tasks.findByName('compileTestJava')
-                            .doLast(new CubaEnhancingAction(project, 'test'))
-                }
-                if (groovyPlugin) {
-                    project.tasks.findByName('compileTestGroovy')
-                            .doLast(new CubaEnhancingAction(project, 'test'))
-                }
+        def testEnhancing = project.entitiesEnhancing.test
+        if (testEnhancing && testEnhancing.enabled) {
+            if (javaPlugin) {
+                project.tasks.findByName('compileTestJava')
+                        .doLast(new CubaEnhancingAction(project, 'test'))
+            }
+            if (groovyPlugin) {
+                project.tasks.findByName('compileTestGroovy')
+                        .doLast(new CubaEnhancingAction(project, 'test'))
+            }
+            if (kotlinPlugin) {
+                project.tasks.findByName('compileTestKotlin')
+                        .doLast(new CubaEnhancingAction(project, 'test'))
             }
         }
     }
