@@ -78,6 +78,9 @@ public class AppPropertiesLoader {
         try {
             DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             File webXmlFile = project.file(project.getProjectDir() + "/web/WEB-INF/web.xml");
+            if (!webXmlFile.exists()) {
+                return null;
+            }
             document = builder.parse(webXmlFile);
         } catch (SAXException | ParserConfigurationException | IOException e) {
             throw new RuntimeException("Can't get properties files names from core web.xml", e);
