@@ -52,7 +52,7 @@ class CubaPluginExtension {
         sdk = new SdkVersions(project)
 
         tomcat.version = sdk.getTomcatVersion()
-        tomcat.dir = project.rootDir.absolutePath + '/../tomcat'
+        tomcat.dir = project.rootDir.absolutePath + '/deploy/tomcat'
         uploadRepository.user = System.getenv('HAULMONT_REPOSITORY_USER')
         uploadRepository.password = System.getenv('HAULMONT_REPOSITORY_PASSWORD')
         artifact.group = 'com.company'
