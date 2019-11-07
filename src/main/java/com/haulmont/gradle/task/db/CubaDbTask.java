@@ -268,7 +268,10 @@ public abstract class CubaDbTask extends DefaultTask {
         dbUser = properties.getProperty(cubaDataSourcePrefix + ".username");
         dbPassword = properties.getProperty(cubaDataSourcePrefix + ".password");
         dbName = properties.getProperty(cubaDataSourcePrefix + ".dbName");
-        host = properties.getProperty(cubaDataSourcePrefix + ".hostname") + ":" + properties.getProperty(cubaDataSourcePrefix + ".port");
+        host = properties.getProperty(cubaDataSourcePrefix + ".hostname");
+        if (StringUtils.isNotEmpty(properties.getProperty(cubaDataSourcePrefix + ".port"))) {
+            host = host + ":" + properties.getProperty(cubaDataSourcePrefix + ".port");
+        }
         connectionParams = properties.getProperty(cubaDataSourcePrefix + ".connectionParams");
 
         if (!StringUtils.isBlank(dbUrl)) {
