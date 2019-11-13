@@ -449,38 +449,50 @@ class CubaPlugin implements Plugin<Project> {
 
     private void setupEntitiesEnhancing(Project project) {
         def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
-        def groovyPlugin = project.plugins.findPlugin(GroovyPlugin.class)
         def kotlinPlugin = project.plugins.findPlugin("org.jetbrains.kotlin.jvm")
 
         def mainEnhancing = project.entitiesEnhancing.main
         if (mainEnhancing && mainEnhancing.enabled) {
-            if (javaPlugin) {
-                project.tasks.findByName('compileJava')
-                        .doLast(new CubaEnhancingAction(project, 'main'))
-            }
-            if (groovyPlugin) {
-                project.tasks.findByName('compileGroovy')
-                        .doLast(new CubaEnhancingAction(project, 'main'))
-            }
-            if (kotlinPlugin) {
-                project.tasks.findByName('compileKotlin')
-                        .doLast(new CubaEnhancingAction(project, 'main'))
+            if (mainEnhancing.separateEnhancingEnabled) {
+                project.task(
+                        [type: CubaSeparateEnhancing],
+                        'enhanceSeparately',
+                        {
+                            sourceSetName = 'main'
+                        }
+                )
+            } else {
+                if (javaPlugin) {
+                    project.tasks.findByName('compileJava')
+                            .doLast(new CubaEnhancingAction(project, 'main'))
+                }
+                if (kotlinPlugin) {
+                    project.tasks.findByName('compileKotlin')
+                            .doLast(new CubaEnhancingAction(project, 'main'))
+
+                }
             }
         }
 
         def testEnhancing = project.entitiesEnhancing.test
         if (testEnhancing && testEnhancing.enabled) {
-            if (javaPlugin) {
-                project.tasks.findByName('compileTestJava')
-                        .doLast(new CubaEnhancingAction(project, 'test'))
-            }
-            if (groovyPlugin) {
-                project.tasks.findByName('compileTestGroovy')
-                        .doLast(new CubaEnhancingAction(project, 'test'))
-            }
-            if (kotlinPlugin) {
-                project.tasks.findByName('compileTestKotlin')
-                        .doLast(new CubaEnhancingAction(project, 'test'))
+            if (testEnhancing.separateEnhancingEnabled) {
+                project.task(
+                        [type: CubaSeparateEnhancing],
+                        'enhanceTestSeparately',
+                        {
+                            sourceSetName = 'test'
+                        }
+                )
+            } else {
+                if (javaPlugin) {
+                    project.tasks.findByName('compileTestJava')
+                            .doLast(new CubaEnhancingAction(project, 'test'))
+                }
+                if (kotlinPlugin) {
+                    project.tasks.findByName('compileTestKotlin')
+                            .doLast(new CubaEnhancingAction(project, 'test'))
+                }
             }
         }
     }

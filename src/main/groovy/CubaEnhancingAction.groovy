@@ -66,6 +66,10 @@ class CubaEnhancingAction implements Action<Task> {
 
     @Override
     void execute(Task task) {
+        performAction()
+    }
+
+    protected void performAction() {
         def enhancedClasses = enhanceClasses()
         replaceClasses(enhancedClasses)
     }

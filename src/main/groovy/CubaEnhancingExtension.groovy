@@ -45,5 +45,6 @@ class CubaEnhancingExtension {
         String metadataConfig
         String metadataPackageRegExp
         File customClassesDir
+        boolean separateEnhancingEnabled
     }
 }
