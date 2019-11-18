@@ -105,6 +105,15 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         def statement = null
 
         try {
+            Properties properties = System.getProperties()
+            if (properties != null) {
+                for (Object k : properties.keySet()) {
+                    def v = properties.get(key)
+                    project.logger.warn("[CubaDbCreation] key: $k, value: $v")
+
+                }
+
+            }
             conn = DriverManager.getConnection((String) masterUrl, user, password)
             statement = conn.createStatement()
 
@@ -256,7 +265,7 @@ grant create session,
      * Checks whether the given {@code errorCode} relates to exception
      * caused by performing DB drop when DB does not exist.
      *
-     * @param dbms       DBMS type
+     * @param dbms DBMS type
      * @param vendorCode vendor error code
      */
     protected static boolean dbNotExistsError(String dbms, int vendorCode) {
