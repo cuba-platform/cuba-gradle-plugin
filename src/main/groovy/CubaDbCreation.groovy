@@ -104,16 +104,17 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         def conn = null
         def statement = null
 
-        try {
-            Properties properties = System.getProperties()
-            if (properties != null) {
-                for (Object k : properties.keySet()) {
-                    def v = properties.get(key)
-                    project.logger.warn("[CubaDbCreation] key: $k, value: $v")
-
-                }
+        Properties properties = System.getProperties()
+        if (properties != null) {
+            for (Object k : properties.keySet()) {
+                def v = properties.get(k)
+                project.logger.warn("[CubaDbCreation] key: $k, value: $v")
 
             }
+        }
+
+        try {
+
             conn = DriverManager.getConnection((String) masterUrl, user, password)
             statement = conn.createStatement()
 
