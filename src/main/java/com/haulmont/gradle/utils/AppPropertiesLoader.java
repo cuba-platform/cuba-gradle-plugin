@@ -46,6 +46,7 @@ import java.util.zip.ZipEntry;
 
 public class AppPropertiesLoader {
     private static final Logger log = LoggerFactory.getLogger(AppPropertiesLoader.class);
+
     protected static final String ACTIVE_PROFILES_PROPERTY_NAME = "spring.profiles.active";
     protected static final String APP_PROPERTIES_CONFIG_PROPERTY_NAME = "appPropertiesConfig";
 
@@ -73,7 +74,8 @@ public class AppPropertiesLoader {
         for (String str : tokenizer.getTokenArray()) {
             try (InputStream stream = getPropertiesInputStream(project, appHomeDir, str)) {
                 if (stream == null) {
-                    throw new FileNotFoundException("Property file '%s' was not found");
+                    log.info(String.format("Property file '%s' was not found in the project. Skip it.", str));
+                    continue;
                 }
 
                 log.info("Loading app properties from {}", str);
