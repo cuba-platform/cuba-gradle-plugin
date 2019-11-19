@@ -84,7 +84,7 @@ public class AppPropertiesLoader {
                     properties.load(reader);
                 }
             } catch (FileNotFoundException e) {
-                log.info(String.format("Property file '%s' was not found in the project. Skip it.", str), e);
+                log.info("Property file '{}' was not found in the project. Skip it. Error: {}", str, e.getMessage());
             } catch (IOException e) {
                 throw new RuntimeException("Unable to read properties from stream", e);
             }
