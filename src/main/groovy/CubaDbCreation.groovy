@@ -104,8 +104,6 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         def conn = null
         def statement = null
 
-        logSystemProperties()
-
         try {
 
             conn = DriverManager.getConnection((String) masterUrl, user, password)
@@ -273,18 +271,6 @@ grant create session,
                 return vendorCode == 1918
             default:
                 return false
-        }
-    }
-
-    protected void logSystemProperties() {
-        if (project.logger.isInfoEnabled()) {
-            Properties properties = System.getProperties()
-            if (properties != null) {
-                for (Object k : properties.keySet()) {
-                    def v = properties.get(k)
-                    project.logger.info("[CubaDbCreation] System property - key: $k, value: $v")
-                }
-            }
         }
     }
 }
