@@ -28,6 +28,7 @@ import org.gradle.api.logging.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -156,6 +157,16 @@ public class CubaEnhancer {
                 if (annotationsAttribute == null || annotationsAttribute.getAnnotation(METAPROPERTY_ANNOTATION) == null)
                     continue;
             }
+
+            // we'll get compilation exceptions if in the code below we will try to insert and use the getterName that doesn't exist
+            boolean getterNameExists = false;
+            for (CtMethod method : ctClass.getDeclaredMethods()) {
+                if (method.getName().equals(getterName)) {
+                    getterNameExists = true;
+                    break;
+                }
+            }
+            if (!getterNameExists) continue;
 
             CtClass setterParamType = ctMethod.getParameterTypes()[0];
 
