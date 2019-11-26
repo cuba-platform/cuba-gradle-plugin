@@ -20,7 +20,6 @@ import com.haulmont.gradle.project.Projects
 import com.haulmont.gradle.uberjar.*
 import com.haulmont.gradle.utils.FrontUtils
 import com.haulmont.gradle.utils.SdkVersions
-import groovy.xml.XmlUtil
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -479,7 +478,6 @@ class CubaUberJarBuilding extends DefaultTask {
         writeLibsFile(theProject, resolvedLibs)
 
         touchWebXml(theProject)
-        modifyWebXmlProperties(theProject)
     }
 
     protected void copyFrontLibsAndContent(Project theProject, Set<String> resolvedLibs) {
@@ -639,26 +637,6 @@ class CubaUberJarBuilding extends DefaultTask {
 
     protected boolean isWidgetSetClientJar(String jarName) {
         return jarName && jarName.contains('web-toolkit') && jarName.contains('-client')
-    }
-
-    protected void modifyWebXmlProperties(Project theProject) {
-        File webXml = new File(getWebXmlPath(theProject))
-        def xml
-        try {
-            xml = new XmlSlurper().parse(webXml)
-        } catch (Exception ignored) {
-            throw new GradleException("web.xml parsing error")
-        }
-
-        xml.'context-param'.each {
-            param ->
-                if (param.'param-name' == 'appPropertiesConfig') {
-                    param.'param-value' = param.'param-value'.text().replaceAll("catalina.base", "app.home")
-                }
-        }
-
-        XmlUtil xmlUtil = new XmlUtil()
-        xmlUtil.serialize(xml, new FileWriter(webXml))
     }
 
     protected void copyWebInfContent(Project theProject) {
