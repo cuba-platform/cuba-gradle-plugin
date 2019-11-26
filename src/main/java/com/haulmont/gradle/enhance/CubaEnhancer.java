@@ -100,6 +100,7 @@ public class CubaEnhancer {
                 continue;
 
             String fieldName = StringUtils.uncapitalize(name.substring(3));
+            String getterName = "get" + StringUtils.capitalize(fieldName);
 
             // check if the setter is for a persistent or transient property
             CtMethod persistenceMethod = null;
@@ -109,6 +110,21 @@ public class CubaEnhancer {
                     break;
                 }
             }
+
+            // handle a special case of Kotlin property with a name starting with "is*"
+            // if the Kotlin property name is "isApproved" then the generated getter will be "isApproved()" and the setter is "setApproved()"
+            if (persistenceMethod == null) {
+                for (CtMethod method : ctClass.getDeclaredMethods()) {
+                    String kotlinPropertyName = "is" + StringUtils.capitalize(fieldName);
+                    if (method.getName().equals("_persistence_set_" + kotlinPropertyName)) {
+                        persistenceMethod = method;
+                        fieldName = kotlinPropertyName;
+                        getterName = kotlinPropertyName;
+                        break;
+                    }
+                }
+            }
+
             if (persistenceMethod == null) {
                 // can be a transient property
                 CtField ctField = null;
@@ -117,6 +133,18 @@ public class CubaEnhancer {
                     if (field.getName().equals(fieldName)) {
                         ctField = field;
                         break;
+                    }
+                }
+                if (ctField == null) {
+                    //no field. Try to handle a special case of Kotlin properties with names starting with "is*"
+                    for (CtField field : declaredFields) {
+                        String kotlinPropertyName = "is" + StringUtils.capitalize(fieldName);
+                        if (field.getName().equals(kotlinPropertyName)) {
+                            ctField = field;
+                            fieldName = kotlinPropertyName;
+                            getterName = kotlinPropertyName;
+                            break;
+                        }
                     }
                 }
                 if (ctField == null)
@@ -142,11 +170,11 @@ public class CubaEnhancer {
             ctMethod.addLocalVariable("__new", setterParamType);
 
             ctMethod.insertBefore(
-                    "__prev = this.get" + StringUtils.capitalize(fieldName) + "();"
+                    "__prev = this." + getterName + "();"
             );
 
             ctMethod.insertAfter(
-                    "__new = this.get" + StringUtils.capitalize(fieldName) + "();" +
+                    "__new = this." + getterName + "();" +
                     "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, __new)) {" +
                     "  this.propertyChanged(\"" + fieldName + "\", __prev, __new);" +
                     "}"
