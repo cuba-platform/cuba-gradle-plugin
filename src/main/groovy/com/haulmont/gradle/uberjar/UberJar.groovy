@@ -16,11 +16,14 @@
 
 package com.haulmont.gradle.uberjar
 
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 
 import java.nio.file.*
+import java.util.stream.Stream
 
 class UberJar {
     protected final Logger logger
@@ -75,23 +78,28 @@ class UberJar {
         execute({
             def toRootPath = toJarRoot()
             if (Files.isDirectory(fromPath)) {
-                for (path in Files.walk(fromPath)) {
-                    def relativePath = fromPath.relativize(path)
-                    def toPath
-                    if (locator != null && locator.canRelocateEntry(relativePath.toString())) {
-                        toPath = locator.relocate(toRootPath, relativePath)
-                    } else {
-                        toPath = toRootPath.resolve(relativePath.toString())
-                    }
-                    if (Files.isDirectory(path)) {
-                        Files.createDirectories(toPath)
-                    } else {
-                        Path parentPath = toPath.getParent()
-                        if (parentPath != null && Files.notExists(parentPath)) {
-                            Files.createDirectories(parentPath)
+                def stream = Files.walk(fromPath)
+                try {
+                    for (path in stream) {
+                        def relativePath = fromPath.relativize(path)
+                        def toPath
+                        if (locator != null && locator.canRelocateEntry(relativePath.toString())) {
+                            toPath = locator.relocate(toRootPath, relativePath)
+                        } else {
+                            toPath = toRootPath.resolve(relativePath.toString())
                         }
-                        Files.copy(path, toPath, StandardCopyOption.REPLACE_EXISTING)
+                        if (Files.isDirectory(path)) {
+                            Files.createDirectories(toPath)
+                        } else {
+                            Path parentPath = toPath.getParent()
+                            if (parentPath != null && Files.notExists(parentPath)) {
+                                Files.createDirectories(parentPath)
+                            }
+                            Files.copy(path, toPath, StandardCopyOption.REPLACE_EXISTING)
+                        }
                     }
+                } finally {
+                    closeStream(stream)
                 }
             } else {
                 def relativePath = fromPath.getName(fromPath.getNameCount() - 1)
@@ -145,7 +153,8 @@ class UberJar {
     protected void visitJar(Path jarPath, ResourceLocator locator) {
         def fromJarFs = createZipFileSystem(jarPath, false)
         try {
-            for (path in Files.walk(++fromJarFs.rootDirectories.iterator())) {
+            for (zipEntry in getZipEntries(jarPath)) {
+                Path path = fromJarFs.getPath(zipEntry)
                 if (Files.isDirectory(path)) {
                     visitDirectory(path, locator)
                 } else {
@@ -155,6 +164,26 @@ class UberJar {
         } finally {
             IOUtils.closeQuietly(fromJarFs)
         }
+    }
+
+    protected List<String> getZipEntries(Path path) {
+        List<String> jarEntries = new LinkedList<>()
+        ZipArchiveInputStream zipStream = null
+        try {
+            zipStream = new ZipArchiveInputStream(Files.newInputStream(path))
+            ZipArchiveEntry zipEntry
+            while ((zipEntry = zipStream.nextZipEntry) != null) {
+                String entryName = zipEntry.name
+                if (entryName.startsWith("/")) {
+                    jarEntries.add(entryName)
+                } else {
+                    jarEntries.add("/${entryName}")
+                }
+            }
+        } finally {
+            IOUtils.closeQuietly(zipStream)
+        }
+        return jarEntries
     }
 
     protected void visitDirectory(Path path, ResourceLocator locator) {
@@ -203,7 +232,7 @@ class UberJar {
     }
 
     protected static FileSystem createZipFileSystem(Path path, boolean create) {
-        String uriString = path.toUri().path.replace(" ","%20")
+        String uriString = path.toUri().path.replace(" ", "%20")
         URI uri = URI.create("jar:file:$uriString")
         Map<String, String> env = new HashMap<>()
         if (create) {
@@ -214,5 +243,13 @@ class UberJar {
 
     protected static boolean isClassEntry(Path path) {
         return path.toString().endsWith(".class")
+    }
+
+    protected static void closeStream(Stream stream) {
+        try {
+            stream.close()
+        } catch (Exception e) {
+            //Do nothing
+        }
     }
 }
