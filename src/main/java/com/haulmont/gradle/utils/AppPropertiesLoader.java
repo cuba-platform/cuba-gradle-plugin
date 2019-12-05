@@ -16,9 +16,8 @@
 
 package com.haulmont.gradle.utils;
 
-import com.google.common.base.Splitter;
 import org.apache.commons.io.input.BOMInputStream;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringSubstitutor;
 import org.apache.commons.text.StringTokenizer;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
@@ -27,14 +26,7 @@ import org.gradle.api.artifacts.ResolvedConfiguration;
 import org.gradle.api.artifacts.ResolvedDependency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
@@ -47,7 +39,6 @@ import java.util.zip.ZipEntry;
 public class AppPropertiesLoader {
     private static final Logger log = LoggerFactory.getLogger(AppPropertiesLoader.class);
 
-    protected static final String ACTIVE_PROFILES_PROPERTY_NAME = "spring.profiles.active";
     protected static final String APP_PROPERTIES_CONFIG_PROPERTY_NAME = "appPropertiesConfig";
 
     public Properties initProperties(Project project, String appHomeDir) {
@@ -55,77 +46,41 @@ public class AppPropertiesLoader {
         String propertiesConfigName = getPropertiesConfigName(project);
         properties.putAll(getPropertiesFromConfig(propertiesConfigName, project, appHomeDir));
 
-        String activeProfiles = getActiveProfiles(project);
-        if (StringUtils.isNotEmpty(activeProfiles)) {
-            Iterable<String> iterableActiveProfiles = Splitter.on(',').omitEmptyStrings().trimResults().split(activeProfiles);
-            for (String activeProfile : iterableActiveProfiles) {
-                String profilePropsConfigName = propertiesConfigName.replace("app.properties", "app-" + activeProfile.trim() + ".properties");
-                properties.putAll(getPropertiesFromConfig(profilePropsConfigName, project, appHomeDir));
-            }
-        }
-
         return properties;
     }
 
     protected Properties getPropertiesFromConfig(String propertiesConfigName, Project project, String appHomeDir) {
+        SpringProfileSpecificNameResolver nameResolver = new SpringProfileSpecificNameResolver(project);
         Properties properties = new Properties();
         StringTokenizer tokenizer = new StringTokenizer(propertiesConfigName);
         tokenizer.setQuoteChar('"');
         for (String str : tokenizer.getTokenArray()) {
-            try (InputStream stream = getPropertiesInputStream(project, appHomeDir, str)) {
-                if (stream == null) {
-                    log.info(String.format("Property file '%s' was not found in the project. Skip it.", str));
-                    continue;
-                }
+            log.trace("Processing properties location: {}", str);
+            String baseName = StringSubstitutor.replaceSystemProperties(str);
+            for (String name : nameResolver.getDerivedNames(baseName)) {
+                try (InputStream stream = getPropertiesInputStream(project, appHomeDir, name)) {
+                    if (stream == null) {
+                        log.trace(String.format("Property file '%s' was not found in the project. Skip it.", name));
+                        continue;
+                    }
 
-                log.info("Loading app properties from {}", str);
-                BOMInputStream bomInputStream = new BOMInputStream(stream);
-                try (Reader reader = new InputStreamReader(bomInputStream, StandardCharsets.UTF_8)) {
-                    properties.load(reader);
+                    log.info("Loading app properties from {}", name);
+                    BOMInputStream bomInputStream = new BOMInputStream(stream);
+                    try (Reader reader = new InputStreamReader(bomInputStream, StandardCharsets.UTF_8)) {
+                        properties.load(reader);
+                    }
+                } catch (FileNotFoundException e) {
+                    log.trace("Property file '{}' was not found in the project. Skip it. Error: {}", name, e.getMessage());
+                } catch (IOException e) {
+                    throw new RuntimeException("Unable to read properties from stream", e);
                 }
-            } catch (FileNotFoundException e) {
-                log.info("Property file '{}' was not found in the project. Skip it. Error: {}", str, e.getMessage());
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to read properties from stream", e);
             }
         }
         return properties;
     }
 
-    protected String getActiveProfiles(Project project) {
-        String activeProfiles = System.getProperty(ACTIVE_PROFILES_PROPERTY_NAME);
-        if (StringUtils.isEmpty(activeProfiles)) {
-            activeProfiles = getParamValueFromWebXml(project, ACTIVE_PROFILES_PROPERTY_NAME);
-        }
-        return activeProfiles;
-    }
-
     protected String getPropertiesConfigName(Project project) {
-        return getParamValueFromWebXml(project, APP_PROPERTIES_CONFIG_PROPERTY_NAME);
-    }
-
-    protected String getParamValueFromWebXml(Project project, String paramName) {
-        Document document;
-        try {
-            DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            File webXmlFile = project.file(project.getProjectDir() + "/web/WEB-INF/web.xml");
-            if (!webXmlFile.exists()) {
-                return null;
-            }
-            document = builder.parse(webXmlFile);
-        } catch (SAXException | ParserConfigurationException | IOException e) {
-            throw new RuntimeException("Can't get properties files names from core web.xml", e);
-        }
-
-        NodeList nList = document.getElementsByTagName("context-param");
-        for (int i = 0; i < nList.getLength(); i++) {
-            Element nNode = (Element) nList.item(i);
-            String currentParamName = nNode.getElementsByTagName("param-name").item(0).getTextContent();
-            if (paramName.equals(currentParamName)) {
-                return nNode.getElementsByTagName("param-value").item(0).getTextContent();
-            }
-        }
-        return null;
+        return WebXmlUtils.getParamValueFromWebXml(project, APP_PROPERTIES_CONFIG_PROPERTY_NAME);
     }
 
     protected InputStream getPropertiesInputStream(Project project, String appHomeDir, String propertyStr) throws FileNotFoundException {
