@@ -22,6 +22,7 @@ class CubaDropTomcat extends DefaultTask {
 
     def tomcatRootDir = project.cuba.tomcat.dir
     def listeningPort = '8787'
+    def waitTimeout = 20
 
     CubaDropTomcat() {
         setDescription('Deletes local Tomcat')
@@ -48,7 +49,7 @@ class CubaDropTomcat extends DefaultTask {
                     arg(line: 'shutdown.sh')
                 }
                 // wait and delete
-                ant.waitfor(maxwait: 20, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
+                ant.waitfor(maxwait: waitTimeout, maxwaitunit: 'second', checkevery: 2, checkeveryunit: 'second') {
                     not {
                         socket(server: 'localhost', port: listeningPort)
                     }
