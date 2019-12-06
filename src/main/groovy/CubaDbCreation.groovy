@@ -114,10 +114,18 @@ class CubaDbCreation extends AbstractCubaDbCreation {
             }
         } catch (Exception e) {
             if (!isAcceptableException(e)) {
-                if (project.logger.isInfoEnabled()) {
-                    project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
+                if (dbInUseError(e)) {
+                    if (project.logger.isInfoEnabled()) {
+                        project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql\nDB is already in use")
+                    } else {
+                        project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nDB is already in use")
+                    }
                 } else {
-                    project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+                    if (project.logger.isInfoEnabled()) {
+                        project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
+                    } else {
+                        project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+                    }
                 }
                 executed = false
             }
@@ -266,5 +274,17 @@ grant create session,
             default:
                 return false
         }
+    }
+
+    /**
+     * Checks that error occurred because someone is already connected to DB.
+     *
+     * @param ex exception
+     * @return true if error occurred due to existing connection
+     */
+    protected boolean dbInUseError(Exception ex) {
+        return ex instanceof SQLException &&
+                dbms == POSTGRES_DBMS &&
+                ((SQLException) ex).getSQLState() == '55006'
     }
 }
