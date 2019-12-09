@@ -587,8 +587,11 @@ class CubaPlugin implements Plugin<Project> {
 
         if (project.name.endsWith('-core')) {
             File dbDir = new File(project.projectDir, "db")
+
             def assembleDbScriptsTask = project.task([type: CubaDbScriptsAssembling], ASSEMBLE_DB_SCRIPTS_TASK_NAME)
+
             project.assemble.dependsOn(assembleDbScriptsTask)
+            project.jar.dependsOn(assembleDbScriptsTask)
 
             if (dbDir.exists() && dbDir.isDirectory() && dbDir.list().length > 0) {
                 def dbScriptsArchiveTask = project.task(
