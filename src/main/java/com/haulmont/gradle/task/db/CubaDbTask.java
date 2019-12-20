@@ -203,7 +203,7 @@ public abstract class CubaDbTask extends DefaultTask {
     }
 
     protected boolean isInitParamsFromDbTask() {
-        return StringUtils.isNotEmpty(dbUrl) || StringUtils.isNotEmpty(host);
+        return StringUtils.isNotEmpty(dbUrl) || StringUtils.isNotEmpty(dbName);
     }
 
     protected void init() {
