@@ -95,12 +95,7 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
     @Override
     protected void initAppHomeDir() {
-        setAppHomeDir(project.cuba.appHome);
-    }
-
-    @Override
-    protected boolean isInitParamsFromDbTask() {
-        return StringUtils.isNotEmpty(dbUrl) || StringUtils.isNotEmpty(dbName) || StringUtils.isNotEmpty(masterUrl);
+        setAppHomeDir(project.cuba.appHome)
     }
 
     protected boolean executeSql(String user, String password, String sql) {
