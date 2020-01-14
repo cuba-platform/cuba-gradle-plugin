@@ -450,6 +450,7 @@ class CubaPlugin implements Plugin<Project> {
     private void setupEntitiesEnhancing(Project project) {
         def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
         def kotlinPlugin = project.plugins.findPlugin("org.jetbrains.kotlin.jvm")
+        def groovyPlugin = project.plugins.findPlugin(GroovyPlugin.class)
 
         def mainEnhancing = project.entitiesEnhancing.main
         if (mainEnhancing && mainEnhancing.enabled) {
@@ -464,6 +465,10 @@ class CubaPlugin implements Plugin<Project> {
             } else {
                 if (javaPlugin) {
                     project.tasks.findByName('compileJava')
+                            .doLast(new CubaEnhancingAction(project, 'main'))
+                }
+                if (groovyPlugin) {
+                    project.tasks.findByName('compileGroovy')
                             .doLast(new CubaEnhancingAction(project, 'main'))
                 }
                 if (kotlinPlugin) {
@@ -487,6 +492,10 @@ class CubaPlugin implements Plugin<Project> {
             } else {
                 if (javaPlugin) {
                     project.tasks.findByName('compileTestJava')
+                            .doLast(new CubaEnhancingAction(project, 'test'))
+                }
+                if (groovyPlugin) {
+                    project.tasks.findByName('compileTestGroovy')
                             .doLast(new CubaEnhancingAction(project, 'test'))
                 }
                 if (kotlinPlugin) {
