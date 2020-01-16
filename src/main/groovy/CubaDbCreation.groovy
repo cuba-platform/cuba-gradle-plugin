@@ -70,14 +70,14 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
         GroovyClass.forName(driver)
 
-        if (!executeSql(user, password, dropDbSql)) {
+        if (!executeSql(masterUrl, user, password, dropDbSql)) {
             throw new RuntimeException('[CubaDbCreation] Failed to drop database')
         }
 
         if (createDbSql) {
             project.logger.debug('[CubaDbCreation] Creating database')
 
-            def executed = executeSql(user, password, createDbSql)
+            def executed = executeSql(masterUrl, user, password, createDbSql)
             if (!executed) {
                 throw new RuntimeException('[CubaDbCreation] Failed to create database')
             }
@@ -86,7 +86,7 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         if (createPostgresSchemeSql) {
             project.logger.debug('[CubaDbCreation] Creating Postgres scheme')
 
-            def executed = executeSql(user, password, createPostgresSchemeSql)
+            def executed = executeSql(dbUrl, user, password, createPostgresSchemeSql)
             if (!executed) {
                 throw new RuntimeException('[CubaDbCreation] Failed to create Postgres scheme')
             }
@@ -98,15 +98,14 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         setAppHomeDir(project.cuba.appHome)
     }
 
-    protected boolean executeSql(String user, String password, String sql) {
+    protected boolean executeSql(String url, String user, String password, String sql) {
         def executed = true
 
         def conn = null
         def statement = null
 
         try {
-
-            conn = DriverManager.getConnection((String) masterUrl, user, password)
+            conn = DriverManager.getConnection(url, user, password)
             statement = conn.createStatement()
 
             ScriptSplitter splitter = new ScriptSplitter(delimiter)
