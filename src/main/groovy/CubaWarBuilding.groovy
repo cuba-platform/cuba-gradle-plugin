@@ -291,6 +291,10 @@ class CubaWarBuilding extends DefaultTask {
         copied.addAll(copyLibs(webProject, '/WEB-INF/lib-web', webJarNames))
         copyLibs(portalProject, '/WEB-INF/lib', portalJarNames)
 
+        copyServerLibs(coreProject)
+        copyServerLibs(webProject)
+        copyServerLibs(portalProject)
+
         if (singleWar) {
             def resolver = new DependencyResolver(new File(coreTmpWarDir), logger)
             resolver.resolveDependencies(new File(coreTmpWarDir, 'WEB-INF/lib'), copied)
@@ -326,6 +330,7 @@ class CubaWarBuilding extends DefaultTask {
                 from frontProject.file("build/$polymerBuildDir")
                 into "${warDir(frontProject)}"
             }
+            copyServerLibs(frontProject)
         }
 
         copySpecificWebContent(webProject)
@@ -605,6 +610,30 @@ class CubaWarBuilding extends DefaultTask {
             return copied
         }
         return Collections.emptyList()
+    }
+
+    protected void copyServerLibs(Project theProject) {
+        if (theProject) {
+            theProject.logger.info("[CubaWarBuilding] copying libs from configurations.server for ${theProject}")
+            if (theProject) {
+                def libsDir = "${warDir(theProject)}/WEB-INF/lib"
+                theProject.copy {
+                    from theProject.configurations.server
+                    into libsDir
+                    include { details ->
+                        def file = details.file
+                        String name = file.name
+                        def targetFile = new File(libsDir, name)
+                        if (name.endsWith(".jar")
+                                && !(name.endsWith('-sources.jar')
+                                && !(targetFile.exists() && targetFile.lastModified() >= file.lastModified()))) {
+                            return true
+                        }
+                        return false
+                    }
+                }
+            }
+        }
     }
 
     protected void copyFrontLibs() {

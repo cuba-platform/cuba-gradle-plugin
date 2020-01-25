@@ -556,6 +556,7 @@ class CubaPlugin implements Plugin<Project> {
         project.configurations {
             themes
             jdbc
+            server
         }
 
         project.sourceSets {
