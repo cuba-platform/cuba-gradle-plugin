@@ -272,14 +272,18 @@ class CubaUberJarBuilding extends DefaultTask {
 
         copyServerLibs(serverLibs)
         copyLibsAndContent(coreProject, coreJarNames, coreLibs)
+        copyServerLibsForProject(coreProject)
         if (webProject) {
             copyLibsAndContent(webProject, webJarNames, webLibs)
+            copyServerLibsForProject(webProject)
         }
         if (frontProject) {
             copyFrontLibsAndContent(frontProject, frontLibs)
+            copyServerLibsForProject(frontProject)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
+            copyServerLibsForProject(portalProject)
         }
 
         if (singleJar) {
@@ -589,6 +593,27 @@ class CubaUberJarBuilding extends DefaultTask {
                 }
                 resolvedLibs.add(details.file.name)
                 return true
+            }
+        }
+    }
+
+    protected void copyServerLibsForProject(Project theProject) {
+        theProject.logger.warn("[CubaUberJAR] Copy libs from configurations.server for ${theProject}")
+        def serverDir = getServerLibsDir()
+        theProject.copy {
+            from theProject.configurations.server
+            into serverDir
+            include {
+                details ->
+                    def file = details.file
+                    String name = file.name
+                    def targetFile = new File(serverDir, name)
+                    if (name.endsWith(".jar")
+                            && !(name.endsWith('-sources.jar')
+                            && !(targetFile.exists() && targetFile.lastModified() >= file.lastModified()))) {
+                        return true
+                    }
+                    return false
             }
         }
     }
