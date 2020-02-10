@@ -265,6 +265,9 @@ class CubaUberJarBuilding extends DefaultTask {
         initTransformers()
 
         Set<String> serverLibs = new LinkedHashSet<>()
+        Set<String> coreServerLibs = new LinkedHashSet<>()
+        Set<String> webServerLibs = new LinkedHashSet<>()
+        Set<String> portalServerLibs = new LinkedHashSet<>()
         Set<String> coreLibs = new LinkedHashSet<>()
         Set<String> webLibs = new LinkedHashSet<>()
         Set<String> portalLibs = new LinkedHashSet<>()
@@ -272,22 +275,26 @@ class CubaUberJarBuilding extends DefaultTask {
 
         copyServerLibs(serverLibs)
         copyLibsAndContent(coreProject, coreJarNames, coreLibs)
-        copyServerLibsForProject(coreProject)
+        copyProjectServerLibs(coreServerLibs, coreProject)
         if (webProject) {
             copyLibsAndContent(webProject, webJarNames, webLibs)
-            copyServerLibsForProject(webProject)
+            copyProjectServerLibs(webServerLibs, webProject)
         }
         if (frontProject) {
             copyFrontLibsAndContent(frontProject, frontLibs)
-            copyServerLibsForProject(frontProject)
+            copyProjectServerLibs(webServerLibs, frontProject)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
-            copyServerLibsForProject(portalProject)
+            copyProjectServerLibs(portalServerLibs, portalProject)
         }
 
         if (singleJar) {
             resolveSharedLibConflicts(coreLibs, webLibs, portalLibs, frontLibs)
+            serverLibs.addAll(coreServerLibs)
+            serverLibs.addAll(webServerLibs)
+            serverLibs.addAll(portalServerLibs)
+            resolveServerLibConflicts(serverLibs, project)
             UberJar jar = createJarTask(appName)
             packServerLibs(jar)
             packLibsAndContent(coreProject, jar, webProject == null)
@@ -311,8 +318,10 @@ class CubaUberJarBuilding extends DefaultTask {
             }
         } else {
             resolveWebSharedLibConflicts(webLibs, frontLibs)
+            resolveServerLibConflicts(coreServerLibs, coreProject)
             UberJar coreJar = createJarTask(coreAppName)
             packServerLibs(coreJar)
+            packProjectServerLibs(coreProject, coreJar)
             packLibsAndContent(coreProject, coreJar, true)
             packLogbackConfigurationFile(coreJar)
             packJettyFile(coreProject, coreJar)
@@ -325,8 +334,10 @@ class CubaUberJarBuilding extends DefaultTask {
             }
 
             if (webProject) {
+                resolveServerLibConflicts(webServerLibs, webProject)
                 UberJar webJar = createJarTask(appName)
                 packServerLibs(webJar)
+                packProjectServerLibs(webProject, webJar)
                 packLibsAndContent(webProject, webJar, true)
                 if (frontProject) {
                     packFrontContent(frontProject, webJar)
@@ -343,8 +354,10 @@ class CubaUberJarBuilding extends DefaultTask {
             }
 
             if (portalProject) {
+                resolveServerLibConflicts(portalServerLibs, portalProject)
                 UberJar portalJar = createJarTask(portalAppName)
                 packServerLibs(portalJar)
+                packProjectServerLibs(portalProject, portalJar)
                 packLibsAndContent(portalProject, portalJar, true)
                 packLogbackConfigurationFile(portalJar)
                 packJettyFile(portalProject, portalJar)
@@ -456,6 +469,12 @@ class CubaUberJarBuilding extends DefaultTask {
         resolver.resolveDependencies(libsDir, new ArrayList<String>(allLibs))
     }
 
+    protected void resolveServerLibConflicts(Set<String> serverLibs, Project theProject) {
+        def libsDir = theProject.file(getProjectServerLibsDir(theProject))
+        def resolver = new DependencyResolver(libsDir, logger)
+        resolver.resolveDependencies(libsDir, new ArrayList<String>(serverLibs))
+    }
+
     protected void resolveWebSharedLibConflicts(Set<String> webLibs, Set<String> frontLibs) {
         Set<String> allLibs = new LinkedHashSet<>()
         allLibs.addAll(webLibs)
@@ -520,6 +539,11 @@ class CubaUberJarBuilding extends DefaultTask {
     protected void packServerLibs(UberJar jar) {
         project.logger.warn("[CubaUberJAR] Pack server libs")
         jar.copyJars(project.file(getServerLibsDir()).toPath(), null)
+    }
+
+    protected void packProjectServerLibs(Project theProject, UberJar jar) {
+        project.logger.warn("[CubaUberJAR] Pack project server libs for ${theProject}")
+        jar.copyJars(project.file(getProjectServerLibsDir(theProject)).toPath(), null)
     }
 
     protected void packLibsAndContent(Project theProject, UberJar jar, boolean copyShared) {
@@ -597,9 +621,9 @@ class CubaUberJarBuilding extends DefaultTask {
         }
     }
 
-    protected void copyServerLibsForProject(Project theProject) {
+    protected void copyProjectServerLibs(Set<String> resolvedLibs, Project theProject) {
         theProject.logger.warn("[CubaUberJAR] Copy libs from configurations.server for ${theProject}")
-        def serverDir = getServerLibsDir()
+        def serverDir = getProjectServerLibsDir(theProject)
         theProject.copy {
             from theProject.configurations.server
             into serverDir
@@ -611,6 +635,7 @@ class CubaUberJarBuilding extends DefaultTask {
                     if (name.endsWith(".jar")
                             && !(name.endsWith('-sources.jar')
                             && !(targetFile.exists() && targetFile.lastModified() >= file.lastModified()))) {
+                        resolvedLibs.add(name)
                         return true
                     }
                     return false
@@ -845,6 +870,19 @@ class CubaUberJarBuilding extends DefaultTask {
 
     protected String getServerLibsDir() {
         return "$rootJarTmpDir/${LIBS_DIR}_server"
+    }
+
+    protected String getProjectServerLibsDir(Project theProject){
+        if (!singleJar) {
+            if (theProject == coreProject) {
+                return "$rootJarTmpDir/${LIBS_DIR}_core_server"
+            } else if (theProject == webProject || theProject == frontProject) {
+                return "$rootJarTmpDir/${LIBS_DIR}_web_server"
+            } else if (theProject == portalProject) {
+                return "$rootJarTmpDir/${LIBS_DIR}_portal_server"
+            }
+        }
+        return getServerLibsDir()
     }
 
     protected String getSharedLibsDir(Project theProject) {
