@@ -291,9 +291,9 @@ class CubaWarBuilding extends DefaultTask {
         copied.addAll(copyLibs(webProject, '/WEB-INF/lib-web', webJarNames))
         copyLibs(portalProject, '/WEB-INF/lib', portalJarNames)
 
-        copyServerLibs(coreProject)
-        copyServerLibs(webProject)
-        copyServerLibs(portalProject)
+        copied.addAll(copyServerLibs(coreProject))
+        copied.addAll(copyServerLibs(webProject))
+        copied.addAll(copyServerLibs(portalProject))
 
         if (singleWar) {
             def resolver = new DependencyResolver(new File(coreTmpWarDir), logger)
@@ -612,28 +612,30 @@ class CubaWarBuilding extends DefaultTask {
         return Collections.emptyList()
     }
 
-    protected void copyServerLibs(Project theProject) {
+    protected List<String> copyServerLibs(Project theProject) {
         if (theProject) {
+            List<String> copied = []
             theProject.logger.info("[CubaWarBuilding] copying libs from configurations.server for ${theProject}")
-            if (theProject) {
-                def libsDir = "${warDir(theProject)}/WEB-INF/lib"
-                theProject.copy {
-                    from theProject.configurations.server
-                    into libsDir
-                    include { details ->
-                        def file = details.file
-                        String name = file.name
-                        def targetFile = new File(libsDir, name)
-                        if (name.endsWith(".jar")
-                                && !(name.endsWith('-sources.jar')
-                                && !(targetFile.exists() && targetFile.lastModified() >= file.lastModified()))) {
-                            return true
-                        }
-                        return false
+            def libsDir = "${warDir(theProject)}/WEB-INF/lib"
+            theProject.copy {
+                from theProject.configurations.server
+                into libsDir
+                include { details ->
+                    def file = details.file
+                    String name = file.name
+                    def targetFile = new File(libsDir, name)
+                    if (name.endsWith(".jar")
+                            && !(name.endsWith('-sources.jar')
+                            && !(targetFile.exists() && targetFile.lastModified() >= file.lastModified()))) {
+                        copied.add(name)
+                        return true
                     }
+                    return false
                 }
             }
+            return copied
         }
+        return Collections.emptyList()
     }
 
     protected void copyFrontLibs() {

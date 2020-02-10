@@ -81,16 +81,18 @@ class CubaDeployment extends DefaultTask {
 
         project.logger.info("[CubaDeployment] copying from configurations.server to ${tomcatRootDir}/lib")
 
+        List<String> copiedToServerLib = []
         project.copy {
             from project.configurations.server {
                 include { details ->
                     File file = details.file
 
-                    if (!isDependencyDeploymentRequired(tomcatLibsDir, file)) {
+                    if (!isDependencyDeploymentRequired(tomcatLibsDir, file) || file.absolutePath.startsWith(tomcatLibsAbsolutePath)) {
                         return false
                     }
 
-                    return !file.absolutePath.startsWith(tomcatLibsAbsolutePath)
+                    copiedToServerLib.add(file.name)
+                    return true
                 }
             }
             into tomcatLibsDir
@@ -195,6 +197,7 @@ class CubaDeployment extends DefaultTask {
                 resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)
             }
             resolver.resolveDependencies(appLibDir, copiedToAppLib)
+            resolver.resolveDependencies(tomcatLibsDir, copiedToServerLib)
         }
 
         File logbackConfig = new File(project.rootProject.rootDir, 'etc/logback.xml')
