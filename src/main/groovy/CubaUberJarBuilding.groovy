@@ -542,8 +542,11 @@ class CubaUberJarBuilding extends DefaultTask {
     }
 
     protected void packProjectServerLibs(Project theProject, UberJar jar) {
-        project.logger.warn("[CubaUberJAR] Pack project server libs for ${theProject}")
-        jar.copyJars(project.file(getProjectServerLibsDir(theProject)).toPath(), null)
+        def libsFile = project.file(getProjectServerLibsDir(theProject))
+        if (libsFile.exists()) {
+            project.logger.warn("[CubaUberJAR] Pack project server libs for ${theProject}")
+            jar.copyJars(libsFile.toPath(), null)
+        }
     }
 
     protected void packLibsAndContent(Project theProject, UberJar jar, boolean copyShared) {
