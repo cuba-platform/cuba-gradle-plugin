@@ -330,7 +330,6 @@ class CubaWarBuilding extends DefaultTask {
                 from frontProject.file("build/$polymerBuildDir")
                 into "${warDir(frontProject)}"
             }
-            copyServerLibs(frontProject)
         }
 
         copySpecificWebContent(webProject)
