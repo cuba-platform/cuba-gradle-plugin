@@ -82,20 +82,22 @@ class CubaDeployment extends DefaultTask {
         project.logger.info("[CubaDeployment] copying from configurations.server to ${tomcatRootDir}/lib")
 
         List<String> copiedToServerLib = []
-        project.copy {
-            from project.configurations.server {
-                include { details ->
-                    File file = details.file
+        if (project.configurations.find { it.name == 'server' }) {
+            project.copy {
+                from project.configurations.server {
+                    include { details ->
+                        File file = details.file
 
-                    if (!isDependencyDeploymentRequired(tomcatLibsDir, file) || file.absolutePath.startsWith(tomcatLibsAbsolutePath)) {
-                        return false
+                        if (!isDependencyDeploymentRequired(tomcatLibsDir, file) || file.absolutePath.startsWith(tomcatLibsAbsolutePath)) {
+                            return false
+                        }
+
+                        copiedToServerLib.add(file.name)
+                        return true
                     }
-
-                    copiedToServerLib.add(file.name)
-                    return true
                 }
+                into tomcatLibsDir
             }
-            into tomcatLibsDir
         }
 
         List<String> copiedToSharedLib = []

@@ -282,7 +282,6 @@ class CubaUberJarBuilding extends DefaultTask {
         }
         if (frontProject) {
             copyFrontLibsAndContent(frontProject, frontLibs)
-            copyProjectServerLibs(webServerLibs, frontProject)
         }
         if (portalProject) {
             copyLibsAndContent(portalProject, portalJarNames, portalLibs)
@@ -879,7 +878,7 @@ class CubaUberJarBuilding extends DefaultTask {
         if (!singleJar) {
             if (theProject == coreProject) {
                 return "$rootJarTmpDir/${LIBS_DIR}_core_server"
-            } else if (theProject == webProject || theProject == frontProject) {
+            } else if (theProject == webProject) {
                 return "$rootJarTmpDir/${LIBS_DIR}_web_server"
             } else if (theProject == portalProject) {
                 return "$rootJarTmpDir/${LIBS_DIR}_portal_server"
