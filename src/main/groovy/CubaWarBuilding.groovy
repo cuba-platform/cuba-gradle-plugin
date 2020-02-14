@@ -65,7 +65,13 @@ class CubaWarBuilding extends DefaultTask {
     String portalWebXmlPath
 
     @Input
-    String polymerBuildDir = 'es6-unbundled'
+    @Optional
+    @Deprecated
+    String polymerBuildDir
+
+    @Input
+    @Optional
+    String frontBuildDir = 'build'
 
     @Input
     @Optional
@@ -319,15 +325,19 @@ class CubaWarBuilding extends DefaultTask {
         }
 
         if (frontProject) {
-            if (!polymerBuildDir) {
-                throw new GradleException("'polymerBuildDir' property should be required for WAR building with Polymer")
+            if (!polymerBuildDir && !frontBuildDir) {
+                throw new GradleException("'polymerBuildDir' or 'frontBuildDir' property should be required for WAR building with front")
             }
-            def dir = frontProject.file("build/$polymerBuildDir")
+            def dirPath = frontBuildDir
+            if (polymerBuildDir) {
+                dirPath = "build/$dirPath"
+            }
+            def dir = frontProject.file(dirPath)
             if (!dir.exists()) {
-                throw new GradleException("Polymer build directory $dir doesn't exists")
+                throw new GradleException("Front build directory $dir doesn't exists")
             }
             frontProject.copy {
-                from frontProject.file("build/$polymerBuildDir")
+                from frontProject.file(dirPath)
                 into "${warDir(frontProject)}"
             }
         }
