@@ -100,7 +100,13 @@ class CubaUberJarBuilding extends DefaultTask {
     Map<String, Object> appProperties
 
     @Input
-    String polymerBuildDir = 'es6-unbundled'
+    @Optional
+    @Deprecated
+    String polymerBuildDir
+
+    @Input
+    @Optional
+    String frontBuildDir = 'build'
 
     protected String distributionDir = "${project.buildDir}/distributions/uberJar"
     protected List<ResourceTransformer> defaultTransformers = new ArrayList<>()
@@ -793,15 +799,20 @@ class CubaUberJarBuilding extends DefaultTask {
         }
         if (theProject == frontProject) {
             theProject.logger.info("[CubaUberJAR] Copy Front files for ${theProject}")
-            if (!polymerBuildDir) {
-                throw new GradleException("'polymerBuildDir' property should be required for Uber JAR building with Polymer")
+            if (!polymerBuildDir && !frontBuildDir) {
+                throw new GradleException("'polymerBuildDir' or 'frontBuildDir' property should be required for Uber JAR building with Polymer")
             }
-            def dir = theProject.file("build/$polymerBuildDir")
+            def dirPath = frontBuildDir
+            if (polymerBuildDir) {
+                dirPath = "build/$polymerBuildDir"
+            }
+
+            def dir = theProject.file(dirPath)
             if (!dir.exists()) {
-                throw new GradleException("Polymer build directory $dir doesn't exists")
+                throw new GradleException("Front build directory $dir doesn't exists")
             }
             theProject.copy {
-                from theProject.file("build/$polymerBuildDir")
+                from theProject.file(dirPath)
                 into "${getContentDir(theProject)}"
             }
         }
