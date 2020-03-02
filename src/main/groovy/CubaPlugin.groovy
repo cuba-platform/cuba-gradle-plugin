@@ -270,6 +270,8 @@ class CubaPlugin implements Plugin<Project> {
 
         setupEntitiesEnhancing(project)
 
+        setupProjectionGeneration(project) //Add entities projection implementation generation
+
         setupKotlinOutputDir(project)
     }
 
@@ -445,6 +447,22 @@ class CubaPlugin implements Plugin<Project> {
         dbUpdateTasks.all {
             it.mustRunAfter hsqlStartTasks
         }
+    }
+
+    /**
+     * Add action to generate entity projection implementations.
+     * TODO: need to add flag to enable and disable it like for enhancing.
+     * @param project - project to set up.
+     */
+    private void setupProjectionGeneration(Project project) {
+        def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
+        if (javaPlugin) {
+            project.tasks.findByName('compileJava')
+                    .doLast(new CubaEntityProjectionsGenerationAction(project, 'main'))
+            project.tasks.findByName('compileTestJava')
+                    .doLast(new CubaEntityProjectionsGenerationAction(project, 'test'))
+        }
+
     }
 
     private void setupEntitiesEnhancing(Project project) {
