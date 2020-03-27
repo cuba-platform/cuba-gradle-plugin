@@ -67,10 +67,12 @@ class CubaDbScriptsAssembling extends DefaultTask {
             if (srcDbDir.exists() && dir.exists()) {
                 def moduleDirName = moduleAlias
                 if (!moduleDirName) {
-                    def moduleNames = Arrays.asList(dir.list()).sort()
+                    def moduleNames = Arrays.asList(dir.list()).sort { a, b ->
+                        a.substring(0, a.indexOf("-")).toInteger() - b.substring(0, b.indexOf("-")).toInteger()
+                    }
                     if (!moduleNames.empty) {
                         def lastName = moduleNames.last()
-                        def num = lastName.substring(0, 2).toInteger()
+                        def num = lastName.substring(0, lastName.indexOf("-")).toInteger()
                         moduleDirName = "${Math.max(50, num + 10)}-${project.rootProject.name}"
                     }
                 }
