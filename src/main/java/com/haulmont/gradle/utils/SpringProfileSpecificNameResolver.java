@@ -23,6 +23,7 @@ import org.gradle.api.Project;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class SpringProfileSpecificNameResolver {
 
@@ -36,10 +37,19 @@ public class SpringProfileSpecificNameResolver {
             activeProfiles = System.getProperty(ACTIVE_PROFILES_PROPERTY_NAME);
         }
         if (StringUtils.isEmpty(activeProfiles)) {
+            activeProfiles = System.getProperty(ACTIVE_PROFILES_PROPERTY_NAME.toUpperCase(Locale.ROOT));
+        }
+        if (StringUtils.isEmpty(activeProfiles)) {
             activeProfiles = System.getenv(ACTIVE_PROFILES_PROPERTY_NAME);
         }
         if (StringUtils.isEmpty(activeProfiles)) {
+            activeProfiles = System.getenv(ACTIVE_PROFILES_PROPERTY_NAME.toUpperCase(Locale.ROOT));
+        }
+        if (StringUtils.isEmpty(activeProfiles)) {
             activeProfiles = System.getenv(UNIX_ENV_ACTIVE_PROFILES_PROPERTY_NAME);
+        }
+        if (StringUtils.isEmpty(activeProfiles)) {
+            activeProfiles = System.getenv(UNIX_ENV_ACTIVE_PROFILES_PROPERTY_NAME.toUpperCase(Locale.ROOT));
         }
     }
 
