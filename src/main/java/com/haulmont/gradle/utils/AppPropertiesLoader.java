@@ -17,6 +17,7 @@
 package com.haulmont.gradle.utils;
 
 import org.apache.commons.io.input.BOMInputStream;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringSubstitutor;
 import org.apache.commons.text.StringTokenizer;
 import org.gradle.api.Project;
@@ -30,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.jar.JarFile;
@@ -40,6 +42,8 @@ public class AppPropertiesLoader {
     private static final Logger log = LoggerFactory.getLogger(AppPropertiesLoader.class);
 
     protected static final String APP_PROPERTIES_CONFIG_PROPERTY_NAME = "appPropertiesConfig";
+    protected static final String PLACEHOLDER_PREFIX = "${";
+    protected static final String PLACEHOLDER_SUFFIX = "}";
 
     public Properties initProperties(Project project, String appHomeDir) {
         Properties properties = new Properties();
@@ -76,6 +80,14 @@ public class AppPropertiesLoader {
                 }
             }
         }
+
+        for (Object key : properties.keySet()) {
+            String value = (String) properties.get(key);
+            if (isPlaceholderValue(value)) {
+                properties.put(key, replacePlaceholder(value));
+            }
+        }
+
         return properties;
     }
 
@@ -172,5 +184,35 @@ public class AppPropertiesLoader {
             throw new RuntimeException(String.format("[CubaPlugin] Error occurred during properties searching at %s", artifact.getFile().getAbsolutePath()), e);
         }
         return true;
+    }
+
+    protected static String replacePlaceholder(String value) {
+        if (value == null) {
+            return null;
+        }
+        String placeholder = StringUtils.substringBetween(value.trim(), PLACEHOLDER_PREFIX, PLACEHOLDER_SUFFIX);
+        if (StringUtils.isEmpty(placeholder)) {
+            return value;
+        }
+
+        String newValue = System.getProperty(placeholder.toLowerCase(Locale.ROOT));
+        if (StringUtils.isEmpty(newValue)) {
+            newValue = System.getProperty(placeholder.toUpperCase(Locale.ROOT));
+        }
+        if (StringUtils.isEmpty(newValue)) {
+            newValue = System.getenv(placeholder.toLowerCase(Locale.ROOT));
+        }
+        if (StringUtils.isEmpty(newValue)) {
+            newValue = System.getenv(placeholder.toUpperCase(Locale.ROOT));
+        }
+        if (StringUtils.isEmpty(newValue)) {
+            newValue = value;
+        }
+
+        return newValue;
+    }
+
+    protected static boolean isPlaceholderValue(String value) {
+        return StringUtils.startsWith(value, PLACEHOLDER_PREFIX) && StringUtils.endsWith(value, PLACEHOLDER_SUFFIX);
     }
 }
