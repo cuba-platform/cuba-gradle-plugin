@@ -174,7 +174,8 @@ public class CubaEnhancer {
                 throw new IllegalStateException(
                         String.format("Unable to enhance field %s.%s with primitive type %s. Use type %s.",
                                 ctClass.getName(), fieldName,
-                                setterParamType.getSimpleName(), StringUtils.capitalize(setterParamType.getSimpleName())));
+                                setterParamType.getSimpleName(),
+                                ((CtPrimitiveType) setterParamType).getWrapperName()));
             }
 
             ctMethod.addLocalVariable("__prev", setterParamType);
