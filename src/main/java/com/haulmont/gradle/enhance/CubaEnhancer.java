@@ -23,13 +23,11 @@ import javassist.bytecode.ConstPool;
 import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.MemberValue;
 import javassist.bytecode.annotation.StringMemberValue;
-import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.logging.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -188,9 +186,9 @@ public class CubaEnhancer {
 
             ctMethod.insertAfter(
                     "__new = this." + getterName + "();" +
-                    "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, __new)) {" +
-                    "  this.propertyChanged(\"" + fieldName + "\", __prev, __new);" +
-                    "}"
+                            "if (!com.haulmont.chile.core.model.utils.InstanceUtils.propertyValueEquals(__prev, __new)) {" +
+                            "  this.propertyChanged(\"" + fieldName + "\", __prev, __new);" +
+                            "}"
             );
         }
     }
