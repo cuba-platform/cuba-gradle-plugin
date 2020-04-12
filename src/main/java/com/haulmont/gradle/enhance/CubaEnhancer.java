@@ -23,6 +23,7 @@ import javassist.bytecode.ConstPool;
 import javassist.bytecode.annotation.Annotation;
 import javassist.bytecode.annotation.MemberValue;
 import javassist.bytecode.annotation.StringMemberValue;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.logging.Logger;
 
@@ -174,7 +175,8 @@ public class CubaEnhancer {
                 throw new IllegalStateException(
                         String.format("Unable to enhance field %s.%s with primitive type %s. Use type %s.",
                                 ctClass.getName(), fieldName,
-                                setterParamType.getSimpleName(), StringUtils.capitalize(setterParamType.getSimpleName())));
+                                setterParamType.getSimpleName(),
+                                ((CtPrimitiveType) setterParamType).getWrapperName()));
             }
 
             ctMethod.addLocalVariable("__prev", setterParamType);
