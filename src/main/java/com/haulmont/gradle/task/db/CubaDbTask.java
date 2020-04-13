@@ -350,9 +350,17 @@ public abstract class CubaDbTask extends DefaultTask {
             if (StringUtils.isBlank(timeStampType)) {
                 timeStampType = "datetime";
             }
-        } else
-            throw new UnsupportedOperationException("DBMS " + dbms + " is not supported. " +
-                    "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property");
+        } else {
+            if (dbUrlProvided) {
+                if (StringUtils.isBlank(driver) || StringUtils.isBlank(dbUrl)) {
+                    throw new UnsupportedOperationException("DBMS " + dbms + " is not supported. " +
+                            "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property");
+                }
+            } else {
+                throw new UnsupportedOperationException("DBMS " + dbms + " is not supported. " +
+                        "You should either provide 'driver' and 'dbUrl' properties, or specify one of supported DBMS in 'dbms' property");
+            }
+        }
     }
 
     protected void initDatabase(String oneModuleDir) {
