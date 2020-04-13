@@ -70,14 +70,14 @@ class CubaDbCreation extends AbstractCubaDbCreation {
 
         GroovyClass.forName(driver)
 
-        if (!executeSql(masterUrl, user, password, dropDbSql)) {
+        if (!executeSql(masterUrl, user, password, dropDbSql, true)) {
             throw new RuntimeException('[CubaDbCreation] Failed to drop database')
         }
 
         if (createDbSql) {
             project.logger.debug('[CubaDbCreation] Creating database')
 
-            def executed = executeSql(masterUrl, user, password, createDbSql)
+            def executed = executeSql(masterUrl, user, password, createDbSql, false)
             if (!executed) {
                 throw new RuntimeException('[CubaDbCreation] Failed to create database')
             }
@@ -86,7 +86,7 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         if (createPostgresSchemeSql) {
             project.logger.debug('[CubaDbCreation] Creating Postgres scheme')
 
-            def executed = executeSql(dbUrl, user, password, createPostgresSchemeSql)
+            def executed = executeSql(dbUrl, user, password, createPostgresSchemeSql, false)
             if (!executed) {
                 throw new RuntimeException('[CubaDbCreation] Failed to create Postgres scheme')
             }
@@ -98,7 +98,7 @@ class CubaDbCreation extends AbstractCubaDbCreation {
         setAppHomeDir(project.cuba.appHome)
     }
 
-    protected boolean executeSql(String url, String user, String password, String sql) {
+    protected boolean executeSql(String url, String user, String password, String sql, boolean skipError) {
         def executed = true
 
         def conn = null
@@ -125,14 +125,19 @@ class CubaDbCreation extends AbstractCubaDbCreation {
                     } else {
                         project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nDB is already in use")
                     }
+                    executed = false
+                } else if (skipError && isCustomDbmsType()) {
+                    if (project.logger.isInfoEnabled()) {
+                        project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
+                    }
                 } else {
                     if (project.logger.isInfoEnabled()) {
                         project.logger.info("[CubaDbCreation] Failed to execute SQL: $sql", e)
                     } else {
                         project.logger.warn("[CubaDbCreation] Failed to execute SQL: $sql\nError: $e.message")
                     }
+                    executed = false
                 }
-                executed = false
             }
         } finally {
             if (statement) {
@@ -234,6 +239,14 @@ grant create session,
         def vendorCode = getVendorCode(e)
 
         dbNotExistsError(dbms, vendorCode)
+    }
+
+    protected boolean isCustomDbmsType() {
+        return dbms != ORACLE_DBMS &&
+                dbms != HSQL_DBMS &&
+                dbms != POSTGRES_DBMS &&
+                dbms != MYSQL_DBMS &&
+                dbms != MSSQL_DBMS
     }
 
     /**
