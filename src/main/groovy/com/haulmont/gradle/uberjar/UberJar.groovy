@@ -22,8 +22,9 @@ import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 
-import java.nio.charset.StandardCharsets
 import java.nio.file.*
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import java.util.stream.Stream
 
 class UberJar {
