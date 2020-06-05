@@ -24,6 +24,8 @@ import org.gradle.api.logging.Logger
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.*
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 import java.util.stream.Stream
 
 class UberJar {
@@ -136,8 +138,14 @@ class UberJar {
         execute({
             def toRootPath = toJarRoot()
             def manifestPath = toRootPath.resolve("META-INF/MANIFEST.MF")
-            Files.copy(new ByteArrayInputStream("Main-Class: $mainClass".getBytes(StandardCharsets.UTF_8)), manifestPath,
-                    StandardCopyOption.REPLACE_EXISTING)
+
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream()
+            Manifest manifest = new Manifest()
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, '1.0')
+            manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, mainClass)
+            manifest.write(byteOutput)
+
+            Files.copy(new ByteArrayInputStream(byteOutput.toByteArray()), manifestPath, StandardCopyOption.REPLACE_EXISTING)
         })
     }
 
