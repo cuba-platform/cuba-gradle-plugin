@@ -22,6 +22,7 @@ import org.apache.commons.io.IOUtils
 import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.*
 import java.util.stream.Stream
 
@@ -130,8 +131,13 @@ class UberJar {
         execute({
             def toRootPath = toJarRoot()
             def manifestPath = toRootPath.resolve("META-INF/MANIFEST.MF")
-            Files.write(manifestPath, Collections.singletonList("Main-Class: $mainClass"), StandardOpenOption.WRITE,
-                    StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+            Files.deleteIfExists(manifestPath)
+        })
+        execute({
+            def toRootPath = toJarRoot()
+            def manifestPath = toRootPath.resolve("META-INF/MANIFEST.MF")
+            Files.copy(new ByteArrayInputStream("Main-Class: $mainClass".getBytes(StandardCharsets.UTF_8)), manifestPath,
+                    StandardCopyOption.REPLACE_EXISTING)
         })
     }
 
