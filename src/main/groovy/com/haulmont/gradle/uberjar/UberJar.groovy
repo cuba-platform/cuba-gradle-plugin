@@ -21,6 +21,8 @@ import org.gradle.api.GradleException
 import org.gradle.api.logging.Logger
 
 import java.nio.file.*
+import java.util.jar.Attributes
+import java.util.jar.Manifest
 
 class UberJar {
     protected final Logger logger
@@ -122,8 +124,19 @@ class UberJar {
         execute({
             def toRootPath = toJarRoot()
             def manifestPath = toRootPath.resolve("META-INF/MANIFEST.MF")
-            Files.write(manifestPath, Collections.singletonList("Main-Class: $mainClass"), StandardOpenOption.WRITE,
-                    StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE)
+            Files.deleteIfExists(manifestPath)
+        })
+        execute({
+            def toRootPath = toJarRoot()
+            def manifestPath = toRootPath.resolve("META-INF/MANIFEST.MF")
+
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream()
+            Manifest manifest = new Manifest()
+            manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, '1.0')
+            manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS, mainClass)
+            manifest.write(byteOutput)
+
+            Files.copy(new ByteArrayInputStream(byteOutput.toByteArray()), manifestPath, StandardCopyOption.REPLACE_EXISTING)
         })
     }
 
@@ -199,7 +212,7 @@ class UberJar {
     }
 
     protected static FileSystem createZipFileSystem(Path path, boolean create) {
-        String uriString = path.toUri().path.replace(" ","%20")
+        String uriString = path.toUri().path.replace(" ", "%20")
         URI uri = URI.create("jar:file:$uriString")
         Map<String, String> env = new HashMap<>()
         if (create) {
