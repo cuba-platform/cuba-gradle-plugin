@@ -16,10 +16,13 @@
 
 package com.haulmont.gradle.uberjar
 
+import org.apache.commons.io.IOUtils
 import org.apache.commons.io.filefilter.WildcardFileFilter
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
 class MergeResourceTransformer implements ResourceTransformer {
@@ -53,7 +56,11 @@ class MergeResourceTransformer implements ResourceTransformer {
             def sourceLines = Files.readAllLines(fromPath)
             def resultLines = new ArrayList<>(destLines)
             resultLines.addAll(sourceLines)
-            Files.write(toPath, resultLines, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream();
+            IOUtils.writeLines(resultLines, null, byteOutput, StandardCharsets.UTF_8)
+            Files.copy(new ByteArrayInputStream(byteOutput.toByteArray()), toPath, StandardCopyOption.REPLACE_EXISTING)
+
         } else {
             Files.copy(fromPath, toPath)
         }

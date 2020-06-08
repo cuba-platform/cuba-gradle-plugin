@@ -6,6 +6,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
 class UiComponentsResourceTransformer implements ResourceTransformer {
@@ -33,18 +34,10 @@ class UiComponentsResourceTransformer implements ResourceTransformer {
                 toXml.append((Node) item.clone())
             }
 
-            OutputStream out = null;
-            try {
-                out = Files.newOutputStream(toPath, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-                XmlUtil.serialize(toXml, out)
-            } finally {
-                try {
-                    if (out != null) {
-                        out.close()
-                    }
-                } catch (Exception e) {
-                }
-            }
+            ByteArrayOutputStream byteOutput = new ByteArrayOutputStream()
+            XmlUtil.serialize(toXml, byteOutput)
+            Files.copy(new ByteArrayInputStream(byteOutput.toByteArray()), toPath, StandardCopyOption.REPLACE_EXISTING)
+
         } else {
             Files.copy(fromPath, toPath)
         }
