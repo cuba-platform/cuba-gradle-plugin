@@ -16,6 +16,7 @@
 
 package com.haulmont.gradle.task.db;
 
+import com.haulmont.gradle.utils.AppProperties;
 import com.haulmont.gradle.utils.AppPropertiesLoader;
 import groovy.lang.GroovyObject;
 import groovy.sql.Sql;
@@ -56,8 +57,7 @@ public abstract class CubaDbTask extends DefaultTask {
     protected static final String CURRENT_SCHEMA_PARAM = "currentSchema";
     protected static final String MS_SQL_2005 = "2005";
 
-    protected AppPropertiesLoader appPropertiesLoader = new AppPropertiesLoader();
-    protected Properties properties;
+    protected AppProperties properties;
     protected String storeName = Stores.MAIN;
     protected String dbms;
     protected String dbmsVersion;
@@ -211,7 +211,7 @@ public abstract class CubaDbTask extends DefaultTask {
 
     protected void init() {
         initAppHomeDir();
-        properties = appPropertiesLoader.initProperties(getProject(), appHomeDir);
+        properties = new AppPropertiesLoader().initProperties(getProject(), appHomeDir);
         String dataSourceProvider = properties.getProperty("cuba.dataSourceProvider" + getStorePostfix());
         if (dataSourceProvider == null || "jndi".equals(dataSourceProvider) || isInitParamsFromDbTask()) {
             initConnectionParamsFromDbTask();
