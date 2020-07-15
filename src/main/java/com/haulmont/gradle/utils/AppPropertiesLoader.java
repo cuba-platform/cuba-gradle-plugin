@@ -45,12 +45,12 @@ public class AppPropertiesLoader {
     protected static final String PLACEHOLDER_PREFIX = "${";
     protected static final String PLACEHOLDER_SUFFIX = "}";
 
-    public Properties initProperties(Project project, String appHomeDir) {
+    public AppProperties initProperties(Project project, String appHomeDir) {
         Properties properties = new Properties();
         String propertiesConfigName = getPropertiesConfigName(project);
         properties.putAll(getPropertiesFromConfig(propertiesConfigName, project, appHomeDir));
 
-        return properties;
+        return new AppProperties(properties);
     }
 
     protected Properties getPropertiesFromConfig(String propertiesConfigName, Project project, String appHomeDir) {
@@ -195,7 +195,10 @@ public class AppPropertiesLoader {
             return value;
         }
 
-        String newValue = System.getProperty(placeholder.toLowerCase(Locale.ROOT));
+        String newValue = System.getProperty(placeholder);
+        if (StringUtils.isEmpty(newValue)) {
+            newValue = System.getProperty(placeholder.toLowerCase(Locale.ROOT));
+        }
         if (StringUtils.isEmpty(newValue)) {
             newValue = System.getProperty(placeholder.toUpperCase(Locale.ROOT));
         }
