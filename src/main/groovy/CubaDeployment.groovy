@@ -79,27 +79,6 @@ class CubaDeployment extends DefaultTask {
             into tomcatLibsDir
         }
 
-        project.logger.info("[CubaDeployment] copying from configurations.server to ${tomcatRootDir}/lib")
-
-        List<String> copiedToServerLib = []
-        if (project.configurations.find { it.name == 'server' }) {
-            project.copy {
-                from project.configurations.server {
-                    include { details ->
-                        File file = details.file
-
-                        if (!isDependencyDeploymentRequired(tomcatLibsDir, file) || file.absolutePath.startsWith(tomcatLibsAbsolutePath)) {
-                            return false
-                        }
-
-                        copiedToServerLib.add(file.name)
-                        return true
-                    }
-                }
-                into tomcatLibsDir
-            }
-        }
-
         List<String> copiedToSharedLib = []
 
         project.logger.info("[CubaDeployment] copying shared libs from configurations.runtime")
@@ -122,6 +101,25 @@ class CubaDeployment extends DefaultTask {
                 copiedToSharedLib.add(file.name)
 
                 return true
+            }
+        }
+
+        project.logger.info("[CubaDeployment] copying from configurations.server to ${tomcatRootDir}/shared/lib")
+        if (project.configurations.find { it.name == 'server' }) {
+            project.copy {
+                from project.configurations.server {
+                    include { details ->
+                        File file = details.file
+
+                        if (!isDependencyDeploymentRequired(sharedLibDir, file) || file.absolutePath.startsWith(sharedLibDir.absolutePath)) {
+                            return false
+                        }
+
+                        copiedToSharedLib.add(file.name)
+                        return true
+                    }
+                }
+                into sharedLibDir
             }
         }
 
@@ -199,7 +197,6 @@ class CubaDeployment extends DefaultTask {
                 resolver.resolveDependencies(sharedLibDir, copiedToSharedLib)
             }
             resolver.resolveDependencies(appLibDir, copiedToAppLib)
-            resolver.resolveDependencies(tomcatLibsDir, copiedToServerLib)
         }
 
         File logbackConfig = new File(project.rootProject.rootDir, 'etc/logback.xml')
