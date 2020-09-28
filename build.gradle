@@ -125,7 +125,7 @@ artifacts {
 if (rootProject == project) {
     // do not build SDK in project-all
     def versionProperties = [
-            'tomcat.version': '9.0.27',
+            'tomcat.version': '9.0.38',
             'gradle.version': GradleVersion.current().version
     ]
 
