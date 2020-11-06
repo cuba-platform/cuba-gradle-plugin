@@ -16,8 +16,6 @@
 
 package com.haulmont.gradle.classpath;
 
-import org.apache.commons.io.IOUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -32,16 +30,12 @@ import java.util.stream.Collectors;
 public class ClassPathUtil {
 
     public static void createClassPathFile(File classPathFile, List<File> classPath) {
-        PrintWriter writer = null;
-        try {
-            writer = new PrintWriter(classPathFile);
+        try (PrintWriter writer = new PrintWriter(classPathFile)) {
             for (File file : classPath) {
                 writer.println(file.getAbsolutePath());
             }
         } catch (IOException e) {
             throw new RuntimeException("Failed to write classpath to temporary file", e);
-        } finally {
-            IOUtils.closeQuietly(writer);
         }
     }
 

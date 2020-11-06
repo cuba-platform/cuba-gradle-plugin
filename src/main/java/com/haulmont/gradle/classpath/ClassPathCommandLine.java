@@ -19,6 +19,7 @@ package com.haulmont.gradle.classpath;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +39,8 @@ public class ClassPathCommandLine {
 
         ClassLoader classLoader = buildClassLoader(classPath);
         Thread.currentThread().setContextClassLoader(classLoader);
-        System.setProperty("java.class.path", StringUtils.join(classPath, ";"));
+        System.setProperty("java.class.path",
+                StringUtils.join(classPath, SystemUtils.IS_OS_WINDOWS ? ";" : ":"));
 
         invokeOriginalMainClass(classLoader, args[1], getOriginalArgs(args));
     }
@@ -47,7 +49,7 @@ public class ClassPathCommandLine {
         try {
             Class<?> cls = classLoader.loadClass(mainClass);
             Method mainMethod = cls.getMethod("main", String[].class);
-            mainMethod.invoke(null, new Object[]{getOriginalArgs(args)});
+            mainMethod.invoke(null, new Object[]{args});
         } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException("Unable to run Main-Class:" + mainClass, e);
         }
@@ -76,7 +78,7 @@ public class ClassPathCommandLine {
         List<String> lines;
         try {
             lines = FileUtils.readLines(new File(path), Charset.defaultCharset());
-            FileUtils.deleteQuietly(new File(path));
+            //FileUtils.deleteQuietly(new File(path));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

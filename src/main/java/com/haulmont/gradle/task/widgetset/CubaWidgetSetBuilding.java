@@ -107,19 +107,17 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         List<String> gwtCompilerArgs = collectCompilerArgs(gwtWidgetSetTemp.getAbsolutePath());
         List<String> gwtCompilerJvmArgs = collectCompilerJvmArgs(gwtJavaTmp);
 
-        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-            if (shortClassPath) {
-                File classPathFile = getProject().file("build/tmp/compile-widget-set-classpath.dat");
-                ClassPathUtil.createClassPathFile(classPathFile, compilerClassPath);
+        if (Os.isFamily(Os.FAMILY_WINDOWS) && shortClassPath) {
+            File classPathFile = getProject().file("build/tmp/compile-widget-set-classpath.dat");
+            ClassPathUtil.createClassPathFile(classPathFile, compilerClassPath);
 
-                getProject().javaexec(spec -> {
-                    spec.setMain("com.haulmont.gradle.classpath.ClassPathCommandLine");
-                    spec.setClasspath(getProject().files(ClassPathUtil.getCommandLineClassPath()));
-                    spec.setArgs(ClassPathUtil.getExtendedCommandLineAgs(
-                            classPathFile.getAbsolutePath(), "com.google.gwt.dev.Compiler", gwtCompilerArgs));
-                    spec.setJvmArgs(gwtCompilerJvmArgs);
-                });
-            }
+            getProject().javaexec(spec -> {
+                spec.setMain("com.haulmont.gradle.classpath.ClassPathCommandLine");
+                spec.setClasspath(getProject().files(ClassPathUtil.getCommandLineClassPath()));
+                spec.setArgs(ClassPathUtil.getExtendedCommandLineAgs(
+                        classPathFile.getAbsolutePath(), "com.google.gwt.dev.Compiler", gwtCompilerArgs));
+                spec.setJvmArgs(gwtCompilerJvmArgs);
+            });
         } else {
             getProject().javaexec(spec -> {
                 spec.setMain("com.google.gwt.dev.Compiler");
