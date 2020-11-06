@@ -16,7 +16,9 @@
 
 package com.haulmont.gradle.task.widgetset;
 
+import com.haulmont.gradle.classpath.ClassPathUtil;
 import org.apache.commons.io.FileUtils;
+import org.apache.tools.ant.taskdefs.condition.Os;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ResolvedArtifact;
@@ -36,6 +38,7 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
     protected String widgetSetClass;
     protected Map<String, Object> compilerArgs;
     protected boolean printCompilerClassPath = false;
+    protected boolean shortClassPath = false;
 
     protected String logLevel = "INFO";
 
@@ -71,12 +74,31 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
         List<String> gwtCompilerArgs = collectCompilerArgs();
         List<String> gwtCompilerJvmArgs = collectCompilerJvmArgs();
 
-        getProject().javaexec(javaExecSpec -> {
-            javaExecSpec.setMain("com.google.gwt.dev.codeserver.CodeServer");
-            javaExecSpec.setClasspath(getProject().files(compilerClassPath));
-            javaExecSpec.setArgs(gwtCompilerArgs);
-            javaExecSpec.setJvmArgs(gwtCompilerJvmArgs);
-        });
+        if (Os.isFamily(Os.FAMILY_WINDOWS) && shortClassPath) {
+            File javaTmp = getProject().file("build/tmp/");
+            if (javaTmp.exists()) {
+                FileUtils.deleteQuietly(javaTmp);
+            }
+            javaTmp.mkdirs();
+
+            File classPathFile = getProject().file("build/tmp/debug-widget-set-classpath.dat");
+            ClassPathUtil.createClassPathFile(classPathFile, compilerClassPath);
+
+            getProject().javaexec(spec -> {
+                spec.setMain("com.haulmont.gradle.classpath.ClassPathCommandLine");
+                spec.setClasspath(getProject().files(ClassPathUtil.getCommandLineClassPath()));
+                spec.setArgs(ClassPathUtil.getExtendedCommandLineAgs(
+                        classPathFile.getAbsolutePath(), "com.google.gwt.dev.codeserver.CodeServer", gwtCompilerArgs));
+                spec.setJvmArgs(gwtCompilerJvmArgs);
+            });
+        } else {
+            getProject().javaexec(javaExecSpec -> {
+                javaExecSpec.setMain("com.google.gwt.dev.codeserver.CodeServer");
+                javaExecSpec.setClasspath(getProject().files(compilerClassPath));
+                javaExecSpec.setArgs(gwtCompilerArgs);
+                javaExecSpec.setJvmArgs(gwtCompilerJvmArgs);
+            });
+        }
     }
 
     @InputFiles
@@ -244,6 +266,14 @@ public class CubaWidgetSetDebug extends AbstractCubaWidgetSetTask {
 
     public boolean isPrintCompilerClassPath() {
         return printCompilerClassPath;
+    }
+
+    public boolean isShortClassPath() {
+        return shortClassPath;
+    }
+
+    public void setShortClassPath(boolean shortClassPath) {
+        this.shortClassPath = shortClassPath;
     }
 
     public void setLogLevel(String logLevel) {
