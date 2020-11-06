@@ -16,7 +16,9 @@
 
 package com.haulmont.gradle.task.widgetset;
 
+import com.haulmont.gradle.classpath.ClassPathUtil;
 import org.apache.commons.io.FileUtils;
+import org.apache.tools.ant.taskdefs.condition.Os;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.FileCollection;
@@ -25,7 +27,10 @@ import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.tasks.*;
 
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -53,6 +58,8 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
     protected String xxMPS = "-XX:MaxPermSize=256m";
 
     protected String logLevel = "ERROR";
+
+    protected boolean shortClassPath = true;
 
     protected int workers = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1);
 
@@ -100,12 +107,27 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
         List<String> gwtCompilerArgs = collectCompilerArgs(gwtWidgetSetTemp.getAbsolutePath());
         List<String> gwtCompilerJvmArgs = collectCompilerJvmArgs(gwtJavaTmp);
 
-        getProject().javaexec(spec -> {
-            spec.setMain("com.google.gwt.dev.Compiler");
-            spec.setClasspath(getProject().files(compilerClassPath));
-            spec.setArgs(gwtCompilerArgs);
-            spec.setJvmArgs(gwtCompilerJvmArgs);
-        });
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            if (shortClassPath) {
+                File classPathFile = getProject().file("build/tmp/compile-widget-set-classpath.dat");
+                ClassPathUtil.createClassPathFile(classPathFile, compilerClassPath);
+
+                getProject().javaexec(spec -> {
+                    spec.setMain("com.haulmont.gradle.classpath.ClassPathCommandLine");
+                    spec.setClasspath(getProject().files(ClassPathUtil.getCommandLineClassPath()));
+                    spec.setArgs(ClassPathUtil.getExtendedCommandLineAgs(
+                            classPathFile.getAbsolutePath(), "com.google.gwt.dev.Compiler", gwtCompilerArgs));
+                    spec.setJvmArgs(gwtCompilerJvmArgs);
+                });
+            }
+        } else {
+            getProject().javaexec(spec -> {
+                spec.setMain("com.google.gwt.dev.Compiler");
+                spec.setClasspath(getProject().files(compilerClassPath));
+                spec.setArgs(gwtCompilerArgs);
+                spec.setJvmArgs(gwtCompilerJvmArgs);
+            });
+        }
 
         FileUtils.deleteQuietly(new File(gwtWidgetSetTemp, "WEB-INF"));
 
@@ -356,6 +378,14 @@ public class CubaWidgetSetBuilding extends AbstractCubaWidgetSetTask {
 
     public String getLogLevel() {
         return logLevel;
+    }
+
+    public boolean isShortClassPath() {
+        return shortClassPath;
+    }
+
+    public void setShortClassPath(boolean shortenClassPath) {
+        this.shortClassPath = shortenClassPath;
     }
 
     public void setWorkers(int workers) {
