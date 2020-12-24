@@ -40,6 +40,11 @@ class MergeResourceTransformer implements ResourceTransformer {
         newWildcards.add("META-INF/services/org.apache.lucene.codecs.DocValuesFormat")
         newWildcards.add("META-INF/services/org.apache.lucene.codecs.Codec")
         newWildcards.add("META-INF/services/javax.script.ScriptEngineFactory")
+        newWildcards.add("META-INF/services/javax.xml.transform.URIResolver")
+        newWildcards.add("META-INF/services/org.apache.xmlgraphics.image.loader.spi.ImageLoaderFactory")
+        newWildcards.add("META-INF/services/org.apache.xmlgraphics.image.loader.spi.ImageConverter")
+        newWildcards.add("META-INF/services/org.apache.xmlgraphics.image.loader.spi.ImagePreloader")
+        newWildcards.add("META-INF/services/org.apache.xmlgraphics.image.writer.ImageWriter")
         newWildcards.addAll(wildcards)
         this.wildcardsFilter = new WildcardFileFilter(newWildcards)
     }
