@@ -330,7 +330,7 @@ class CubaWarBuilding extends DefaultTask {
             }
             def dirPath = frontBuildDir
             if (polymerBuildDir) {
-                dirPath = "build/$dirPath"
+                dirPath = "build/$polymerBuildDir"
             }
             def dir = frontProject.file(dirPath)
             if (!dir.exists()) {
