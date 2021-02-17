@@ -27,6 +27,8 @@ import org.gradle.api.tasks.*
 import org.gradle.jvm.tasks.Jar
 import org.gradle.language.base.plugins.LifecycleBasePlugin
 
+import java.nio.charset.StandardCharsets
+
 class CubaUberJarBuilding extends DefaultTask {
 
     private static final String LIBS_DIR = "libs"
@@ -975,9 +977,9 @@ class CubaUberJarBuilding extends DefaultTask {
         templateDir.mkdir()
         File indexTemplate = new File(templateDir, "index.ftl")
         File indexHtml = new File("${getContentDir(frontProject)}/index.html")
-        String text = FrontUtils.rewriteBaseUrl(indexHtml.text, null)
+        String text = FrontUtils.rewriteBaseUrl(indexHtml.getText(StandardCharsets.UTF_8.name()), null)
         text = FrontUtils.rewriteApiUrl(text, null)
-        indexTemplate.write(text)
+        indexTemplate.write(text, StandardCharsets.UTF_8.name())
         indexHtml.delete()
     }
 }
