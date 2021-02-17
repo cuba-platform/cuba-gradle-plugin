@@ -899,9 +899,9 @@ class CubaWarBuilding extends DefaultTask {
     protected void writeIndexHtmlTemplate() {
         File indexTemplate = new File("${warDir(frontProject)}/index.ftl")
         File indexHtml = new File("${warDir(frontProject)}/index.html")
-        def text = FrontUtils.rewriteBaseUrl(indexHtml.text, "/$appName/front/")
+        def text = FrontUtils.rewriteBaseUrl(indexHtml.getText(StandardCharsets.UTF_8.name()), "/$appName/front/")
         text = FrontUtils.rewriteApiUrl(text, null)
-        indexTemplate.write(text)
+        indexTemplate.write(text, StandardCharsets.UTF_8.name())
         indexHtml.delete()
     }
 
