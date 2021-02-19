@@ -132,6 +132,54 @@ class CubaSetupTomcat extends DefaultTask {
         }
     }
 
+    private boolean updatePort(def serverNode){
+        def serviceNode = serverNode.find { node ->
+            node.name() == 'Service' && node.@name == 'Catalina'
+        }
+        if (!serviceNode) {
+            logger.error('cannot find Service node')
+            return false
+        }
+        def connectorNode = serviceNode.find { node ->
+            node.name() == 'Connector' && node.@protocol == 'HTTP/1.1'
+        }
+        if (!connectorNode) {
+            logger.error('cannot find HTTP Connector node')
+            return false
+        }
+        String currPortValue = connectorNode.@port
+        String newPortValue = project.cuba.tomcat.port
+        if (!Objects.equals(currPortValue, newPortValue)) {
+            connectorNode.@port = newPortValue
+            return true
+        }
+        return false
+    }
+
+    private boolean updateAjpPort(def serverNode){
+        def serviceNode = serverNode.find { node ->
+            node.name() == 'Service' && node.@name == 'Catalina'
+        }
+        if (!serviceNode) {
+            logger.error('cannot find AJP Connector node')
+            return false
+        }
+        def connectorNode = serviceNode.find { node ->
+            node.name() == 'Connector' && node.@protocol == 'AJP/1.3'
+        }
+        if (!connectorNode) {
+            logger.error('cannot find AJP Connector node')
+            return false
+        }
+        String currPortValue = connectorNode.@port
+        String newPortValue = project.cuba.tomcat.ajpPort
+        if (!Objects.equals(currPortValue, newPortValue)) {
+            connectorNode.@port = newPortValue
+            return true
+        }
+        return false
+    }
+
     private void updateServerXml() {
         Path serverXml = Paths.get(tomcatRootDir, 'conf', 'server.xml')
         if (!Files.exists(serverXml)) {
@@ -151,49 +199,11 @@ class CubaSetupTomcat extends DefaultTask {
         }
 
         if (project.cuba.tomcat.port) {
-            def serviceNode = serverNode.find { node ->
-                node.name() == 'Service' && node.@name == 'Catalina'
-            }
-            if (!serviceNode) {
-                logger.error('conf/server.xml has not been updated: cannot find Service node')
-                return
-            }
-            def connectorNode = serviceNode.find { node ->
-                node.name() == 'Connector' && node.@protocol == 'HTTP/1.1'
-            }
-            if (!connectorNode) {
-                logger.error('conf/server.xml has not been updated: cannot find HTTP Connector node')
-                return
-            }
-            String currPortValue = connectorNode.@port
-            String newPortValue = project.cuba.tomcat.port
-            if (!Objects.equals(currPortValue, newPortValue)) {
-                connectorNode.@port = newPortValue
-                changed = true
-            }
+            changed = updatePort(serverNode) || changed
         }
 
         if (project.cuba.tomcat.ajpPort) {
-            def serviceNode = serverNode.find { node ->
-                node.name() == 'Service' && node.@name == 'Catalina'
-            }
-            if (!serviceNode) {
-                logger.error('conf/server.xml has not been updated: cannot find Service node')
-                return
-            }
-            def connectorNode = serviceNode.find { node ->
-                node.name() == 'Connector' && node.@protocol == 'AJP/1.3'
-            }
-            if (!connectorNode) {
-                logger.error('conf/server.xml has not been updated: cannot find AJP Connector node')
-                return
-            }
-            String currPortValue = connectorNode.@port
-            String newPortValue = project.cuba.tomcat.ajpPort
-            if (!Objects.equals(currPortValue, newPortValue)) {
-                connectorNode.@port = newPortValue
-                changed = true
-            }
+            changed = updateAjpPort(serverNode) || changed
         }
 
         if (changed) {
