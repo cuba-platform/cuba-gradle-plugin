@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 public class DependencyResolver {
     private static final Pattern LIBRARY_PATTERN = Pattern.compile("((?:(?!-\\d)\\S)+)-(\\S*\\d\\S*(?:-SNAPSHOT)?)\\.jar$");
-    private static final Pattern PLATFORM_VERSION_PATTERN = Pattern.compile("(\\S+)-(((linux)|(windows)|(macosx)|(android))-[A-Za-z0-9_]+)?");
+    private static final Pattern PLATFORM_VERSION_PATTERN = Pattern.compile("(\\S+)-(((linux)|(windows)|(macosx)|(ios)|(android))-[A-Za-z0-9_]+)?");
 
     private static final Pattern LIBRARY_SNAPSHOT_PATTERN = Pattern.compile("((?:(?!-\\d)\\S)+)-(?:SNAPSHOT)\\.jar$");
     private static final Pattern LIBRARY_WITHOUT_VERSION_PATTERN = Pattern.compile("((?:(?!-\\d)\\S)+)\\.jar$");
