@@ -168,8 +168,13 @@ class CubaSetupTomcat extends DefaultTask {
             node.name() == 'Connector' && node.@protocol == 'AJP/1.3'
         }
         if (!connectorNode) {
-            logger.error('cannot find AJP Connector node')
-            return false
+            Map attributes = new HashMap();
+            attributes.put('protocol', 'AJP/1.3')
+            attributes.put('address', '::1')
+            attributes.put('port', '1')
+            attributes.put('redirectPort', '8443')
+            connectorNode = new Node(serviceNode, 'Connector', attributes);
+            serviceNode.appendNode(connectorNode)
         }
         String currPortValue = connectorNode.@port
         String newPortValue = project.cuba.tomcat.ajpPort
