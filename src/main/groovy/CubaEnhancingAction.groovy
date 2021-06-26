@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
+
 import com.haulmont.gradle.enhance.CubaEnhancer
 import groovy.io.FileType
 import groovy.xml.QName
 import groovy.xml.XmlUtil
 import javassist.ClassPool
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.output.NullOutputStream
+import org.apache.tools.ant.util.TeeOutputStream
 import org.gradle.api.Action
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.file.FileTree
+import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.tasks.SourceSet
 
 import java.nio.file.Files
@@ -35,6 +39,7 @@ import java.util.regex.Pattern
 class CubaEnhancingAction implements Action<Task> {
 
     protected static final String ABSTRACT_INSTANCE_FQN = 'com.haulmont.chile.core.model.impl.AbstractInstance'
+    protected static final String NON_ENTITY_ERROR_CODE = "EclipseLink-7250"
 
     protected final Project project
 
@@ -46,8 +51,9 @@ class CubaEnhancingAction implements Action<Task> {
     protected final String metadataConfig
     protected final String metadataPackageRegExp
     protected final File customClassesDir
+    protected boolean isSeparate;
 
-    CubaEnhancingAction(Project project, String sourceSet) {
+    CubaEnhancingAction(Project project, String sourceSet, boolean separate = false) {
         this.project = project
 
         def mainSourceSet = sourceSet == 'main'
@@ -62,6 +68,7 @@ class CubaEnhancingAction implements Action<Task> {
         metadataConfig = enhancingConfig.metadataConfig
         metadataPackageRegExp = enhancingConfig.metadataPackageRegExp
         customClassesDir = enhancingConfig.customClassesDir
+        this.isSeparate = separate;
     }
 
     @Override
@@ -89,19 +96,46 @@ class CubaEnhancingAction implements Action<Task> {
 
         if (javaOutputDir.exists()) {
             project.logger.info("[CubaEnhancing] Start EclipseLink enhancing")
-            project.javaexec {
-                main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
-                classpath(
-                        sourceSet.compileClasspath,
-                        javaOutputDir
-                )
-                args "-loglevel"
-                args "INFO"
-                args "-persistenceinfo"
-                args "$project.buildDir/tmp/persistence"
-                args "$javaOutputDir"
-                args enhancedDirPath
-                debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+
+            def javaPlugin = project.plugins.findPlugin(JavaPlugin.class)
+            def kotlinPlugin = project.plugins.findPlugin("org.jetbrains.kotlin.jvm")
+            def separateEnhancingMayBeNeeded = !isSeparate && javaPlugin && kotlinPlugin
+            OutputStream errorClone = separateEnhancingMayBeNeeded ? new ByteArrayOutputStream() : new NullOutputStream()
+
+            try {
+                project.javaexec {
+                    main = 'org.eclipse.persistence.tools.weaving.jpa.CubaStaticWeave'
+                    classpath(
+                            sourceSet.compileClasspath,
+                            javaOutputDir
+                    )
+                    args "-loglevel"
+                    args "INFO"
+                    args "-persistenceinfo"
+                    args "$project.buildDir/tmp/persistence"
+                    args "$javaOutputDir"
+                    args enhancedDirPath
+                    debug = System.getProperty("debugEnhance") ? Boolean.valueOf(System.getProperty("debugEnhance")) : false
+                    errorOutput = new TeeOutputStream(errorOutput, errorClone)
+                }
+            } catch (Exception e) {
+                if (separateEnhancingMayBeNeeded) {
+                    String errorMessage = errorClone.toString()
+                    if (errorMessage.contains(NON_ENTITY_ERROR_CODE)) {
+                        project.logger.warn("NOTE: Exception [EclipseLink-7250] may be caused by reference to Java entity from Kotlin entity. " +
+                                "In such case it is required to set 'separateEnhancingEnabled = true' for global module in build.gradle:\n" +
+                                "   configure(globalModule) {\n" +
+                                "       //...\n" +
+                                "       entitiesEnhancing {\n" +
+                                "           $classesRoot {\n" +
+                                "               //...\n" +
+                                "               separateEnhancingEnabled = true\n" +
+                                "           }\n" +
+                                "       }\n" +
+                                "   }");
+                    }
+                }
+                throw e;
             }
         }
 

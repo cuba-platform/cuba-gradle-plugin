@@ -454,7 +454,8 @@ class CubaPlugin implements Plugin<Project> {
 
         def mainEnhancing = project.entitiesEnhancing.main
         if (mainEnhancing && mainEnhancing.enabled) {
-            if (mainEnhancing.separateEnhancingEnabled) {
+            if (mainEnhancing.separateEnhancingEnabled
+                    || (mainEnhancing.separateEnhancingEnabled == null && kotlinPlugin && javaPlugin)) {
                 project.task(
                         [type: CubaSeparateEnhancing],
                         'enhanceSeparately',
@@ -481,7 +482,8 @@ class CubaPlugin implements Plugin<Project> {
 
         def testEnhancing = project.entitiesEnhancing.test
         if (testEnhancing && testEnhancing.enabled) {
-            if (testEnhancing.separateEnhancingEnabled) {
+            if (testEnhancing.separateEnhancingEnabled
+                    || (testEnhancing.separateEnhancingEnabled == null && kotlinPlugin && javaPlugin)) {
                 project.task(
                         [type: CubaSeparateEnhancing],
                         'enhanceTestSeparately',
