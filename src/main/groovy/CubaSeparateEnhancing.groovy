@@ -49,7 +49,7 @@ class CubaSeparateEnhancing extends DefaultTask {
 
     @TaskAction
     def enhanceClasses() {
-        def enhancingAction = new CubaEnhancingAction(project, sourceSetName);
+        def enhancingAction = new CubaEnhancingAction(project, sourceSetName, true)
         enhancingAction.performAction()
     }
 }
