@@ -36,6 +36,8 @@ import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.artifacts.ResolvedDependency
+import org.gradle.api.artifacts.repositories.PasswordCredentials
+import org.gradle.api.credentials.HttpHeaderCredentials
 import org.gradle.api.internal.artifacts.repositories.DefaultMavenArtifactRepository
 import org.gradle.api.internal.artifacts.repositories.DefaultMavenLocalArtifactRepository
 import org.gradle.api.plugins.BasePlugin
@@ -141,17 +143,38 @@ class CubaPlugin implements Plugin<Project> {
                 DefaultMavenArtifactRepository mavenRepo = repo
 
                 // we copy only http / https repositories using standard way:
-                if (mavenRepo.url.scheme == 'http' || mavenRepo.url.scheme == 'https') {
+                PasswordCredentials passwordCredentials
+                HttpHeaderCredentials httpHeaderCredentials
+                try {
+                    passwordCredentials = mavenRepo.getCredentials(PasswordCredentials)
+                } catch (IllegalArgumentException ignored) {
+                    passwordCredentials == null
+                }
+                try {
+                    httpHeaderCredentials = mavenRepo.getCredentials(HttpHeaderCredentials)
+                } catch (IllegalArgumentException ignored) {
+                    httpHeaderCredentials == null
+                }
+                if ((mavenRepo.url.scheme == 'http' || mavenRepo.url.scheme == 'https')) {
                     project.logger.info("[CubaPlugin] using repository $mavenRepo.name at $mavenRepo.url with credentials")
-
-                    def mavenCredentials = mavenRepo.credentials
-
-                    project.repositories {
-                        maven {
-                            url mavenRepo.url
-                            credentials {
-                                username(mavenCredentials.username ?: '')
-                                password(mavenCredentials.password ?: '')
+                    if (passwordCredentials != null) {
+                        project.repositories {
+                            maven {
+                                url mavenRepo.url
+                                credentials {
+                                    username(passwordCredentials.username ?: '')
+                                    password(passwordCredentials.password ?: '')
+                                }
+                            }
+                        }
+                    } else if (httpHeaderCredentials != null) {
+                        project.repositories {
+                            maven {
+                                url mavenRepo.url
+                                credentials(HttpHeaderCredentials) {
+                                    name(httpHeaderCredentials.name ?: '')
+                                    value(httpHeaderCredentials.value ?: '')
+                                }
                             }
                         }
                     }
