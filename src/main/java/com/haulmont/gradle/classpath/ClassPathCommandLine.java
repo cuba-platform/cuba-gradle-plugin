@@ -73,7 +73,7 @@ public class ClassPathCommandLine {
         } catch (MalformedURLException e) {
             throw new RuntimeException("Unable to build classpath:", e);
         }
-        return new URLClassLoader(urls.toArray(new URL[0]), null);
+        return new URLClassLoader(urls.toArray(new URL[0]));
     }
 
     private static List<String> readAndRemoveFile(String path) {
