@@ -111,7 +111,7 @@ dependencies {
 
     // Optional dependencies of projects, required for SDK build
 
-    sdk('com.haulmont.uberjar:uberjar:1.3.3')
+    sdk('com.haulmont.uberjar:uberjar:1.3.4')
     sdk('com.haulmont.frontservlet:frontservlet:1.0.3')
     sdk('org.apache.maven.wagon:wagon-http:3.3.2')
 }
