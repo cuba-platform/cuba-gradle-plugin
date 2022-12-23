@@ -49,6 +49,7 @@ import org.gradle.api.tasks.bundling.Zip
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.authentication.http.HttpHeaderAuthentication
 import org.gradle.language.jvm.tasks.ProcessResources
 import org.gradle.plugins.ide.eclipse.EclipsePlugin
 import org.gradle.plugins.ide.idea.IdeaPlugin
@@ -174,6 +175,9 @@ class CubaPlugin implements Plugin<Project> {
                                 credentials(HttpHeaderCredentials) {
                                     name(httpHeaderCredentials.name ?: '')
                                     value(httpHeaderCredentials.value ?: '')
+                                }
+                                authentication {
+                                    header(HttpHeaderAuthentication)
                                 }
                             }
                         }
